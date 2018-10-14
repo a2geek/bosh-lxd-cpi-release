@@ -4,16 +4,11 @@ import (
 	"os"
 
 	boshlog "github.com/cloudfoundry/bosh-utils/logger"
+	boshuuid "github.com/cloudfoundry/bosh-utils/uuid"
 	"github.com/cppforlife/bosh-cpi-go/apiv1"
 	"github.com/cppforlife/bosh-cpi-go/rpc"
+	lxdclient "github.com/lxc/lxd/client"
 )
-
-type CPIFactory struct{}
-
-type CPI struct{}
-
-var _ apiv1.CPIFactory = CPIFactory{}
-var _ apiv1.CPI = CPI{}
 
 func main() {
 	logger := boshlog.NewLogger(boshlog.LevelNone)
@@ -27,22 +22,29 @@ func main() {
 	}
 }
 
-// Empty CPI implementation
+// CPIFactory implementation.
+type CPIFactory struct{}
 
 func (f CPIFactory) New(_ apiv1.CallContext) (apiv1.CPI, error) {
-	return CPI{}, nil
+	c, err := lxdclient.ConnectLXDUnix("", nil)
+	if err != nil {
+		return nil, err
+	}
+	cpi := CPI{
+		client:  c,
+		uuidGen: boshuuid.NewGenerator(),
+	}
+	return cpi, nil
+}
+
+// CPI implementation
+type CPI struct {
+	client  lxdclient.ContainerServer
+	uuidGen boshuuid.Generator
 }
 
 func (c CPI) Info() (apiv1.Info, error) {
 	return apiv1.Info{StemcellFormats: []string{"warden-tar"}}, nil
-}
-
-func (c CPI) CreateStemcell(imagePath string, _ apiv1.StemcellCloudProps) (apiv1.StemcellCID, error) {
-	return apiv1.NewStemcellCID("stemcell-cid"), nil
-}
-
-func (c CPI) DeleteStemcell(cid apiv1.StemcellCID) error {
-	return nil
 }
 
 func (c CPI) CreateVM(
@@ -125,4 +127,20 @@ func (c CPI) SnapshotDisk(cid apiv1.DiskCID, meta apiv1.DiskMeta) (apiv1.Snapsho
 
 func (c CPI) DeleteSnapshot(cid apiv1.SnapshotCID) error {
 	return nil
+}
+
+// WardenCloudProperties represents the StemcellCloudProps supplied by the Bosh
+// stemcell in CreateStemcell.
+type WardenCloudProperties struct {
+	Architecture    string `json:"architecture" yaml:"architecture"`
+	ContainerFormat string `json:"container_format" yaml:"container_format"`
+	Disk            int    `json:"disk" yaml:"disk"`
+	DiskFormat      string `json:"disk_format" yaml:"disk_format"`
+	Hypervisor      string `json:"hypervisor" yaml:"hypervisor"`
+	Infrastructure  string `json:"infrastructure" yaml:"infrastructure"`
+	Name            string `json:"name" yaml:"name"`
+	OsDistro        string `json:"os_distro" yaml:"os_distro"`
+	OsType          string `json:"os_type" yaml:"os_type"`
+	RootDeviceName  string `json:"root_device_name" yaml:"root_device_name"`
+	Version         string `json:"version" yaml:"version"`
 }

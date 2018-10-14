@@ -1,0 +1,6 @@
+{
+  "method": "delete_stemcell",
+  "arguments": [
+      "img-e20ae8df-7030-4e30-5a4e-defd35706ecc"
+  ]
+}

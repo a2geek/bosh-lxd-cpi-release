@@ -1,0 +1,19 @@
+{
+  "method": "create_stemcell",
+  "arguments": [
+      "tmp/image",
+      {
+          "name": "bosh-warden-boshlite-ubuntu-xenial-go_agent",
+          "version": "97.22",
+          "infrastructure": "warden",
+          "hypervisor": "boshlite",
+          "disk": 2048,
+          "disk_format": "files",
+          "container_format": "bare",
+          "os_type": "linux",
+          "os_distro": "ubuntu",
+          "architecture": "x86_64",
+          "root_device_name": "/dev/sda1"
+      }
+  ]
+}
