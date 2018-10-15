@@ -1,0 +1,6 @@
+{
+  "method": "reboot_vm",
+  "arguments": [
+    "u1"
+  ]
+}

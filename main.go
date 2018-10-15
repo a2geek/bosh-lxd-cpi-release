@@ -47,42 +47,6 @@ func (c CPI) Info() (apiv1.Info, error) {
 	return apiv1.Info{StemcellFormats: []string{"warden-tar"}}, nil
 }
 
-func (c CPI) CreateVM(
-	agentID apiv1.AgentID, stemcellCID apiv1.StemcellCID,
-	cloudProps apiv1.VMCloudProps, networks apiv1.Networks,
-	associatedDiskCIDs []apiv1.DiskCID, env apiv1.VMEnv) (apiv1.VMCID, error) {
-
-	return apiv1.NewVMCID("vm-cid"), nil
-}
-
-func (c CPI) CreateVMV2(
-	agentID apiv1.AgentID, stemcellCID apiv1.StemcellCID,
-	cloudProps apiv1.VMCloudProps, networks apiv1.Networks,
-	associatedDiskCIDs []apiv1.DiskCID, env apiv1.VMEnv) (apiv1.VMCID, apiv1.Networks, error) {
-
-	return apiv1.NewVMCID("vm-cid"), networks, nil
-}
-
-func (c CPI) DeleteVM(cid apiv1.VMCID) error {
-	return nil
-}
-
-func (c CPI) CalculateVMCloudProperties(res apiv1.VMResources) (apiv1.VMCloudProps, error) {
-	return apiv1.NewVMCloudPropsFromMap(map[string]interface{}{}), nil
-}
-
-func (c CPI) SetVMMetadata(cid apiv1.VMCID, metadata apiv1.VMMeta) error {
-	return nil
-}
-
-func (c CPI) HasVM(cid apiv1.VMCID) (bool, error) {
-	return false, nil
-}
-
-func (c CPI) RebootVM(cid apiv1.VMCID) error {
-	return nil
-}
-
 func (c CPI) GetDisks(cid apiv1.VMCID) ([]apiv1.DiskCID, error) {
 	return []apiv1.DiskCID{}, nil
 }

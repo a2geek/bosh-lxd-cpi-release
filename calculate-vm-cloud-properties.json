@@ -1,0 +1,10 @@
+{
+  "method": "calculate_vm_cloud_properties",
+  "arguments": [
+    {
+      "ram": 4096,
+      "cpu": 2,
+      "ephemeral_disk_size": 2048
+    }
+  ]
+}
