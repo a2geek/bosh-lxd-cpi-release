@@ -93,9 +93,9 @@ func (c CPI) DeleteSnapshot(cid apiv1.SnapshotCID) error {
 	return nil
 }
 
-// WardenCloudProperties represents the StemcellCloudProps supplied by the Bosh
+// LXDCloudProperties represents the StemcellCloudProps supplied by the Bosh
 // stemcell in CreateStemcell.
-type WardenCloudProperties struct {
+type LXDCloudProperties struct {
 	Architecture    string `json:"architecture" yaml:"architecture"`
 	ContainerFormat string `json:"container_format" yaml:"container_format"`
 	Disk            int    `json:"disk" yaml:"disk"`
@@ -107,4 +107,11 @@ type WardenCloudProperties struct {
 	OsType          string `json:"os_type" yaml:"os_type"`
 	RootDeviceName  string `json:"root_device_name" yaml:"root_device_name"`
 	Version         string `json:"version" yaml:"version"`
+}
+
+// LXDVMCloudProperties represents the StemcellCloudProps supplied by the Bosh
+// stemcell in CreateStemcell.
+type LXDVMCloudProperties struct {
+	InstanceType  string `json:"instance_type" yaml:"instance_type"`
+	EphemeralDisk string `json:"ephemeral_disk" yaml:"ephemeral_disk"`
 }

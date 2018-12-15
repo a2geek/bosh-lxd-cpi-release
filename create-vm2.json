@@ -1,0 +1,11 @@
+{
+  "method": "create_vm",
+  "arguments": [
+      "1b994b23-3210-408c-a438-95b4baa98c74",
+      "img-9800ed7a-19e7-4990-770b-89892533639c",
+      { "instance_type": "t2.small" },
+      {},
+      [],
+      {}
+    ]
+}

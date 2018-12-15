@@ -13,7 +13,8 @@ func (c CPI) CreateVM(
 	cloudProps apiv1.VMCloudProps, networks apiv1.Networks,
 	associatedDiskCIDs []apiv1.DiskCID, env apiv1.VMEnv) (apiv1.VMCID, error) {
 
-	return apiv1.NewVMCID("vm-cid"), nil
+	vmCID, _, err := c.CreateVMV2(agentID, stemcellCID, cloudProps, networks, associatedDiskCIDs, env)
+	return vmCID, err
 }
 
 func (c CPI) CreateVMV2(
@@ -21,7 +22,49 @@ func (c CPI) CreateVMV2(
 	cloudProps apiv1.VMCloudProps, networks apiv1.Networks,
 	associatedDiskCIDs []apiv1.DiskCID, env apiv1.VMEnv) (apiv1.VMCID, apiv1.Networks, error) {
 
-	return apiv1.NewVMCID("vm-cid"), networks, nil
+	id, err := c.uuidGen.Generate()
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating VM id")
+	}
+	theCid := "c-" + id
+	containerSource := api.ContainerSource{
+		Type:  "image",
+		Alias: stemcellCID.AsString(),
+	}
+	props := LXDVMCloudProperties{}
+	err = cloudProps.As(&props)
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Cloud Props")
+	}
+	containersPost := api.ContainersPost{
+		Name:         theCid,
+		InstanceType: props.InstanceType,
+		Source:       containerSource,
+	}
+	op, err := c.client.CreateContainer(containersPost)
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating VM")
+	}
+	err = op.Wait()
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating VM")
+	}
+
+	_, etag, err := c.client.GetContainerState(theCid)
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Retrieve state of VM")
+	}
+
+	containerStatePut := api.ContainerStatePut{
+		Action: "start",
+	}
+	op, err = c.client.UpdateContainerState(theCid, containerStatePut, etag)
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Update state of VM")
+	}
+	// Don't have to wait
+
+	return apiv1.NewVMCID(theCid), networks, nil
 }
 
 func (c CPI) DeleteVM(cid apiv1.VMCID) error {

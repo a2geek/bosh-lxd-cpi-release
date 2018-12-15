@@ -22,7 +22,7 @@ func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) 
 		return apiv1.StemcellCID{}, bosherr.WrapError(err, "Generating stemcell id")
 	}
 
-	props := WardenCloudProperties{}
+	props := LXDCloudProperties{}
 	err = scprops.As(&props)
 	if err != nil {
 		return apiv1.StemcellCID{}, bosherr.WrapError(err, "error while reading stemcell cloud properties")
