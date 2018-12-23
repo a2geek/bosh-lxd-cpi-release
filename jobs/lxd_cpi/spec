@@ -1,0 +1,12 @@
+---
+name: lxd_cpi
+
+templates:
+  cpi.erb: bin/cpi
+  cpi_ctl.erb: bin/cpi_ctl
+  sudoers: config/sudoers
+
+packages:
+- lxd_cpi
+
+properties: {}

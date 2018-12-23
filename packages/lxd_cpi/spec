@@ -1,0 +1,8 @@
+---
+name: lxd_cpi
+
+dependencies:
+- golang-1.10-linux
+
+files:
+- "**/*.go"
