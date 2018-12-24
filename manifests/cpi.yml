@@ -1,0 +1,12 @@
+---
+- type: replace
+  path: /releases/-
+  value:
+    name: lxd-bosh-cpi
+    url: file://(cpi_path)
+
+- type: replace
+  path: /resource_pools/name=vms/stemcell?
+  value:
+    url: https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-xenial-go_agent?v=170.14
+    sha1: 9190e1d20dcb937e007abbb4054e19b1daa8d0a4
