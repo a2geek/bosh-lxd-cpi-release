@@ -4,9 +4,13 @@ name: lxd_cpi
 templates:
   cpi.erb: bin/cpi
   cpi_ctl.erb: bin/cpi_ctl
-  sudoers: config/sudoers
+  cpi.json.erb: config/cpi.json
 
 packages:
 - lxd_cpi
 
-properties: {}
+properties:
+  lxd_cpi.lxd.unix_socket:
+    description: "Unix socket used to connect to LXD daemon (must be on same host)"
+    example: "/var/lib/lxd/unix.socket"
+    #default: "/var/snap/lxd/common/lxd/unix.socket"

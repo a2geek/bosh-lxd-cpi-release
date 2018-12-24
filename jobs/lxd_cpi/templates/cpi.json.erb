@@ -1,0 +1,11 @@
+<%=
+
+config = {
+  "Server" => {
+    "Socket" => p("lxd_cpi.lxd.unix_socket")
+  }
+}
+
+JSON.dump(config)
+
+%>

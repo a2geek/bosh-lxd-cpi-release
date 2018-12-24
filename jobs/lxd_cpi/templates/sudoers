@@ -1,3 +1,0 @@
-vcap ALL= NOPASSWD: /var/vcap/packages/lxd_cpi/bin/cpi
-
-Defaults:vcap !requiretty

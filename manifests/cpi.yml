@@ -25,3 +25,15 @@
 - type: replace
   path: /cloud_provider/template?
   value: *cpi_job
+
+- type: replace
+  path: /cloud_provider/properties/lxd_cpi?
+  value:
+    lxd:
+      unix_socket: ((lxd_unix_socket))
+
+#- type: replace
+#  path: /instance_groups/name=bosh/properties/lxd_cpi?
+#  value:
+#    lxd:
+#      unix_socket: ((lxd_unix_socket))
