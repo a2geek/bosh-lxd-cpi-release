@@ -31,3 +31,6 @@ bat.spec
 *.sublime-workspace
 
 tmp/
+cpi
+creds.yml
+state.json

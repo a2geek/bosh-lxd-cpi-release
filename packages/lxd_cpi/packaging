@@ -1,4 +1,4 @@
-# 'Blatently' borrowed from bosh-warden-cpi-release. Thanks! 
+# 'Blatently' borrowed from bosh-warden-cpi-release. Thanks!
 set -ex
 
 if [ -z "$BOSH_PACKAGES_DIR" ]; then
@@ -13,4 +13,4 @@ mkdir ../src && cp -a * ../src/ && mv ../src ./src
 
 mkdir $BOSH_INSTALL_TARGET/bin
 
-go build -o $BOSH_INSTALL_TARGET/bin/cpi src/a2geek/*.go
+go build -o $BOSH_INSTALL_TARGET/bin/cpi src/lxd-bosh-cpi/*.go

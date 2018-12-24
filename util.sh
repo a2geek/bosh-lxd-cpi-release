@@ -6,7 +6,12 @@ function do_help() {
   do
     echo "- $subcommand"
   done
+  echo
   echo "Note that this script will detect if it is sourced in and setup an alias."
+  echo
+  echo "Useful environment variables to export..."
+  echo "- LXD_SOCKET (default: /var/lib/lxd/unix.socket)"
+  echo "- BOSH_DEPLOYMENT (default: \${HOME}/Documents/Source/bosh-deployment)"
 }
 
 function do_deps() {
@@ -24,23 +29,22 @@ function do_deps() {
 }
 
 function do_deploy() {
-  bosh_deployment="${BOSH_DEPLOYMENT:-~/Documents/Source/bosh-deployment}"
+  bosh_deployment="${BOSH_DEPLOYMENT:-${HOME}/Documents/Source/bosh-deployment}"
   cpi_path=$PWD/cpi
 
   rm -f creds.yml
 
   echo "-----> `date`: Create dev release"
-  bosh create-release --force --dir ./../ --tarball $cpi_path
+  bosh create-release --force --tarball $cpi_path
 
   echo "-----> `date`: Create env"
   bosh create-env ${bosh_deployment}/bosh.yml \
-    -o ~/workspace/bosh-deployment/docker/cpi.yml \
+    -o ./manifests/cpi.yml \
     -o ${bosh_deployment}/jumpbox-user.yml \
-    -o ../manifests/dev.yml \
     --state=state.json \
     --vars-store=creds.yml \
-    -v docker_cpi_path=$cpi_path \
-    -v director_name=docker \
+    -v cpi_path=$cpi_path \
+    -v director_name=lxd \
     -v internal_cidr=10.245.0.0/16 \
     -v internal_gw=10.245.0.1 \
     -v internal_ip=10.245.0.11
