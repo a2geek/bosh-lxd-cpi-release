@@ -11,6 +11,12 @@
     url: https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-xenial-go_agent?v=170.14
     sha1: 9190e1d20dcb937e007abbb4054e19b1daa8d0a4
 
+# Configure LXD sizes
+- type: replace
+  path: /resource_pools/name=vms/cloud_properties?
+  value:
+    instance_type: c2-m4
+
 # Add CPI job
 - type: replace
   path: /instance_groups/name=bosh/jobs/-
