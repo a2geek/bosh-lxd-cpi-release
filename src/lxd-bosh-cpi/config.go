@@ -5,6 +5,7 @@ import (
 
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 	boshsys "github.com/cloudfoundry/bosh-utils/system"
+	"github.com/cppforlife/bosh-cpi-go/apiv1"
 )
 
 type Config struct {
@@ -12,6 +13,7 @@ type Config struct {
 	Project string
 	Profile string
 	Network string
+	Agent   apiv1.AgentOptions
 }
 type LXD struct {
 	Socket string

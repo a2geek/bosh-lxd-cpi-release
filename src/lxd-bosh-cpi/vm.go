@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -29,6 +30,8 @@ func (c CPI) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating VM id")
 	}
 	theCid := "c-" + id
+	vmCid := apiv1.NewVMCID(theCid)
+
 	containerSource := api.ContainerSource{
 		Type:  "image",
 		Alias: stemcellCID.AsString(),
@@ -71,7 +74,7 @@ func (c CPI) CreateVMV2(
 	}
 
 	// Write the eth0 file for auto configuration. This is likely a bug waiting to happen. :-(
-	containerFileArgs := lxd.ContainerFileArgs{
+	eth0FileArgs := lxd.ContainerFileArgs{
 		Content:   strings.NewReader("# Using LXD DHCP to statically assign our IP address\nauto eth0\niface eth0 inet dhcp\n"),
 		UID:       0,    // root
 		GID:       0,    // root
@@ -79,7 +82,23 @@ func (c CPI) CreateVMV2(
 		Type:      "file",
 		WriteMode: "overwrite",
 	}
-	c.client.CreateContainerFile(theCid, "/etc/network/interfaces.d/eth0", containerFileArgs)
+	c.client.CreateContainerFile(theCid, "/etc/network/interfaces.d/eth0", eth0FileArgs)
+
+	agentEnv := apiv1.AgentEnvFactory{}.ForVM(agentID, vmCid, networks, env, c.config.Agent)
+	//agentEnv.AttachSystemDisk("")
+	agentEnvContents, err := agentEnv.AsBytes()
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "AgentEnv as Bytes")
+	}
+	agentConfigFileArgs := lxd.ContainerFileArgs{
+		Content:   bytes.NewReader(agentEnvContents),
+		UID:       0,    // root
+		GID:       0,    // root
+		Mode:      0644, // rw-r--r--
+		Type:      "file",
+		WriteMode: "overwrite",
+	}
+	c.client.CreateContainerFile(theCid, "/var/vcap/bosh/warden-cpi-agent-env.json", agentConfigFileArgs)
 
 	containerStatePut := api.ContainerStatePut{
 		Action: "start",
@@ -90,7 +109,7 @@ func (c CPI) CreateVMV2(
 	}
 	// Don't have to wait
 
-	return apiv1.NewVMCID(theCid), networks, nil
+	return vmCid, networks, nil
 }
 
 func (c CPI) DeleteVM(cid apiv1.VMCID) error {

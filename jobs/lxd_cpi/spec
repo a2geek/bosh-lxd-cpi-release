@@ -26,4 +26,19 @@ properties:
   lxd_cpi.lxd.network_name:
     description: "Name of LXD Network with which to place VMs [lxdbr0]"
     default: "lxdbr0"
-  
+
+  lxd_cpi.agent.mbus:
+    description: "Mbus URL used by deployed BOSH agents"
+    example: "nats://nats:nats-password@10.254.50.4:4222"
+
+  lxd_cpi.agent.ntp:
+    description: "NTP configuration used by deployed BOSH agents"
+    default: []
+
+  lxd_cpi.agent.blobstore.provider:
+    description: "Provider type for the blobstore used by deployed BOSH agents (e.g. dav, s3)"
+    default: "dav"
+
+  lxd_cpi.agent.blobstore.options:
+    description: "Options for the blobstore used by deployed BOSH agents"
+    default: {}

@@ -32,6 +32,23 @@
   path: /cloud_provider/template?
   value: *cpi_job
 
+#- type: replace
+#  path: /instance_groups/name=bosh/properties/lxd_cpi?
+#  value:
+#    lxd:
+#      unix_socket: ((lxd_unix_socket))
+#      project_name: ((lxd_project_name))
+#      profile_name: ((lxd_profile_name))
+#      network_name: ((lxd_network_name))
+#    agent: # todo remove
+#      mbus: nats://nats:((nats_password))@((internal_ip)):4222
+#      blobstore:
+#        provider: dav
+#        options:
+#          endpoint: http://((internal_ip)):25250
+#          user: agent
+#          password: ((blobstore_agent_password))
+
 - type: replace
   path: /cloud_provider/properties/lxd_cpi?
   value:
@@ -40,9 +57,9 @@
       project_name: ((lxd_project_name))
       profile_name: ((lxd_profile_name))
       network_name: ((lxd_network_name))
-
-#- type: replace
-#  path: /instance_groups/name=bosh/properties/lxd_cpi?
-#  value:
-#    lxd:
-#      unix_socket: ((lxd_unix_socket))
+    agent: # todo remove <== From docker/warden CPI
+      mbus: "https://mbus:((mbus_bootstrap_password))@0.0.0.0:6868"
+      blobstore:
+        provider: local
+        options:
+          blobstore_path: /var/vcap/micro_bosh/data/cache
