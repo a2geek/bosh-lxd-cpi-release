@@ -40,7 +40,15 @@ func (c CPI) CreateVMV2(
 	}
 	containersPost := api.ContainersPost{
 		ContainerPut: api.ContainerPut{
-			// FIXME - Config:      map[string]string{"eth0.ipv4.address": networks["default"].IP()},
+			Devices: map[string]map[string]string{
+				"eth0": map[string]string{
+					"name":         "eth0",
+					"nictype":      "bridged",
+					"parent":       c.config.Network,
+					"type":         "nic",
+					"ipv4.address": networks["default"].IP(),
+				},
+			},
 			Profiles:    []string{c.config.Profile},
 			Description: "hello world",
 		},
