@@ -28,6 +28,19 @@ func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) 
 		return apiv1.StemcellCID{}, bosherr.WrapError(err, "error while reading stemcell cloud properties")
 	}
 
+	description := props.Name + "-" + props.Version
+
+	images, err := c.client.GetImages()
+	if err != nil {
+		return apiv1.StemcellCID{}, bosherr.WrapError(err, "error while inspecting images")
+	}
+	for _, image := range images {
+		if description == image.Properties["description"] {
+			alias := image.Aliases[0].Name
+			return apiv1.NewStemcellCID(alias), nil
+		}
+	}
+
 	alias := "img-" + id
 	image := api.ImagesPost{
 		ImagePut: api.ImagePut{
@@ -53,7 +66,7 @@ func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) 
 		CreationDate: rootfsInfo.ModTime().Unix(),
 		Properties: map[string]string{
 			"architecture": props.Architecture,
-			"description":  props.Name + "-" + props.Version,
+			"description":  description,
 			"os":           strings.Title(props.OsDistro),
 		},
 	}
