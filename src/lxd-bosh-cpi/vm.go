@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 	"github.com/cppforlife/bosh-cpi-go/apiv1"
+	lxd "github.com/lxc/lxd/client"
 	"github.com/lxc/lxd/shared/api"
 )
 
@@ -37,6 +39,11 @@ func (c CPI) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Cloud Props")
 	}
 	containersPost := api.ContainersPost{
+		ContainerPut: api.ContainerPut{
+			// FIXME - Config:      map[string]string{"eth0.ipv4.address": networks["default"].IP()},
+			Profiles:    []string{c.config.Profile},
+			Description: "hello world",
+		},
 		Name:         theCid,
 		InstanceType: props.InstanceType,
 		Source:       containerSource,
@@ -54,6 +61,17 @@ func (c CPI) CreateVMV2(
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Retrieve state of VM")
 	}
+
+	// Write the eth0 file for auto configuration. This is likely a bug waiting to happen. :-(
+	containerFileArgs := lxd.ContainerFileArgs{
+		Content:   strings.NewReader("# Using LXD DHCP to statically assign our IP address\nauto eth0\niface eth0 inet dhcp\n"),
+		UID:       0,    // root
+		GID:       0,    // root
+		Mode:      0644, // rw-r--r--
+		Type:      "file",
+		WriteMode: "overwrite",
+	}
+	c.client.CreateContainerFile(theCid, "/etc/network/interfaces.d/eth0", containerFileArgs)
 
 	containerStatePut := api.ContainerStatePut{
 		Action: "start",

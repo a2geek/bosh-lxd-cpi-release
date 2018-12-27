@@ -3,7 +3,10 @@
 config = {
   "Server" => {
     "Socket" => p("lxd_cpi.lxd.unix_socket")
-  }
+  },
+  "Project" => p("lxd_cpi.lxd.project_name"),
+  "Profile" => p("lxd_cpi.lxd.profile_name"),
+  "Network" => p("lxd_cpi.lxd.network_name")
 }
 
 JSON.dump(config)

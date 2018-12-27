@@ -20,7 +20,7 @@ function do_deps() {
   cd src
 
   # Remove all deps
-  find * -maxdepth 3 -type d | grep -v '^lxd-bosh-cpi$' | xargs rm -rf
+  #find * -maxdepth 3 -type d | grep -v '^lxd-bosh-cpi$' | xargs rm -rf
 
   go get -d -t -v lxd-bosh-cpi/...
 
@@ -65,6 +65,9 @@ function do_deploy() {
     -v cpi_path=$cpi_path \
     -v director_name=lxd \
     -v lxd_unix_socket=$lxd_unix_socket \
+    -v lxd_project_name=bosh \
+    -v lxd_profile_name=default \
+    -v lxd_network_name=boshbr0 \
     -v internal_cidr=10.245.0.0/16 \
     -v internal_gw=10.245.0.1 \
     -v internal_ip=10.245.0.11

@@ -53,9 +53,16 @@ func (f CPIFactory) New(_ apiv1.CallContext) (apiv1.CPI, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// If a project has been specified, we use it _always_
+	if len(f.config.Profile) != 0 {
+		c = c.UseProject(f.config.Project)
+	}
+
 	cpi := CPI{
 		client:  c,
 		uuidGen: boshuuid.NewGenerator(),
+		config:  f.config,
 	}
 	return cpi, nil
 }
@@ -64,56 +71,11 @@ func (f CPIFactory) New(_ apiv1.CallContext) (apiv1.CPI, error) {
 type CPI struct {
 	client  lxdclient.ContainerServer
 	uuidGen boshuuid.Generator
+	config  Config
 }
 
 func (c CPI) Info() (apiv1.Info, error) {
 	return apiv1.Info{StemcellFormats: []string{"warden-tar"}}, nil
-}
-
-func (c CPI) GetDisks(cid apiv1.VMCID) ([]apiv1.DiskCID, error) {
-	return []apiv1.DiskCID{}, nil
-}
-
-func (c CPI) CreateDisk(size int,
-	cloudProps apiv1.DiskCloudProps, associatedVMCID *apiv1.VMCID) (apiv1.DiskCID, error) {
-
-	return apiv1.NewDiskCID("disk-cid"), nil
-}
-
-func (c CPI) DeleteDisk(cid apiv1.DiskCID) error {
-	return nil
-}
-
-func (c CPI) AttachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
-	return nil
-}
-
-func (c CPI) AttachDiskV2(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) (apiv1.DiskHint, error) {
-	return apiv1.NewDiskHintFromString(""), nil
-}
-
-func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
-	return nil
-}
-
-func (c CPI) HasDisk(cid apiv1.DiskCID) (bool, error) {
-	return false, nil
-}
-
-func (c CPI) SetDiskMetadata(cid apiv1.DiskCID, metadata apiv1.DiskMeta) error {
-	return nil
-}
-
-func (c CPI) ResizeDisk(cid apiv1.DiskCID, size int) error {
-	return nil
-}
-
-func (c CPI) SnapshotDisk(cid apiv1.DiskCID, meta apiv1.DiskMeta) (apiv1.SnapshotCID, error) {
-	return apiv1.NewSnapshotCID("snap-cid"), nil
-}
-
-func (c CPI) DeleteSnapshot(cid apiv1.SnapshotCID) error {
-	return nil
 }
 
 // LXDCloudProperties represents the StemcellCloudProps supplied by the Bosh
@@ -133,7 +95,7 @@ type LXDCloudProperties struct {
 }
 
 // LXDVMCloudProperties represents the StemcellCloudProps supplied by the Bosh
-// stemcell in CreateStemcell.
+// stemcell in CreateVM.
 type LXDVMCloudProperties struct {
 	InstanceType  string `json:"instance_type" yaml:"instance_type"`
 	EphemeralDisk string `json:"ephemeral_disk" yaml:"ephemeral_disk"`

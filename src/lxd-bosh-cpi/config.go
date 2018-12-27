@@ -8,14 +8,25 @@ import (
 )
 
 type Config struct {
-	Server LXD
+	Server  LXD
+	Project string
+	Profile string
+	Network string
 }
 type LXD struct {
 	Socket string
 }
 
 func NewConfigFromPath(path string, fs boshsys.FileSystem) (Config, error) {
-	var config Config
+	// This includes any default values
+	config := Config{
+		Server: LXD{
+			Socket: "/var/lib/lxd/unix.socket",
+		},
+		Project: "default",
+		Profile: "default",
+		Network: "lxdbr0", // Default network bridge?
+	}
 
 	bytes, err := fs.ReadFile(path)
 	if err != nil {
