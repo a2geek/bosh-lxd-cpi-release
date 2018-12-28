@@ -11,6 +11,9 @@ source ${pkg_dir}/bosh/compile.env
 
 mkdir ../src && cp -a * ../src/ && mv ../src ./src
 
-mkdir $BOSH_INSTALL_TARGET/bin
+if [ ! -d $BOSH_INSTALL_TARGET/bin ]
+then
+  mkdir $BOSH_INSTALL_TARGET/bin
+fi
 
 go build -o $BOSH_INSTALL_TARGET/bin/cpi src/lxd-bosh-cpi/*.go
