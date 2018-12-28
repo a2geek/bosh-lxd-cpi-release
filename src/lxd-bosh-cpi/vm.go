@@ -41,16 +41,27 @@ func (c CPI) CreateVMV2(
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Cloud Props")
 	}
+
+	devices := make(map[string]map[string]string)
+	eth := 0
+	for _, net := range networks {
+		net.SetPreconfigured()
+		name := fmt.Sprintf("eth%d", eth)
+		devices[name] = map[string]string{
+			"name":         name,
+			"nictype":      "bridged",
+			"parent":       c.config.Network,
+			"type":         "nic",
+			"ipv4.address": net.IP(),
+		}
+		eth++
+	}
+
 	containersPost := api.ContainersPost{
 		ContainerPut: api.ContainerPut{
-			Devices: map[string]map[string]string{
-				"eth0": map[string]string{
-					"name":         "eth0",
-					"nictype":      "bridged",
-					"parent":       c.config.Network,
-					"type":         "nic",
-					"ipv4.address": networks["default"].IP(),
-				},
+			Devices: devices,
+			Config: map[string]string{
+				"security.privileged": "true",
 			},
 			Profiles:    []string{c.config.Profile},
 			Description: "hello world",
@@ -74,15 +85,20 @@ func (c CPI) CreateVMV2(
 	}
 
 	// Write the eth0 file for auto configuration. This is likely a bug waiting to happen. :-(
-	eth0FileArgs := lxd.ContainerFileArgs{
-		Content:   strings.NewReader("# Using LXD DHCP to statically assign our IP address\nauto eth0\niface eth0 inet dhcp\n"),
-		UID:       0,    // root
-		GID:       0,    // root
-		Mode:      0644, // rw-r--r--
-		Type:      "file",
-		WriteMode: "overwrite",
+	for name, _ := range devices {
+		template := "# Using LXD DHCP to statically assign our IP address\nauto %s\niface %s inet dhcp\n"
+		content := fmt.Sprintf(template, name, name)
+		fileArgs := lxd.ContainerFileArgs{
+			Content:   strings.NewReader(content),
+			UID:       0,    // root
+			GID:       0,    // root
+			Mode:      0644, // rw-r--r--
+			Type:      "file",
+			WriteMode: "overwrite",
+		}
+		path := fmt.Sprintf("/etc/network/interfaces.d/%s", name)
+		c.client.CreateContainerFile(theCid, path, fileArgs)
 	}
-	c.client.CreateContainerFile(theCid, "/etc/network/interfaces.d/eth0", eth0FileArgs)
 
 	agentEnv := apiv1.AgentEnvFactory{}.ForVM(agentID, vmCid, networks, env, c.config.Agent)
 	//agentEnv.AttachSystemDisk("")
@@ -113,6 +129,32 @@ func (c CPI) CreateVMV2(
 }
 
 func (c CPI) DeleteVM(cid apiv1.VMCID) error {
+	req := api.ContainerStatePut{
+		Action:   "stop",
+		Timeout:  30,
+		Force:    true,
+		Stateful: false,
+	}
+
+	op, err := c.client.UpdateContainerState(cid.AsString(), req, "")
+	if err != nil {
+		return bosherr.WrapError(err, "stop vm")
+	}
+
+	err = op.Wait()
+	if err != nil {
+		return bosherr.WrapError(err, "stop vm2")
+	}
+
+	op, err = c.client.DeleteContainer(cid.AsString())
+	if err != nil {
+		return bosherr.WrapError(err, "Delete VM")
+	}
+	err = op.Wait()
+	if err != nil {
+		return bosherr.WrapError(err, "Delete VM2")
+	}
+
 	return nil
 }
 
