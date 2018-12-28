@@ -37,10 +37,10 @@ function do_clean() {
   rm -f creds.yml
   rm -f state.json
 
-  lxc list --format json |
+  lxc --project bosh list --format json |
     jq -r '.[] | .name | select(test("c-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"))' |
     xargs --verbose --no-run-if-empty --max-args=1 lxc delete -f
-  lxc image list --format json |
+  lxc --project bosh image list --format json |
     jq -r '.[] | select(.aliases[0].name | test("img-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) | .fingerprint' |
     xargs --verbose --no-run-if-empty --max-args=1 lxc image delete
 }
