@@ -1,7 +1,11 @@
 package main
 
 import (
+	"fmt"
+
+	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 	"github.com/cppforlife/bosh-cpi-go/apiv1"
+	"github.com/lxc/lxd/shared/api"
 )
 
 func (c CPI) GetDisks(cid apiv1.VMCID) ([]apiv1.DiskCID, error) {
@@ -11,10 +15,38 @@ func (c CPI) GetDisks(cid apiv1.VMCID) ([]apiv1.DiskCID, error) {
 func (c CPI) CreateDisk(size int,
 	cloudProps apiv1.DiskCloudProps, associatedVMCID *apiv1.VMCID) (apiv1.DiskCID, error) {
 
-	return apiv1.NewDiskCID("disk-cid"), nil
+	id, err := c.uuidGen.Generate()
+	if err != nil {
+		return apiv1.DiskCID{}, bosherr.WrapError(err, "Creating Disk id")
+	}
+	theCid := "vol-" + id
+	diskCid := apiv1.NewDiskCID(theCid)
+
+	storageVolumeRequest := api.StorageVolumesPost{
+		Name: theCid,
+		Type: "custom",
+		StorageVolumePut: api.StorageVolumePut{
+			Config: map[string]string{
+				"size": fmt.Sprintf("%dMB", size),
+			},
+		},
+	}
+
+	// FIXME: default is assumed to be name
+	err = c.client.CreateStoragePoolVolume("default", storageVolumeRequest)
+	if err != nil {
+		return apiv1.DiskCID{}, bosherr.WrapError(err, "Creating volume")
+	}
+
+	return diskCid, nil
 }
 
 func (c CPI) DeleteDisk(cid apiv1.DiskCID) error {
+	err := c.client.DeleteStoragePoolVolume("default", "custom", cid.AsString())
+	if err != nil {
+		return bosherr.WrapError(err, "Deleting volume")
+	}
+
 	return nil
 }
 
