@@ -51,19 +51,96 @@ func (c CPI) DeleteDisk(cid apiv1.DiskCID) error {
 }
 
 func (c CPI) AttachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
-	return nil
+	_, err := c.AttachDiskV2(vmCID, diskCID)
+	return err
 }
 
 func (c CPI) AttachDiskV2(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) (apiv1.DiskHint, error) {
-	return apiv1.NewDiskHintFromString(""), nil
+	err := c.stopVM(vmCID)
+	if err != nil {
+		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Stopping container")
+	}
+
+	container, etag, err := c.client.GetContainer(vmCID.AsString())
+	if err != nil {
+		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Get container state")
+	}
+
+	// Check if the device already exists
+	_, ok := container.Devices[diskCID.AsString()]
+	if ok {
+		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Device already exists: "+diskCID.AsString())
+	}
+
+	container.Devices[diskCID.AsString()] = map[string]string{
+		"type":   "disk",
+		"pool":   "default",
+		"path":   "/dev/bosh/" + diskCID.AsString(),
+		"source": diskCID.AsString(),
+	}
+
+	op, err := c.client.UpdateContainer(vmCID.AsString(), container.Writable(), etag)
+	if err != nil {
+		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Update container state")
+	}
+
+	err = op.Wait()
+	if err != nil {
+		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Update container state - wait")
+	}
+
+	err = c.startVM(vmCID)
+	if err != nil {
+		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Starting container")
+	}
+
+	return apiv1.NewDiskHintFromString(container.Devices[diskCID.AsString()]["path"]), nil
 }
 
 func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
+	err := c.stopVM(vmCID)
+	if err != nil {
+		return bosherr.WrapError(err, "Stopping container")
+	}
+
+	container, etag, err := c.client.GetContainer(vmCID.AsString())
+	if err != nil {
+		return bosherr.WrapError(err, "Get container state")
+	}
+
+	// Check if the device already exists
+	_, ok := container.Devices[diskCID.AsString()]
+	if !ok {
+		return bosherr.WrapError(err, "Device already exists: "+diskCID.AsString())
+	}
+
+	delete(container.Devices, diskCID.AsString())
+
+	op, err := c.client.UpdateContainer(vmCID.AsString(), container.Writable(), etag)
+	if err != nil {
+		return bosherr.WrapError(err, "Update container state")
+	}
+
+	err = op.Wait()
+	if err != nil {
+		return bosherr.WrapError(err, "Update container state - wait")
+	}
+
+	err = c.startVM(vmCID)
+	if err != nil {
+		return bosherr.WrapError(err, "Starting container")
+	}
+
 	return nil
 }
 
 func (c CPI) HasDisk(cid apiv1.DiskCID) (bool, error) {
-	return false, nil
+	_, etag, err := c.client.GetStoragePoolVolume("default", "custom", cid.AsString())
+	if err != nil {
+		return false, bosherr.WrapError(err, "Locating storage volume")
+	}
+
+	return len(etag) > 0, nil
 }
 
 func (c CPI) SetDiskMetadata(cid apiv1.DiskCID, metadata apiv1.DiskMeta) error {

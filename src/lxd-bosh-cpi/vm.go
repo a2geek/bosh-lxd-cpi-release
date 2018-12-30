@@ -152,30 +152,18 @@ func (c CPI) CreateVMV2(
 }
 
 func (c CPI) DeleteVM(cid apiv1.VMCID) error {
-	req := api.ContainerStatePut{
-		Action:   "stop",
-		Timeout:  30,
-		Force:    true,
-		Stateful: false,
-	}
-
-	op, err := c.client.UpdateContainerState(cid.AsString(), req, "")
+	err := c.stopVM(cid)
 	if err != nil {
-		return bosherr.WrapError(err, "stop vm")
+		return bosherr.WrapError(err, "Delete VM - stop")
 	}
 
-	err = op.Wait()
-	if err != nil {
-		return bosherr.WrapError(err, "stop vm2")
-	}
-
-	op, err = c.client.DeleteContainer(cid.AsString())
+	op, err := c.client.DeleteContainer(cid.AsString())
 	if err != nil {
 		return bosherr.WrapError(err, "Delete VM")
 	}
 	err = op.Wait()
 	if err != nil {
-		return bosherr.WrapError(err, "Delete VM2")
+		return bosherr.WrapError(err, "Delete VM - wait")
 	}
 
 	return nil
@@ -201,8 +189,20 @@ func (c CPI) HasVM(cid apiv1.VMCID) (bool, error) {
 }
 
 func (c CPI) RebootVM(cid apiv1.VMCID) error {
+	return c.setVMAction(cid, "restart")
+}
+
+func (c CPI) stopVM(cid apiv1.VMCID) error {
+	return c.setVMAction(cid, "stop")
+}
+
+func (c CPI) startVM(cid apiv1.VMCID) error {
+	return c.setVMAction(cid, "start")
+}
+
+func (c CPI) setVMAction(cid apiv1.VMCID, action string) error {
 	req := api.ContainerStatePut{
-		Action:   "restart",
+		Action:   action,
 		Timeout:  30,
 		Force:    true,
 		Stateful: false,
@@ -210,12 +210,12 @@ func (c CPI) RebootVM(cid apiv1.VMCID) error {
 
 	op, err := c.client.UpdateContainerState(cid.AsString(), req, "")
 	if err != nil {
-		return bosherr.WrapError(err, "reboot vm")
+		return bosherr.WrapError(err, "Set VM Action - "+action)
 	}
 
 	err = op.Wait()
 	if err != nil {
-		return bosherr.WrapError(err, "reboot vm")
+		return bosherr.WrapError(err, "Set VM Action - wait - "+action)
 	}
 
 	return nil
