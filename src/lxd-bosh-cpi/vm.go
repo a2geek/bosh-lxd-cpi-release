@@ -84,8 +84,7 @@ func (c CPI) CreateVMV2(
 			Config: map[string]string{
 				"security.privileged": "true",
 			},
-			Profiles:    []string{c.config.Profile},
-			Description: "hello world",
+			Profiles: []string{c.config.Profile},
 		},
 		Name:         theCid,
 		InstanceType: props.InstanceType,
