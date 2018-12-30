@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
@@ -65,9 +66,11 @@ func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) 
 		Architecture: props.Architecture,
 		CreationDate: rootfsInfo.ModTime().Unix(),
 		Properties: map[string]string{
-			"architecture": props.Architecture,
-			"description":  description,
-			"os":           strings.Title(props.OsDistro),
+			"architecture":     props.Architecture,
+			"description":      description,
+			"os":               strings.Title(props.OsDistro),
+			"root_device_name": props.RootDeviceName,
+			"root_disk_size":   strconv.Itoa(props.Disk),
 		},
 	}
 	metadataYaml, err := yaml.Marshal(metadata)

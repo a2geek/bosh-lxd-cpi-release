@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"strings"
 
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
@@ -57,6 +58,26 @@ func (c CPI) CreateVMV2(
 		eth++
 	}
 
+	// Add root device
+	imageAlias, _, err := c.client.GetImageAlias(containerSource.Alias)
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Image Alias locate")
+	}
+	image, _, err := c.client.GetImage(imageAlias.Target)
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Image retrieval")
+	}
+	rootDeviceSize, err := strconv.Atoi(image.Properties["root_disk_size"])
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Root device size not determined")
+	}
+	devices["root"] = map[string]string{
+		"type": "disk",
+		"pool": "default",
+		"path": "/",
+		"size": fmt.Sprintf("%dMB", rootDeviceSize),
+	}
+
 	containersPost := api.ContainersPost{
 		ContainerPut: api.ContainerPut{
 			Devices: devices,
@@ -85,7 +106,10 @@ func (c CPI) CreateVMV2(
 	}
 
 	// Write the eth0 file for auto configuration. This is likely a bug waiting to happen. :-(
-	for name, _ := range devices {
+	for name, device := range devices {
+		if device["type"] != "nic" {
+			continue
+		}
 		template := "# Using LXD DHCP to statically assign our IP address\nauto %s\niface %s inet dhcp\n"
 		content := fmt.Sprintf(template, name, name)
 		fileArgs := lxd.ContainerFileArgs{
@@ -101,7 +125,7 @@ func (c CPI) CreateVMV2(
 	}
 
 	agentEnv := apiv1.AgentEnvFactory{}.ForVM(agentID, vmCid, networks, env, c.config.Agent)
-	//agentEnv.AttachSystemDisk("")
+	agentEnv.AttachSystemDisk(apiv1.NewDiskHintFromString(""))
 	agentEnvContents, err := agentEnv.AsBytes()
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "AgentEnv as Bytes")
