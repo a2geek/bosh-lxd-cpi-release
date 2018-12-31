@@ -10,6 +10,11 @@ case $1 in
     mkdir -p           $RUN_DIR $LOG_DIR
     chown -R vcap:vcap $RUN_DIR $LOG_DIR
 
+    # Hack to fix permission issues?!
+    mkdir -p /var/vcap/data/sys
+    chmod 755 /var/vcap/data
+    chmod 755 /var/vcap/data/sys
+
     echo 1 > $PIDFILE
     ;;
 
