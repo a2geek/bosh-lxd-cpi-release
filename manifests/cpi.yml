@@ -17,6 +17,15 @@
   value:
     instance_type: c2-m4
     ephemeral_disk: 16_384
+    devices:
+      lxdsocket:
+        type: proxy
+        connect: unix:((lxd_unix_socket))
+        listen: unix:/warden-cpi-dev/lxd.socket
+        bind: container
+        uid: "1000"   # vcap
+        gid: "1000"   # vcap
+        mode: "0660"
 
 # Add CPI job
 - type: replace
@@ -38,7 +47,7 @@
   path: /instance_groups/name=bosh/properties/lxd_cpi?
   value:
     lxd:
-      unix_socket: ((lxd_unix_socket))
+      unix_socket: /warden-cpi-dev/lxd.socket
       project_name: ((lxd_project_name))
       profile_name: ((lxd_profile_name))
       network_name: ((lxd_network_name))

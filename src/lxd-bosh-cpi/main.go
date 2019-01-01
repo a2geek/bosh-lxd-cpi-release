@@ -99,4 +99,7 @@ type LXDCloudProperties struct {
 type LXDVMCloudProperties struct {
 	InstanceType  string `json:"instance_type" yaml:"instance_type"`
 	EphemeralDisk int    `json:"ephemeral_disk" yaml:"ephemeral_disk"`
+	// Devices is formatted as a map of maps. The key for the primary entry is the device name
+	// and the secondary map keys are all the device properties.
+	Devices map[string]map[string]string `json:"devices" yaml:"devices"`
 }

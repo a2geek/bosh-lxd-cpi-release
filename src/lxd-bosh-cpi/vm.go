@@ -78,6 +78,10 @@ func (c CPI) CreateVMV2(
 		"size": fmt.Sprintf("%dMB", rootDeviceSize),
 	}
 
+	for name, settings := range props.Devices {
+		devices[name] = settings
+	}
+
 	containersPost := api.ContainersPost{
 		ContainerPut: api.ContainerPut{
 			Devices: devices,
