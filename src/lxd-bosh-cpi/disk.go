@@ -1,11 +1,8 @@
 package main
 
 import (
-	"fmt"
-
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 	"github.com/cppforlife/bosh-cpi-go/apiv1"
-	"github.com/lxc/lxd/shared/api"
 )
 
 func (c CPI) GetDisks(cid apiv1.VMCID) ([]apiv1.DiskCID, error) {
@@ -19,21 +16,11 @@ func (c CPI) CreateDisk(size int,
 	if err != nil {
 		return apiv1.DiskCID{}, bosherr.WrapError(err, "Creating Disk id")
 	}
-	theCid := "vol-" + id
+	theCid := "vol-p-" + id
 	diskCid := apiv1.NewDiskCID(theCid)
 
-	storageVolumeRequest := api.StorageVolumesPost{
-		Name: theCid,
-		Type: "custom",
-		StorageVolumePut: api.StorageVolumePut{
-			Config: map[string]string{
-				"size": fmt.Sprintf("%dMB", size),
-			},
-		},
-	}
-
 	// FIXME: default is assumed to be name
-	err = c.client.CreateStoragePoolVolume("default", storageVolumeRequest)
+	err = c.createDisk(size, theCid)
 	if err != nil {
 		return apiv1.DiskCID{}, bosherr.WrapError(err, "Creating volume")
 	}
@@ -61,32 +48,9 @@ func (c CPI) AttachDiskV2(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) (apiv1.DiskH
 		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Stopping container")
 	}
 
-	container, etag, err := c.client.GetContainer(vmCID.AsString())
+	path, err := c.attachDiskToVM(vmCID, diskCID.AsString())
 	if err != nil {
-		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Get container state")
-	}
-
-	// Check if the device already exists
-	_, ok := container.Devices[diskCID.AsString()]
-	if ok {
-		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Device already exists: "+diskCID.AsString())
-	}
-
-	container.Devices[diskCID.AsString()] = map[string]string{
-		"type":   "disk",
-		"pool":   "default",
-		"path":   "/dev/bosh/" + diskCID.AsString(),
-		"source": diskCID.AsString(),
-	}
-
-	op, err := c.client.UpdateContainer(vmCID.AsString(), container.Writable(), etag)
-	if err != nil {
-		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Update container state")
-	}
-
-	err = op.Wait()
-	if err != nil {
-		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Update container state - wait")
+		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Attach disk")
 	}
 
 	err = c.startVM(vmCID)
@@ -94,7 +58,7 @@ func (c CPI) AttachDiskV2(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) (apiv1.DiskH
 		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Starting container")
 	}
 
-	return apiv1.NewDiskHintFromString(container.Devices[diskCID.AsString()]["path"]), nil
+	return apiv1.NewDiskHintFromMap(map[string]interface{}{"path": path}), nil
 }
 
 func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {

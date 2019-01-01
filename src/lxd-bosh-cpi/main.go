@@ -98,5 +98,5 @@ type LXDCloudProperties struct {
 // stemcell in CreateVM.
 type LXDVMCloudProperties struct {
 	InstanceType  string `json:"instance_type" yaml:"instance_type"`
-	EphemeralDisk string `json:"ephemeral_disk" yaml:"ephemeral_disk"`
+	EphemeralDisk int    `json:"ephemeral_disk" yaml:"ephemeral_disk"`
 }

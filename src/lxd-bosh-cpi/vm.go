@@ -125,6 +125,27 @@ func (c CPI) CreateVMV2(
 
 	agentEnv := apiv1.AgentEnvFactory{}.ForVM(agentID, vmCid, networks, env, c.config.Agent)
 	agentEnv.AttachSystemDisk(apiv1.NewDiskHintFromString(""))
+
+	if props.EphemeralDisk > 0 {
+		diskId, err := c.uuidGen.Generate()
+		if err != nil {
+			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating Disk id")
+		}
+		diskCid := "vol-e-" + diskId
+
+		err = c.createDisk(props.EphemeralDisk, diskCid)
+		if err != nil {
+			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Create ephemeral disk")
+		}
+
+		path, err := c.attachDiskToVM(vmCid, diskCid)
+		if err != nil {
+			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Attach ephemeral disk")
+		}
+
+		agentEnv.AttachEphemeralDisk(apiv1.NewDiskHintFromMap(map[string]interface{}{"path": path}))
+	}
+
 	agentEnvContents, err := agentEnv.AsBytes()
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "AgentEnv as Bytes")
@@ -190,33 +211,4 @@ func (c CPI) HasVM(cid apiv1.VMCID) (bool, error) {
 
 func (c CPI) RebootVM(cid apiv1.VMCID) error {
 	return c.setVMAction(cid, "restart")
-}
-
-func (c CPI) stopVM(cid apiv1.VMCID) error {
-	return c.setVMAction(cid, "stop")
-}
-
-func (c CPI) startVM(cid apiv1.VMCID) error {
-	return c.setVMAction(cid, "start")
-}
-
-func (c CPI) setVMAction(cid apiv1.VMCID, action string) error {
-	req := api.ContainerStatePut{
-		Action:   action,
-		Timeout:  30,
-		Force:    true,
-		Stateful: false,
-	}
-
-	op, err := c.client.UpdateContainerState(cid.AsString(), req, "")
-	if err != nil {
-		return bosherr.WrapError(err, "Set VM Action - "+action)
-	}
-
-	err = op.Wait()
-	if err != nil {
-		return bosherr.WrapError(err, "Set VM Action - wait - "+action)
-	}
-
-	return nil
 }
