@@ -138,7 +138,7 @@ func (c CPI) CreateVMV2(
 			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Create ephemeral disk")
 		}
 
-		path, err := c.attachDiskToVM(vmCid, diskCid)
+		path, err := c.attachDiskDeviceToVM(vmCid, diskCid, "/var/vcap/data")
 		if err != nil {
 			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Attach ephemeral disk")
 		}

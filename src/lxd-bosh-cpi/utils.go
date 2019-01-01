@@ -80,12 +80,15 @@ func (c CPI) createDisk(size int, name string) error {
 }
 
 func (c CPI) attachDiskToVM(vmCID apiv1.VMCID, diskId string) (string, error) {
-	path := "/dev/bosh/" + diskId
+	return c.attachDiskDeviceToVM(vmCID, diskId, "/dev/bosh/"+diskId)
+}
+
+func (c CPI) attachDiskDeviceToVM(vmCID apiv1.VMCID, diskId string, devicePath string) (string, error) {
 	device := map[string]string{
 		"type":   "disk",
 		"pool":   "default",
-		"path":   path,
+		"path":   devicePath,
 		"source": diskId,
 	}
-	return path, c.addDevice(vmCID, diskId, device)
+	return devicePath, c.addDevice(vmCID, diskId, device)
 }
