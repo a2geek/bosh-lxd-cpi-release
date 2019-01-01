@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 	"github.com/cppforlife/bosh-cpi-go/apiv1"
+	lxd "github.com/lxc/lxd/client"
 	"github.com/lxc/lxd/shared/api"
 )
 
@@ -91,4 +93,16 @@ func (c CPI) attachDiskDeviceToVM(vmCID apiv1.VMCID, diskId string, devicePath s
 		"source": diskId,
 	}
 	return devicePath, c.addDevice(vmCID, diskId, device)
+}
+
+func (c CPI) writeFilesAsRootToVM(vmCID apiv1.VMCID, filemode int, path string, content string) error {
+	fileArgs := lxd.ContainerFileArgs{
+		Content:   strings.NewReader(content),
+		UID:       0, // root
+		GID:       0, // root
+		Mode:      filemode,
+		Type:      "file",
+		WriteMode: "overwrite",
+	}
+	return c.client.CreateContainerFile(vmCID.AsString(), path, fileArgs)
 }

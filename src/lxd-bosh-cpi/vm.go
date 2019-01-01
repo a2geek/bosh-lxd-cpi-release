@@ -4,12 +4,26 @@ import (
 	"bytes"
 	"fmt"
 	"strconv"
-	"strings"
 
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 	"github.com/cppforlife/bosh-cpi-go/apiv1"
 	lxd "github.com/lxc/lxd/client"
 	"github.com/lxc/lxd/shared/api"
+)
+
+const (
+	FIXPERMISSIONS = "# Hack to fix permission issues\n" +
+		"mkdir -p /var/vcap/data/sys\n" +
+		"chmod 755 /var/vcap/data\n" +
+		"chmod 755 /var/vcap/data/sys\n"
+	MOUNTDISK = "# Manually re-mount persistent disk\n" +
+		"if [ -d /warden-cpi-dev/vol-p-* ]\n" +
+		"then\n" +
+		"  mount --bind /warden-cpi-dev/vol-p-* /var/vcap/store\n" +
+		"fi\n"
+	ATTACHETH = "# Using LXD DHCP to statically assign our IP address\n" +
+		"auto %s\n" +
+		"iface %s inet dhcp\n"
 )
 
 func (c CPI) CreateVM(
@@ -85,6 +99,7 @@ func (c CPI) CreateVMV2(
 	containersPost := api.ContainersPost{
 		ContainerPut: api.ContainerPut{
 			Devices: devices,
+			// FIXME: Should this be in config instead?
 			Config: map[string]string{
 				"security.privileged": "true",
 			},
@@ -113,18 +128,22 @@ func (c CPI) CreateVMV2(
 		if device["type"] != "nic" {
 			continue
 		}
-		template := "# Using LXD DHCP to statically assign our IP address\nauto %s\niface %s inet dhcp\n"
-		content := fmt.Sprintf(template, name, name)
-		fileArgs := lxd.ContainerFileArgs{
-			Content:   strings.NewReader(content),
-			UID:       0,    // root
-			GID:       0,    // root
-			Mode:      0644, // rw-r--r--
-			Type:      "file",
-			WriteMode: "overwrite",
-		}
+		content := fmt.Sprintf(ATTACHETH, name, name)
 		path := fmt.Sprintf("/etc/network/interfaces.d/%s", name)
-		c.client.CreateContainerFile(theCid, path, fileArgs)
+		err = c.writeFilesAsRootToVM(vmCid, 0644 /* rw-r--r-- */, path, content)
+		if err != nil {
+			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating network file "+path)
+		}
+	}
+
+	err = c.writeFilesAsRootToVM(vmCid, 0755 /* rwxr-xr-x */, "/etc/init.d/bosh-fix-permissions.sh", FIXPERMISSIONS)
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating firboot file")
+	}
+
+	err = c.writeFilesAsRootToVM(vmCid, 0755 /* rwxr-xr-x */, "/etc/init.d/bosh-mount-persistent.sh", MOUNTDISK)
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating mount persistent disk file")
 	}
 
 	agentEnv := apiv1.AgentEnvFactory{}.ForVM(agentID, vmCid, networks, env, c.config.Agent)
