@@ -1,0 +1,8 @@
+director_name: lxd
+lxd_project_name: bosh
+lxd_profile_name: default
+lxd_network_name: boshbr0
+internal_cidr: 10.245.0.0/16
+internal_gw: 10.245.0.1
+internal_ip: 10.245.0.11
+credhub_encryption_password: topsecret

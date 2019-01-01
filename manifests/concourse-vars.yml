@@ -1,0 +1,11 @@
+deployment_name: concourse
+network_name: default
+web_vm_type: default
+db_persistent_disk_type: default
+db_vm_type: default
+worker_vm_type: default
+web_ip: 10.245.0.250
+external_url: http://10.245.0.250
+local_user:
+  username: admin
+  password: admin
