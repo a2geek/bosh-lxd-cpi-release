@@ -43,9 +43,14 @@ function do_clean() {
   lxc --project bosh image list --format json |
     jq -r '.[] | select(.aliases[0].name // "not present" | test("img-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) | .fingerprint' |
     xargs --verbose --no-run-if-empty --max-args=1 lxc image delete
+  # NO JSON AVAILABLE?!
+  lxc storage volume list default |
+    grep custom |
+    cut -d"|" -f3 |
+    xargs -n 1 lxc storage volume delete default
 }
 
-function do_deploy() {
+function do_deploy_bosh() {
   set -eu
   bosh_deployment="${BOSH_DEPLOYMENT:-${HOME}/Documents/Source/bosh-deployment}"
   lxd_unix_socket="${LXD_SOCKET:-/var/lib/lxd/unix.socket}"
@@ -58,19 +63,15 @@ function do_deploy() {
 
   echo "-----> `date`: Create env"
   bosh create-env ${bosh_deployment}/bosh.yml \
-    -o ./manifests/cpi.yml \
-    -o ${bosh_deployment}/jumpbox-user.yml \
+    --ops-file=manifests/cpi.yml \
+    --ops-file=${bosh_deployment}/bbr.yml \
+    --ops-file=${bosh_deployment}/uaa.yml \
+    --ops-file=${bosh_deployment}/credhub.yml \
     --state=state.json \
     --vars-store=creds.yml \
-    -v cpi_path=$cpi_path \
-    -v director_name=lxd \
-    -v lxd_unix_socket=$lxd_unix_socket \
-    -v lxd_project_name=bosh \
-    -v lxd_profile_name=default \
-    -v lxd_network_name=boshbr0 \
-    -v internal_cidr=10.245.0.0/16 \
-    -v internal_gw=10.245.0.1 \
-    -v internal_ip=10.245.0.11
+    --vars-file=manifests/bosh-vars.yml \
+    --var=cpi_path=$cpi_path \
+    --var=lxd_unix_socket=$lxd_unix_socket
 }
 
 function do_capture_requests() {
@@ -92,6 +93,63 @@ function do_capture_requests() {
       (( num=num+1 ))
       echo $LINE | sed -nr "s/STDOUT: '(.*)'/\1/p" | json_pp > requests/response-$num.json
     done
+}
+
+function do_cloud_config() {
+  source scripts/bosh-env.sh
+  bosh update-cloud-config manifests/cloud-config.yml
+}
+
+function do_upload_stemcells() {
+  source scripts/bosh-env.sh
+
+  TRUSTY=$(bosh stemcells --json | jq -r '[ .Tables[] | .Rows[] | select(.os == "ubuntu-trusty")] | length')
+  if [ 0 -eq $TRUSTY ]
+  then
+    bosh upload-stemcell --sha1 c51a1ae3faadd470ded7b83f69d09971bdd7de7b \
+         https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-trusty-go_agent?v=3586.65
+  else
+    echo "ubuntu-trusty stemcell exists"
+  fi
+
+  XENIAL=$(bosh stemcells --json | jq -r '[ .Tables[] | .Rows[] | select(.os == "ubuntu-xenial")] | length')
+  if [ 0 -eq $XENIAL ]
+  then
+      bosh upload-stemcell --sha1 f67cc28a19d39ca0504f7fbf5a39859cc934c5eb \
+           https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-xenial-go_agent?v=170.15
+  else
+    echo "ubuntu-xenial stemcell exists"
+  fi
+}
+
+function do_upload_releases() {
+  source scripts/bosh-env.sh
+
+  # See https://github.com/concourse/concourse-bosh-deployment/issues/77
+  BBR=$(bosh --json releases | jq -r '[ .Tables[] | .Rows[] | select(.name == "backup-and-restore-sdk") ] | length')
+  if [ 0 -eq $BBR ]
+  then
+    bosh upload-release --sha1 8e74035caee59d84ec46e9dc5d84084e8c5ca5c8 \
+         https://bosh.io/d/github.com/cloudfoundry-incubator/backup-and-restore-sdk-release?v=1.11.2
+  else
+    echo "bbr release exists"
+  fi
+}
+
+function do_deploy_concourse() {
+  if [ -z "$CONCOURSE_DIR" ]
+  then
+    echo "Please set CONCOURSE_DIR to root of concourse-bosh-deployment"
+    exit 1
+  fi
+  source scripts/bosh-env.sh
+  bosh -d concourse deploy $CONCOURSE_DIR/cluster/concourse.yml \
+       -o $CONCOURSE_DIR/cluster/operations/backup-atc.yml \
+       -o $CONCOURSE_DIR/cluster/operations/basic-auth.yml \
+       -o $CONCOURSE_DIR/cluster/operations/static-web.yml \
+       -o $CONCOURSE_DIR/cluster/operations/privileged-http.yml \
+       -l $CONCOURSE_DIR/versions.yml \
+       -l manifests/concourse-vars.yml
 }
 
 if [[ "$0" == "bash" ]]
