@@ -73,6 +73,27 @@ function do_deploy() {
     -v internal_ip=10.245.0.11
 }
 
+function do_capture_requests() {
+  if [ ! -f log ]
+  then
+    echo "Expecting to find 'log' file."
+    exit 1
+  fi
+  mkdir -p requests
+  num=0
+  grep "STDIN: " log | while read LINE
+    do
+      (( num=num+1 ))
+      echo $LINE | sed -nr "s/STDIN: '(.*)'/\1/p" | json_pp > requests/request-$num.json
+    done
+  num=0
+  grep "STDOUT: " log | while read LINE
+    do
+      (( num=num+1 ))
+      echo $LINE | sed -nr "s/STDOUT: '(.*)'/\1/p" | json_pp > requests/response-$num.json
+    done
+}
+
 if [[ "$0" == "bash" ]]
 then
   alias util="${BASH_SOURCE}"
