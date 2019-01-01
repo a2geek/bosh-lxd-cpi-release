@@ -80,7 +80,7 @@ func (c CPI) createDisk(size int, name string) error {
 }
 
 func (c CPI) attachDiskToVM(vmCID apiv1.VMCID, diskId string) (string, error) {
-	return c.attachDiskDeviceToVM(vmCID, diskId, "/dev/bosh/"+diskId)
+	return c.attachDiskDeviceToVM(vmCID, diskId, "/warden-cpi-dev/"+diskId)
 }
 
 func (c CPI) attachDiskDeviceToVM(vmCID apiv1.VMCID, diskId string, devicePath string) (string, error) {
