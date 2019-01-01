@@ -1,4 +1,4 @@
-check process warden_cpi
+check process lxd_cpi
   with pidfile /var/vcap/sys/run/lxd_cpi/cpi.pid
   start program "/var/vcap/jobs/lxd_cpi/bin/cpi_ctl start"
   stop program "/var/vcap/jobs/lxd_cpi/bin/cpi_ctl stop"
