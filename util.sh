@@ -10,8 +10,11 @@ function do_help() {
   echo "Note that this script will detect if it is sourced in and setup an alias."
   echo
   echo "Useful environment variables to export..."
+  echo "- BOSH_LOG_LEVEL (set to 'debug' to capture all bosh activity including request/response)"
   echo "- LXD_SOCKET (default: /var/lib/lxd/unix.socket)"
   echo "- BOSH_DEPLOYMENT (default: \${HOME}/Documents/Source/bosh-deployment)"
+  echo "- CONCOURSE_DIR when deploying Concourse"
+  echo "- ZOOKEEPER_DIR when deploying ZooKeeper"
 }
 
 function do_deps() {
@@ -142,6 +145,7 @@ function do_deploy_concourse() {
     echo "Please set CONCOURSE_DIR to root of concourse-bosh-deployment"
     exit 1
   fi
+  set -eux
   source scripts/bosh-env.sh
   bosh -d concourse deploy $CONCOURSE_DIR/cluster/concourse.yml \
        -o $CONCOURSE_DIR/cluster/operations/backup-atc.yml \
@@ -152,10 +156,25 @@ function do_deploy_concourse() {
        -l manifests/concourse-vars.yml
 }
 
+function do_deploy_zookeeper() {
+  if [ -z "$ZOOKEEPER_DIR" ]
+  then
+    echo "Please set ZOOKEEPER_DIR to root of zookeeper-release"
+    exit 1
+  fi
+  set -eux
+  source scripts/bosh-env.sh
+  export BOSH_DEPLOYMENT=zookeeper
+  bosh deploy $ZOOKEEPER_DIR/manifests/zookeeper.yml
+  bosh run-errand smoke-tests
+  bosh run-errand status
+}
+
 if [[ "$0" == "bash" ]]
 then
   alias util="${BASH_SOURCE}"
   echo "'util' now available."
 else
+  export BOSH_NON_INTERACTIVE=true
   do_${1:-help}
 fi
