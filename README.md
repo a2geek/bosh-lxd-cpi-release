@@ -101,7 +101,7 @@ $ export BOSH_DEPLOYMENT=...
 
 # 'util.sh' has all the pieces currently being used.
 # Source it in to setup the 'util' alias.
-$ source util.sh
+$ source ./util.sh
 'util' now available.
 
 # Note: 'util' assumes you are in the root of this project.
