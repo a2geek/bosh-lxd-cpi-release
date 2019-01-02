@@ -77,8 +77,7 @@ func (c CPI) createDisk(size int, name string) error {
 		},
 	}
 
-	// FIXME: default is assumed to be name
-	return c.client.CreateStoragePoolVolume("default", storageVolumeRequest)
+	return c.client.CreateStoragePoolVolume(c.config.Server.StoragePool, storageVolumeRequest)
 }
 
 func (c CPI) attachDiskToVM(vmCID apiv1.VMCID, diskId string) (string, error) {
@@ -88,7 +87,7 @@ func (c CPI) attachDiskToVM(vmCID apiv1.VMCID, diskId string) (string, error) {
 func (c CPI) attachDiskDeviceToVM(vmCID apiv1.VMCID, diskId string, devicePath string) (string, error) {
 	device := map[string]string{
 		"type":   "disk",
-		"pool":   "default",
+		"pool":   c.config.Server.StoragePool,
 		"path":   devicePath,
 		"source": diskId,
 	}

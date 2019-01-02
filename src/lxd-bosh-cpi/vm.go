@@ -65,7 +65,7 @@ func (c CPI) CreateVMV2(
 		devices[name] = map[string]string{
 			"name":         name,
 			"nictype":      "bridged",
-			"parent":       c.config.Network,
+			"parent":       c.config.Server.Network,
 			"type":         "nic",
 			"ipv4.address": net.IP(),
 		}
@@ -87,7 +87,7 @@ func (c CPI) CreateVMV2(
 	}
 	devices["root"] = map[string]string{
 		"type": "disk",
-		"pool": "default",
+		"pool": c.config.Server.StoragePool,
 		"path": "/",
 		"size": fmt.Sprintf("%dMB", rootDeviceSize),
 	}
@@ -103,7 +103,7 @@ func (c CPI) CreateVMV2(
 			Config: map[string]string{
 				"security.privileged": "true",
 			},
-			Profiles: []string{c.config.Profile},
+			Profiles: []string{c.config.Server.Profile},
 		},
 		Name:         theCid,
 		InstanceType: props.InstanceType,
@@ -200,6 +200,9 @@ func (c CPI) DeleteVM(cid apiv1.VMCID) error {
 	if err != nil {
 		return bosherr.WrapError(err, "Delete VM - stop")
 	}
+
+	// TODO: Do we need to delete the ephemeral volume at this time?
+	// It wasn't requested, so presumably the answer is "yes".
 
 	op, err := c.client.DeleteContainer(cid.AsString())
 	if err != nil {

@@ -29,7 +29,7 @@ func (c CPI) CreateDisk(size int,
 }
 
 func (c CPI) DeleteDisk(cid apiv1.DiskCID) error {
-	err := c.client.DeleteStoragePoolVolume("default", "custom", cid.AsString())
+	err := c.client.DeleteStoragePoolVolume(c.config.Server.StoragePool, "custom", cid.AsString())
 	if err != nil {
 		return bosherr.WrapError(err, "Deleting volume")
 	}
@@ -99,7 +99,7 @@ func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
 }
 
 func (c CPI) HasDisk(cid apiv1.DiskCID) (bool, error) {
-	_, etag, err := c.client.GetStoragePoolVolume("default", "custom", cid.AsString())
+	_, etag, err := c.client.GetStoragePoolVolume(c.config.Server.StoragePool, "custom", cid.AsString())
 	if err != nil {
 		return false, bosherr.WrapError(err, "Locating storage volume")
 	}

@@ -55,8 +55,8 @@ func (f CPIFactory) New(_ apiv1.CallContext) (apiv1.CPI, error) {
 	}
 
 	// If a project has been specified, we use it _always_
-	if len(f.config.Profile) != 0 {
-		c = c.UseProject(f.config.Project)
+	if len(f.config.Server.Project) != 0 {
+		c = c.UseProject(f.config.Server.Project)
 	}
 
 	cpi := CPI{

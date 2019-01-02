@@ -9,25 +9,27 @@ import (
 )
 
 type Config struct {
-	Server  LXD
-	Project string
-	Profile string
-	Network string
-	Agent   apiv1.AgentOptions
+	Server LXD
+	Agent  apiv1.AgentOptions
 }
 type LXD struct {
-	Socket string
+	Socket      string
+	Project     string
+	Profile     string
+	Network     string
+	StoragePool string
 }
 
 func NewConfigFromPath(path string, fs boshsys.FileSystem) (Config, error) {
 	// This includes any default values
 	config := Config{
 		Server: LXD{
-			Socket: "/var/lib/lxd/unix.socket",
+			Socket:      "/var/lib/lxd/unix.socket",
+			Project:     "default",
+			Profile:     "default",
+			Network:     "lxdbr0", // Default network bridge?
+			StoragePool: "default",
 		},
-		Project: "default",
-		Profile: "default",
-		Network: "lxdbr0", // Default network bridge?
 	}
 
 	bytes, err := fs.ReadFile(path)
