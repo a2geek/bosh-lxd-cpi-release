@@ -12,9 +12,10 @@ function do_help() {
   echo "Useful environment variables to export..."
   echo "- BOSH_LOG_LEVEL (set to 'debug' to capture all bosh activity including request/response)"
   echo "- LXD_SOCKET (default: /var/lib/lxd/unix.socket)"
-  echo "- BOSH_DEPLOYMENT (default: \${HOME}/Documents/Source/bosh-deployment)"
+  echo "- BOSH_DEPLOYMENT_DIR (default: \${HOME}/Documents/Source/bosh-deployment)"
   echo "- CONCOURSE_DIR when deploying Concourse"
   echo "- ZOOKEEPER_DIR when deploying ZooKeeper"
+  echo "- POSTGRES_DIR when deploying Postgres"
 }
 
 function do_deps() {
@@ -50,12 +51,12 @@ function do_clean() {
   lxc storage volume list default |
     grep custom |
     cut -d"|" -f3 |
-    xargs -n 1 lxc storage volume delete default
+    xargs --verbose --no-run-if-empty --max-args=1  lxc storage volume delete default
 }
 
 function do_deploy_bosh() {
   set -eu
-  bosh_deployment="${BOSH_DEPLOYMENT:-${HOME}/Documents/Source/bosh-deployment}"
+  bosh_deployment="${BOSH_DEPLOYMENT_DIR:-${HOME}/Documents/Source/bosh-deployment}"
   lxd_unix_socket="${LXD_SOCKET:-/var/lib/lxd/unix.socket}"
   cpi_path=$PWD/cpi
 
@@ -137,6 +138,14 @@ function do_upload_releases() {
   else
     echo "bbr release exists"
   fi
+
+  POSTGRES=$(bosh --json releases | jq -r '[ .Tables[] | .Rows[] | select(.name == "postgres-release") ] | length')
+  if [ 0 -eq $BBR ]
+  then
+    bosh upload-release https://bosh.io/d/github.com/cloudfoundry/postgres-release
+  else
+    echo "postgres release exists"
+  fi
 }
 
 function do_deploy_concourse() {
@@ -145,7 +154,7 @@ function do_deploy_concourse() {
     echo "Please set CONCOURSE_DIR to root of concourse-bosh-deployment"
     exit 1
   fi
-  set -eux
+  set -eu
   source scripts/bosh-env.sh
   bosh -d concourse deploy $CONCOURSE_DIR/cluster/concourse.yml \
        -o $CONCOURSE_DIR/cluster/operations/backup-atc.yml \
@@ -156,13 +165,24 @@ function do_deploy_concourse() {
        -l manifests/concourse-vars.yml
 }
 
+function do_deploy_postgres() {
+  if [ -z "$POSTGRES_DIR" ]
+  then
+    echo "Please set POSTGRES_DIR to root of postgres-release"
+    exit 1
+  fi
+  set -eu
+  source scripts/bosh-env.sh
+  bosh -d postgres deploy $POSTGRES_DIR/templates/postgres.yml
+}
+
 function do_deploy_zookeeper() {
   if [ -z "$ZOOKEEPER_DIR" ]
   then
     echo "Please set ZOOKEEPER_DIR to root of zookeeper-release"
     exit 1
   fi
-  set -eux
+  set -eu
   source scripts/bosh-env.sh
   export BOSH_DEPLOYMENT=zookeeper
   bosh deploy $ZOOKEEPER_DIR/manifests/zookeeper.yml
