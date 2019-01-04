@@ -4,16 +4,24 @@ This is a [BOSH CPI](https://bosh.io/) implementation to support [LXD](https://l
 
 Please note that Go is new so the code is ugly. Working on making it functional before beautiful. ;-)
 
+## Requirements
+
+As this depends on LXD, which is Linux only, this is also Linux only.  See the [LXD Introduction](https://linuxcontainers.org/lxd/introduction/).
+
+The current development environment is Ubuntu 18.04. LXD has been installed via a Snap and [this guide](https://linuxcontainers.org/lxd/getting-started-cli/) was generally followed.
+
 ## Current State
 
 What _is_ functional:
 * A BOSH Director can be stood up.
+* Postgres stand-alone database can be stood up.
 * Network is configured and available.
 * Disk is provisioned and attached. Does not survive a reboot (important for me because we do lose power from time-to-time).
 
 What is _not_ functional:
 * ZooKeeper has some issue mounting disks.
   - Not all API endpoints have an implementation and maybe this is the issue.
+  - There may be some Bosh Agent incompatibility with the stemcells. The agent is reporting `{"exception":{"message":"unknown message add_persistent_disk"}}` when being requested to attach a disk.
 * Concourse deploys `web` and `db` but `worker` fails.
   - Maybe something related to privileges that Garden RunC requires?
   - If these need special privileges, maybe the cloud config needs to allow custom properties for LXD.
