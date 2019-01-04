@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"strconv"
+	"strings"
 
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 	"github.com/cppforlife/bosh-cpi-go/apiv1"
@@ -154,7 +155,7 @@ func (c CPI) CreateVMV2(
 		if err != nil {
 			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating Disk id")
 		}
-		diskCid := "vol-e-" + diskId
+		diskCid := DISK_EPHEMERAL_PREFIX + diskId
 
 		err = c.createDisk(props.EphemeralDisk, diskCid)
 		if err != nil {
@@ -201,8 +202,10 @@ func (c CPI) DeleteVM(cid apiv1.VMCID) error {
 		return bosherr.WrapError(err, "Delete VM - stop")
 	}
 
-	// TODO: Do we need to delete the ephemeral volume at this time?
-	// It wasn't requested, so presumably the answer is "yes".
+	disks, err := c.findDisksAttachedToVm(cid)
+	if err != nil {
+		return bosherr.WrapError(err, "Delete VM - enumerate disks")
+	}
 
 	op, err := c.client.DeleteContainer(cid.AsString())
 	if err != nil {
@@ -211,6 +214,16 @@ func (c CPI) DeleteVM(cid apiv1.VMCID) error {
 	err = op.Wait()
 	if err != nil {
 		return bosherr.WrapError(err, "Delete VM - wait")
+	}
+
+	for name := range disks {
+		// Only delete ephemeral disks; never the 'root' disk
+		if strings.HasPrefix(name, DISK_EPHEMERAL_PREFIX) {
+			err = c.client.DeleteStoragePoolVolume(c.config.Server.StoragePool, "custom", name)
+			if err != nil {
+				return bosherr.WrapError(err, "Delete VM - attached disk - "+name)
+			}
+		}
 	}
 
 	return nil

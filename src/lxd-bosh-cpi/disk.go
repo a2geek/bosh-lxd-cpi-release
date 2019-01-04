@@ -5,8 +5,23 @@ import (
 	"github.com/cppforlife/bosh-cpi-go/apiv1"
 )
 
+const (
+	DISK_EPHEMERAL_PREFIX  = "vol-e-"
+	DISK_PERSISTENT_PREFIX = "vol-p-"
+)
+
 func (c CPI) GetDisks(cid apiv1.VMCID) ([]apiv1.DiskCID, error) {
-	return []apiv1.DiskCID{}, nil
+	disks, err := c.findDisksAttachedToVm(cid)
+	if err != nil {
+		return []apiv1.DiskCID{}, bosherr.WrapError(err, "GetDisks - locating disks")
+	}
+
+	var diskcids []apiv1.DiskCID
+	for name, _ := range disks {
+		diskcids = append(diskcids, apiv1.NewDiskCID(name))
+	}
+
+	return diskcids, nil
 }
 
 func (c CPI) CreateDisk(size int,
@@ -16,7 +31,7 @@ func (c CPI) CreateDisk(size int,
 	if err != nil {
 		return apiv1.DiskCID{}, bosherr.WrapError(err, "Creating Disk id")
 	}
-	theCid := "vol-p-" + id
+	theCid := DISK_PERSISTENT_PREFIX + id
 	diskCid := apiv1.NewDiskCID(theCid)
 
 	// FIXME: default is assumed to be name
