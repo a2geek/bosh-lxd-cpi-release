@@ -26,6 +26,18 @@ What is _not_ functional:
   - Maybe something related to privileges that Garden RunC requires?
   - If these need special privileges, maybe the cloud config needs to allow custom properties for LXD.
 * Only supports Unix socket at this time.
+* `bosh vms` and `bosh instances` fails with negative uptime for Postgres:
+  ```
+  $ bosh -d postgres vms
+  Using environment '10.245.0.11' as client 'admin'
+
+  Task 17. Done
+
+  Unmarshaling vm info response: '{"vm_cid":"c-b4b2c88b-3941-4e37-5991-6e3858610410","active":true,"vm_created_at":"2019-01-04T03:58:00Z","cloud_properties":{"ephemeral_disk":2048,"instance_type":"c1-m2"},"disk_cid":"vol-p-2786a14e-6199-479b-7e06-22d260816507","disk_cids":["vol-p-2786a14e-6199-479b-7e06-22d260816507"],"ips":["10.245.0.12"],"dns":[],"agent_id":"7db1a505-76bf-401e-bf02-42e63189b5b4","job_name":"postgres","index":0,"job_state":"running","state":"started","resource_pool":"small","vm_type":"small","vitals":{"cpu":{"sys":"2.3","user":"3.8","wait":"0.0"},"disk":{"ephemeral":{"inode_percent":"0","percent":"2"},"persistent":{"inode_percent":"0","percent":"0"},"system":{"inode_percent":"2","percent":"27"}},"load":["1.35","1.16","0.89"],"mem":{"kb":"28528","percent":"1"},"swap":{"kb":"232448","percent":"1"},"uptime":{"secs":977141}},"processes":[{"name":"postgres","state":"running","uptime":{"secs":-972769},"mem":{"kb":59752,"percent":2.9},"cpu":{"total":0}},{"name":"pg_janitor","state":"running","uptime":{"secs":-972770},"mem":{"kb":23560,"percent":1.1},"cpu":{"total":0}}],"resurrection_paused":false,"az":"z1","id":"248d04db-2a15-44c5-8e97-a9fcbda3e35c","bootstrap":true,"ignore":false}':
+    json: cannot unmarshal number -972769 into Go struct field VMInfoVitalsUptime.secs of type uint64
+
+  Exit code 1
+  ```
 
 ## LXD Setup
 
