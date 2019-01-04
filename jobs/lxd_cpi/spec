@@ -14,18 +14,18 @@ properties:
     description: "Unix socket used to connect to LXD daemon (must be on same host)"
     example: "/var/lib/lxd/unix.socket"
     #default: "/var/snap/lxd/common/lxd/unix.socket"
-
   lxd_cpi.lxd.project_name:
     description: "Name of LXD Project with which to place VMs and Stemcells [default]"
     default: "default"
-
   lxd_cpi.lxd.profile_name:
     description: "Name of LXD Profile with which to build VMs [default]"
     default: "default"
-
   lxd_cpi.lxd.network_name:
     description: "Name of LXD Network with which to place VMs [lxdbr0]"
     default: "lxdbr0"
+  lxd_cpi.lxd.storage_pool_name:
+    description: "Name of LXD StoragePool with which to place disks [default]"
+    default: "default"
 
   lxd_cpi.agent.mbus:
     description: "Mbus URL used by deployed BOSH agents"

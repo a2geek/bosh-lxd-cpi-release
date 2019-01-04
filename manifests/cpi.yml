@@ -46,12 +46,12 @@
 - type: replace
   path: /instance_groups/name=bosh/properties/lxd_cpi?
   value:
-    lxd: &lxd_config
-      unix_socket: /warden-cpi-dev/lxd.socket
+    lxd:
       project_name: ((lxd_project_name))
       profile_name: ((lxd_profile_name))
       network_name: ((lxd_network_name))
       storage_pool_name: ((lxd_storage_pool_name))
+      unix_socket: /warden-cpi-dev/lxd.socket
     agent:
       mbus: nats://nats:((nats_password))@((internal_ip)):4222
       blobstore:
@@ -65,7 +65,12 @@
 - type: replace
   path: /cloud_provider/properties/lxd_cpi?
   value:
-    lxd: *lxd_config
+    lxd:
+      project_name: ((lxd_project_name))
+      profile_name: ((lxd_profile_name))
+      network_name: ((lxd_network_name))
+      storage_pool_name: ((lxd_storage_pool_name))
+      unix_socket: ((lxd_unix_socket))
     agent:
       mbus: "https://mbus:((mbus_bootstrap_password))@0.0.0.0:6868"
       blobstore:
