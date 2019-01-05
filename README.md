@@ -23,7 +23,7 @@ BOSH release status:
 | --- | --- | --- |
 | [concourse-bosh-deployment](https://github.com/concourse/concourse-bosh-deployment) | Does not work | Workers fail. |
 | [postgres-release](https://github.com/cloudfoundry/postgres-release) | Works! | Suffers from the uptime bug. |
-| [zookeeper-release](https://github.com/cppforlife/zookeeper-release) | Works! | Issues resolved with older Xenial stemcell. |
+| [zookeeper-release](https://github.com/cppforlife/zookeeper-release) | Works! | Issues resolved with older Trusty stemcell. <br> Suffers from the uptime bug. |
 
 What is _not_ functional:
 * Concourse deploys `web` and `db` but `worker` fails.
