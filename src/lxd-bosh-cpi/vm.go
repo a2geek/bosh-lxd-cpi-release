@@ -1,14 +1,12 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"strconv"
 	"strings"
 
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 	"github.com/cppforlife/bosh-cpi-go/apiv1"
-	lxd "github.com/lxc/lxd/client"
 	"github.com/lxc/lxd/shared/api"
 )
 
@@ -170,19 +168,10 @@ func (c CPI) CreateVMV2(
 		agentEnv.AttachEphemeralDisk(apiv1.NewDiskHintFromMap(map[string]interface{}{"path": path}))
 	}
 
-	agentEnvContents, err := agentEnv.AsBytes()
+	err = c.writeAgentFileToVM(vmCid, agentEnv)
 	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "AgentEnv as Bytes")
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Write AgentEnv")
 	}
-	agentConfigFileArgs := lxd.ContainerFileArgs{
-		Content:   bytes.NewReader(agentEnvContents),
-		UID:       0,    // root
-		GID:       0,    // root
-		Mode:      0644, // rw-r--r--
-		Type:      "file",
-		WriteMode: "overwrite",
-	}
-	c.client.CreateContainerFile(theCid, "/var/vcap/bosh/warden-cpi-agent-env.json", agentConfigFileArgs)
 
 	containerStatePut := api.ContainerStatePut{
 		Action: "start",

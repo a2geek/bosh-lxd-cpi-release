@@ -68,12 +68,25 @@ func (c CPI) AttachDiskV2(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) (apiv1.DiskH
 		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Attach disk")
 	}
 
+	agentEnv, err := c.readAgentFileFromVM(vmCID)
+	if err != nil {
+		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Read AgentEnv")
+	}
+
+	diskHint := apiv1.NewDiskHintFromMap(map[string]interface{}{"path": path})
+	agentEnv.AttachPersistentDisk(diskCID, diskHint)
+
+	err = c.writeAgentFileToVM(vmCID, agentEnv)
+	if err != nil {
+		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Write AgentEnv")
+	}
+
 	err = c.startVM(vmCID)
 	if err != nil {
 		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Starting container")
 	}
 
-	return apiv1.NewDiskHintFromMap(map[string]interface{}{"path": path}), nil
+	return diskHint, nil
 }
 
 func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
@@ -103,6 +116,18 @@ func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
 	err = op.Wait()
 	if err != nil {
 		return bosherr.WrapError(err, "Update container state - wait")
+	}
+
+	agentEnv, err := c.readAgentFileFromVM(vmCID)
+	if err != nil {
+		return bosherr.WrapError(err, "Retrieve AgentEnv")
+	}
+
+	agentEnv.DetachPersistentDisk(diskCID)
+
+	err = c.writeAgentFileToVM(vmCID, agentEnv)
+	if err != nil {
+		return bosherr.WrapError(err, "Write AgentEnv")
 	}
 
 	err = c.startVM(vmCID)

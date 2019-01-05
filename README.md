@@ -14,14 +14,18 @@ The current development environment is Ubuntu 18.04. LXD has been installed via 
 
 What _is_ functional:
 * A BOSH Director can be stood up.
-* Postgres stand-alone database can be stood up.
 * Network is configured and available.
 * Disk is provisioned and attached. Does not survive a reboot (important for me because we do lose power from time-to-time).
 
+BOSH release status:
+
+| Release | Status | Notes |
+| --- | --- | --- |
+| [concourse-bosh-deployment](https://github.com/concourse/concourse-bosh-deployment) | Does not work | Workers fail. |
+| [postgres-release](https://github.com/cloudfoundry/postgres-release) | Works! | Suffers from the uptime bug. |
+| [zookeeper-release](https://github.com/cppforlife/zookeeper-release) | Works! | Issues resolved with older Xenial stemcell. |
+
 What is _not_ functional:
-* ZooKeeper has some issue mounting disks.
-  - There may be some Bosh Agent incompatibility with the stemcells. The agent is reporting `{"exception":{"message":"unknown message add_persistent_disk"}}` when being requested to attach a disk.
-  - This appears to be due agent/stemcell versions. The CPI does not currently update the metdata for V1 stemcells. This deployment uses `ubuntu-trusty`. Switching to `ubuntu-xenial` yields a successful deployment. The smoketests fail as `python` is not a command in the Xenial stemcell.
 * Concourse deploys `web` and `db` but `worker` fails.
   - Maybe something related to privileges that Garden RunC requires?
   - If these need special privileges, maybe the cloud config needs to allow custom properties for LXD.
