@@ -20,8 +20,8 @@ What _is_ functional:
 
 What is _not_ functional:
 * ZooKeeper has some issue mounting disks.
-  - Not all API endpoints have an implementation and maybe this is the issue.
   - There may be some Bosh Agent incompatibility with the stemcells. The agent is reporting `{"exception":{"message":"unknown message add_persistent_disk"}}` when being requested to attach a disk.
+  - This appears to be due agent/stemcell versions. The CPI does not currently update the metdata for V1 stemcells. This deployment uses `ubuntu-trusty`. Switching to `ubuntu-xenial` yields a successful deployment. The smoketests fail as `python` is not a command in the Xenial stemcell.
 * Concourse deploys `web` and `db` but `worker` fails.
   - Maybe something related to privileges that Garden RunC requires?
   - If these need special privileges, maybe the cloud config needs to allow custom properties for LXD.
