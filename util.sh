@@ -34,8 +34,8 @@ function do_deps() {
   find * -type d -name '.git' | xargs rm -rf
 }
 
-function do_clean() {
-  echo "Cleaning out all state..."
+function do_destroy() {
+  echo "Destroying out all state..."
   set -x
   rm -rf .dev_builds/
   rm -rf dev_releases/
@@ -54,6 +54,12 @@ function do_clean() {
     grep custom |
     cut -d"|" -f3 |
     xargs --verbose --no-run-if-empty --max-args=1  lxc storage volume delete default
+
+  echo "Visual confirmation:"
+  lxc --project bosh list
+  lxc --project bosh image list
+  lxc --project bosh storage list
+  lxc --project bosh storage volume list default
 }
 
 function do_deploy_bosh() {
