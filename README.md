@@ -72,7 +72,9 @@ name: bosh
 
 $ lxc --project bosh profile show default
 config:
-  raw.lxc: lxc.apparmor.profile = unconfined
+  raw.lxc: |
+    lxc.apparmor.profile = unconfined
+  security.privileged: "true"
 description: Default LXD profile for project bosh
 devices:
   root:

@@ -97,11 +97,8 @@ func (c CPI) CreateVMV2(
 
 	containersPost := api.ContainersPost{
 		ContainerPut: api.ContainerPut{
-			Devices: devices,
-			// FIXME: Should this be in config instead?
-			Config: map[string]string{
-				"security.privileged": "true",
-			},
+			Devices:  devices,
+			Config:   props.Config,
 			Profiles: []string{c.config.Server.Profile},
 		},
 		Name:         theCid,

@@ -26,6 +26,12 @@
         uid: "1000"   # vcap
         gid: "1000"   # vcap
         mode: "0660"
+    # This configuration is required by all Bosh Agents and should be on the LXD profile.
+    # They are left here as a sample and a referene.
+    config:
+      security.privileged: "true"
+      raw.lxc: |
+        lxc.apparmor.profile = unconfined
 
 # Add CPI job
 - type: replace
