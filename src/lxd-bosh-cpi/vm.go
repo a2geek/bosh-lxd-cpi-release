@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 	"github.com/cppforlife/bosh-cpi-go/apiv1"
@@ -188,9 +187,9 @@ func (c CPI) DeleteVM(cid apiv1.VMCID) error {
 		return bosherr.WrapError(err, "Delete VM - stop")
 	}
 
-	disks, err := c.findDisksAttachedToVm(cid)
+	disks, err := c.findEphemeralDisksAttachedToVM(cid)
 	if err != nil {
-		return bosherr.WrapError(err, "Delete VM - enumerate disks")
+		return bosherr.WrapError(err, "Delete VM - enumerate ephemeral disks")
 	}
 
 	op, err := c.client.DeleteContainer(cid.AsString())
@@ -202,13 +201,10 @@ func (c CPI) DeleteVM(cid apiv1.VMCID) error {
 		return bosherr.WrapError(err, "Delete VM - wait")
 	}
 
-	for name := range disks {
-		// Only delete ephemeral disks; never the 'root' disk
-		if strings.HasPrefix(name, DISK_EPHEMERAL_PREFIX) {
-			err = c.client.DeleteStoragePoolVolume(c.config.Server.StoragePool, "custom", name)
-			if err != nil {
-				return bosherr.WrapError(err, "Delete VM - attached disk - "+name)
-			}
+	for _, disk := range disks {
+		err = c.client.DeleteStoragePoolVolume(c.config.Server.StoragePool, "custom", disk)
+		if err != nil {
+			return bosherr.WrapError(err, "Delete VM - attached disk - "+disk)
 		}
 	}
 
@@ -223,13 +219,48 @@ func (c CPI) CalculateVMCloudProperties(res apiv1.VMResources) (apiv1.VMCloudPro
 }
 
 func (c CPI) SetVMMetadata(cid apiv1.VMCID, metadata apiv1.VMMeta) error {
+	actual, err := NewActualVMMeta(metadata)
+	if err != nil {
+		return bosherr.WrapError(err, "Unmarshal VMMeta to ActualVMMeta")
+	}
+
+	container, etag, err := c.client.GetContainer(cid.AsString())
+	if err != nil {
+		return bosherr.WrapError(err, "Get container state")
+	}
+
+	description := fmt.Sprintf("%s/%s", actual.Job, actual.Index)
+	container.Description = description
+
+	op, err := c.client.UpdateContainer(cid.AsString(), container.Writable(), etag)
+	if err != nil {
+		return bosherr.WrapError(err, "Update container state")
+	}
+
+	err = op.Wait()
+	if err != nil {
+		return bosherr.WrapError(err, "Update container state - wait")
+	}
+
+	disks, err := c.findEphemeralDisksAttachedToVM(cid)
+	if err != nil {
+		return bosherr.WrapError(err, "Delete VM - enumerate ephemeral disks")
+	}
+
+	for _, disk := range disks {
+		err = c.setDiskMetadata(apiv1.NewDiskCID(disk), description)
+		if err != nil {
+			return bosherr.WrapError(err, "Update stoarge volume description")
+		}
+	}
+
 	return nil
 }
 
 func (c CPI) HasVM(cid apiv1.VMCID) (bool, error) {
 	_, _, err := c.client.GetContainer(cid.AsString())
 	if err != nil {
-		return false, nil
+		return false, bosherr.WrapError(err, "HasVM")
 	}
 	return true, nil
 }

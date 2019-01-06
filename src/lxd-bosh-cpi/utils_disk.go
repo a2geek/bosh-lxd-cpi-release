@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/cppforlife/bosh-cpi-go/apiv1"
 	"github.com/lxc/lxd/shared/api"
@@ -48,4 +49,30 @@ func (c CPI) findDisksAttachedToVm(vmCID apiv1.VMCID) (map[string]map[string]str
 		}
 	}
 	return devices, nil
+}
+
+func (c CPI) findEphemeralDisksAttachedToVM(cid apiv1.VMCID) ([]string, error) {
+	disks, err := c.findDisksAttachedToVm(cid)
+	if err != nil {
+		return nil, err
+	}
+
+	var ephemeral []string
+	for name := range disks {
+		if strings.HasPrefix(name, DISK_EPHEMERAL_PREFIX) {
+			ephemeral = append(ephemeral, name)
+		}
+	}
+	return ephemeral, nil
+}
+
+func (c CPI) setDiskMetadata(cid apiv1.DiskCID, description string) error {
+	volume, etag, err := c.client.GetStoragePoolVolume(c.config.Server.StoragePool, "custom", cid.AsString())
+	if err != nil {
+		return err
+	}
+
+	volume.Description = description
+
+	return c.client.UpdateStoragePoolVolume(c.config.Server.StoragePool, "custom", cid.AsString(), volume.Writable(), etag)
 }

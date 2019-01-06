@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 	"github.com/cppforlife/bosh-cpi-go/apiv1"
 )
@@ -148,6 +150,16 @@ func (c CPI) HasDisk(cid apiv1.DiskCID) (bool, error) {
 }
 
 func (c CPI) SetDiskMetadata(cid apiv1.DiskCID, metadata apiv1.DiskMeta) error {
+	actual, err := NewActualDiskMeta(metadata)
+	if err != nil {
+		return bosherr.WrapError(err, "Unmarshalling DiskMeta")
+	}
+
+	err = c.setDiskMetadata(cid, fmt.Sprintf("%s/%s", actual.InstanceGroup, actual.InstanceIndex))
+	if err != nil {
+		return bosherr.WrapError(err, "Update storage volume description")
+	}
+
 	return nil
 }
 
