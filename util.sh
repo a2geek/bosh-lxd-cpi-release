@@ -7,7 +7,9 @@ function do_help() {
     echo "- $subcommand"
   done
   echo
-  echo "Note that this script will detect if it is sourced in and setup an alias."
+  echo "Notes:"
+  echo "* This script will detect if it is sourced in and setup an alias."
+  echo "* Creds are placed into the 'creds/' folder."
   echo
   echo "Useful environment variables to export..."
   echo "- BOSH_LOG_LEVEL (set to 'debug' to capture all bosh activity including request/response)"
@@ -37,8 +39,8 @@ function do_clean() {
   set -x
   rm -rf .dev_builds/
   rm -rf dev_releases/
+  rm -rf creds/
   rm -f cpi
-  rm -f creds.yml
   rm -f state.json
 
   lxc --project bosh list --format json |
@@ -60,7 +62,7 @@ function do_deploy_bosh() {
   lxd_unix_socket="${LXD_SOCKET:-/var/lib/lxd/unix.socket}"
   cpi_path=$PWD/cpi
 
-  rm -f creds.yml
+  rm -f creds/bosh.yml
 
   echo "-----> `date`: Create dev release"
   bosh create-release --force --tarball $cpi_path
@@ -72,7 +74,7 @@ function do_deploy_bosh() {
     --ops-file=${bosh_deployment}/uaa.yml \
     --ops-file=${bosh_deployment}/credhub.yml \
     --state=state.json \
-    --vars-store=creds.yml \
+    --vars-store=creds/bosh.yml \
     --vars-file=manifests/bosh-vars.yml \
     --var=cpi_path=$cpi_path \
     --var=lxd_unix_socket=$lxd_unix_socket
@@ -156,12 +158,14 @@ function do_deploy_concourse() {
   fi
   set -eu
   source scripts/bosh-env.sh
-  bosh -d concourse deploy $CONCOURSE_DIR/cluster/concourse.yml \
+  export BOSH_DEPLOYMENT=concourse
+  bosh deploy $CONCOURSE_DIR/cluster/concourse.yml \
        -o $CONCOURSE_DIR/cluster/operations/backup-atc.yml \
        -o $CONCOURSE_DIR/cluster/operations/basic-auth.yml \
        -o $CONCOURSE_DIR/cluster/operations/static-web.yml \
        -o $CONCOURSE_DIR/cluster/operations/privileged-http.yml \
        -l $CONCOURSE_DIR/versions.yml \
+       --vars-store=creds/concourse.yml \
        -l manifests/concourse-vars.yml
 }
 
@@ -172,8 +176,15 @@ function do_deploy_postgres() {
     exit 1
   fi
   set -eu
+  rm -f creds/postgres.yml
   source scripts/bosh-env.sh
-  bosh -d postgres deploy $POSTGRES_DIR/templates/postgres.yml
+  export BOSH_DEPLOYMENT=postgres
+  bosh deploy $POSTGRES_DIR/templates/postgres.yml \
+       -o $POSTGRES_DIR/templates/operations/add_static_ips.yml \
+       -o $POSTGRES_DIR/templates/operations/set_properties.yml \
+       -o $POSTGRES_DIR/templates/operations/use_bbr.yml \
+       --vars-store=creds/postgres.yml \
+       -l manifests/postgres-vars.yml
 }
 
 function do_deploy_zookeeper() {
@@ -185,7 +196,8 @@ function do_deploy_zookeeper() {
   set -eu
   source scripts/bosh-env.sh
   export BOSH_DEPLOYMENT=zookeeper
-  bosh deploy $ZOOKEEPER_DIR/manifests/zookeeper.yml
+  bosh deploy $ZOOKEEPER_DIR/manifests/zookeeper.yml \
+       --vars-store=creds/zookeeper.yml
   bosh run-errand smoke-tests
   bosh run-errand status
 }
@@ -195,6 +207,7 @@ then
   alias util="${BASH_SOURCE}"
   echo "'util' now available."
 else
+  mkdir -p creds
   export BOSH_NON_INTERACTIVE=true
   do_${1:-help}
 fi

@@ -35,3 +35,4 @@ cpi
 creds.yml
 state.json
 requests/
+creds/
