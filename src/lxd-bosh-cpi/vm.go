@@ -250,7 +250,7 @@ func (c CPI) SetVMMetadata(cid apiv1.VMCID, metadata apiv1.VMMeta) error {
 	for _, disk := range disks {
 		err = c.setDiskMetadata(apiv1.NewDiskCID(disk), description)
 		if err != nil {
-			return bosherr.WrapError(err, "Update stoarge volume description")
+			return bosherr.WrapError(err, "Update storage volume description")
 		}
 	}
 
