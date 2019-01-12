@@ -42,6 +42,7 @@ What is _not_ functional:
 
   Exit code 1
   ```
+  This appears to likely be related to [this non-issue in Monit](https://bitbucket.org/tildeslash/monit/issues/310/monit-in-lxc-containers)... that still has a useful patch.
 
 ## LXD Setup
 
