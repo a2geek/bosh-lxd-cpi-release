@@ -123,8 +123,8 @@ If you wish to tinker with this, here is how I'm using the scripts:
 $ export LXD_SOCKET=/var/snap/lxd/common/lxd/unix.socket
 
 # This project needs the bosh-deployment project available.
-# Set the location with BOSH_DEPLOYMENT.
-$ export BOSH_DEPLOYMENT=...
+# Set the location with BOSH_DEPLOYMENT_DIR.
+$ export BOSH_DEPLOYMENT_DIR=...
 
 # 'util.sh' has all the pieces currently being used.
 # Source it in to setup the 'util' alias.
@@ -137,24 +137,28 @@ $ source ./util.sh
 $ util
 Subcommands:
 - capture_requests
-- clean
 - cloud_config
 - deploy_bosh
 - deploy_concourse
+- deploy_postgres
 - deploy_zookeeper
 - deps
+- destroy
 - help
 - upload_releases
 - upload_stemcells
 
-Note that this script will detect if it is sourced in and setup an alias.
+Notes:
+* This script will detect if it is sourced in and setup an alias.
+* Creds are placed into the 'creds/' folder.
 
 Useful environment variables to export...
 - BOSH_LOG_LEVEL (set to 'debug' to capture all bosh activity including request/response)
 - LXD_SOCKET (default: /var/lib/lxd/unix.socket)
-- BOSH_DEPLOYMENT (default: ${HOME}/Documents/Source/bosh-deployment)
+- BOSH_DEPLOYMENT_DIR (default: ${HOME}/Documents/Source/bosh-deployment)
 - CONCOURSE_DIR when deploying Concourse
 - ZOOKEEPER_DIR when deploying ZooKeeper
+- POSTGRES_DIR when deploying Postgres
 
 # Most likely you want to deploy the bosh director:
 $ util deploy_bosh
