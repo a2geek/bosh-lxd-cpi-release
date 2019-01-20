@@ -36,3 +36,5 @@ creds.yml
 state.json
 requests/
 creds/
+stemcell/
+release/

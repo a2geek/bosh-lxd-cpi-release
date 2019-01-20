@@ -18,6 +18,7 @@ function do_help() {
   echo "- CONCOURSE_DIR when deploying Concourse"
   echo "- ZOOKEEPER_DIR when deploying ZooKeeper"
   echo "- POSTGRES_DIR when deploying Postgres"
+  echo "- LXD_MONIT_PATCH_DIR when deploying the runtime config patch"
 }
 
 function do_deps() {
@@ -73,12 +74,20 @@ function do_deploy_bosh() {
   echo "-----> `date`: Create dev release"
   bosh create-release --force --tarball $cpi_path
 
+  extra_ops_files=()
+  if [ ! -z "${LXD_MONIT_PATCH_DIR:-}" ]
+  then
+    echo "-----> `date`: Adding lxd-monit-patch"
+    extra_ops_files+=("--ops-file=${LXD_MONIT_PATCH_DIR}/manifests/operations/add-to-director.yml")
+  fi
+
   echo "-----> `date`: Create env"
   bosh create-env ${bosh_deployment}/bosh.yml \
     --ops-file=manifests/cpi.yml \
     --ops-file=${bosh_deployment}/bbr.yml \
     --ops-file=${bosh_deployment}/uaa.yml \
     --ops-file=${bosh_deployment}/credhub.yml \
+    "${extra_ops_files[@]}" \
     --state=state.json \
     --vars-store=creds/bosh.yml \
     --vars-file=manifests/bosh-vars.yml \
@@ -112,25 +121,46 @@ function do_cloud_config() {
   bosh update-cloud-config manifests/cloud-config.yml
 }
 
+function do_runtime_config() {
+  if [ -z "$LXD_MONIT_PATCH_DIR" ]
+  then
+    echo "Please set LXD_MONIT_PATCH_DIR to root of lxd-monit-patch"
+    exit 1
+  fi
+
+  source scripts/bosh-env.sh
+  bosh update-runtime-config ${LXD_MONIT_PATCH_DIR}/manifests/runtime-config.yml
+}
+
 function do_upload_stemcells() {
   source scripts/bosh-env.sh
 
   TRUSTY=$(bosh stemcells --json | jq -r '[ .Tables[] | .Rows[] | select(.os == "ubuntu-trusty")] | length')
-  if [ 0 -eq $TRUSTY ]
+  if [ 0 -ne $TRUSTY ]
   then
-    bosh upload-stemcell --sha1 c51a1ae3faadd470ded7b83f69d09971bdd7de7b \
-         https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-trusty-go_agent?v=3586.65
-  else
     echo "ubuntu-trusty stemcell exists"
+  else
+    if [ ! -f stemcell/ubuntu-trusty-image ]
+    then
+      echo "Downloading ubuntu-trusty-image"
+      curl --location --output stemcell/ubuntu-trusty-image \
+        https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-trusty-go_agent?v=3586.67
+    fi
+    bosh upload-stemcell stemcell/ubuntu-trusty-image
   fi
 
   XENIAL=$(bosh stemcells --json | jq -r '[ .Tables[] | .Rows[] | select(.os == "ubuntu-xenial")] | length')
-  if [ 0 -eq $XENIAL ]
+  if [ 0 -ne $XENIAL ]
   then
-      bosh upload-stemcell --sha1 f67cc28a19d39ca0504f7fbf5a39859cc934c5eb \
-           https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-xenial-go_agent?v=170.15
-  else
     echo "ubuntu-xenial stemcell exists"
+  else
+    if [ ! -f stemcell/ubuntu-xenial-image ]
+    then
+      echo "Downloading ubuntu-xenial-image"
+      curl --location --output stemcell/ubuntu-xenial-image \
+        https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-xenial-go_agent?v=170.21
+    fi
+    bosh upload-stemcell stemcell/ubuntu-xenial-image
   fi
 }
 
@@ -139,20 +169,31 @@ function do_upload_releases() {
 
   # See https://github.com/concourse/concourse-bosh-deployment/issues/77
   BBR=$(bosh --json releases | jq -r '[ .Tables[] | .Rows[] | select(.name == "backup-and-restore-sdk") ] | length')
-  if [ 0 -eq $BBR ]
+  if [ 0 -ne $BBR ]
   then
-    bosh upload-release --sha1 8e74035caee59d84ec46e9dc5d84084e8c5ca5c8 \
-         https://bosh.io/d/github.com/cloudfoundry-incubator/backup-and-restore-sdk-release?v=1.11.2
-  else
     echo "bbr release exists"
+  else
+    if [ ! -f release/backup-and-restore-sdk ]
+    then
+      echo "Downloading backup-and-restore-sdk"
+      curl --location --output release/backup-and-restore-sdk \
+        https://bosh.io/d/github.com/cloudfoundry-incubator/backup-and-restore-sdk-release?v=1.11.2
+    fi
+    bosh upload-release release/backup-and-restore-sdk
   fi
 
   POSTGRES=$(bosh --json releases | jq -r '[ .Tables[] | .Rows[] | select(.name == "postgres-release") ] | length')
-  if [ 0 -eq $BBR ]
+  if [ 0 -ne $BBR ]
   then
-    bosh upload-release https://bosh.io/d/github.com/cloudfoundry/postgres-release
-  else
     echo "postgres release exists"
+  else
+    if [ ! -f release/postgres-release ]
+    then
+      echo "Downloading postgres-release"
+      curl --location --output release/postgres-release \
+        https://bosh.io/d/github.com/cloudfoundry/postgres-release
+    fi
+    bosh upload-release release/postgres-release
   fi
 }
 
@@ -214,6 +255,8 @@ then
   echo "'util' now available."
 else
   mkdir -p creds
+  mkdir -p stemcell
+  mkdir -p release
   export BOSH_NON_INTERACTIVE=true
   do_${1:-help}
 fi
