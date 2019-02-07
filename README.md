@@ -16,6 +16,7 @@ What _is_ functional:
 * A BOSH Director can be stood up.
 * Network is configured and available.
 * Disk is provisioned and attached. Does not survive a reboot (important for me because we do lose power from time-to-time).
+* "Simple" releases can be deployed (appears to be applications that do not require elevated privileges that LXD protects against).
 
 BOSH release status:
 
