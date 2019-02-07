@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 	"github.com/cppforlife/bosh-cpi-go/apiv1"
@@ -10,16 +11,32 @@ import (
 )
 
 const (
-	FIXPERMISSIONS = "# Hack to fix permission issues\n" +
-		"mkdir -p /var/vcap/data/sys\n" +
-		"chmod 755 /var/vcap/data\n" +
-		"chmod 755 /var/vcap/data/sys\n"
-	MOUNTDISK = "# Manually re-mount persistent disk\n" +
+	StartupPath = "/root/startup.sh"
+	RcLocalPath = "/etc/rc.local"
+
+	AtStartup = "#!/bin/bash\n" +
+		"\n" +
+		"# Re-mount any persistent disk\n" +
+		"# Note: assumes only 1 disk attached; may not be correct when resizing.\n" +
 		"if [ -d /warden-cpi-dev/vol-p-* ]\n" +
 		"then\n" +
 		"  mount --bind /warden-cpi-dev/vol-p-* /var/vcap/store\n" +
-		"fi\n"
-	ATTACHETH = "# Using LXD DHCP to statically assign our IP address\n" +
+		"  \n" +
+		"  # A restart is required upon reboot.  May be related to remounting /var/vcap/store?\n" +
+		"  (\n" +
+		"    export PATH=/var/vcap/bosh/bin/:$PATH\n" +
+		"    sleep 300\n" +
+		"    monit restart all\n" +
+		"  ) &\n" +
+		"  disown\n" +
+		"fi\n" +
+		"\n" +
+		"# Hack to fix permission issues\n" +
+		"mkdir -p /var/vcap/data/sys\n" +
+		"chmod 755 /var/vcap/data\n" +
+		"chmod 755 /var/vcap/data/sys\n" +
+		"\n"
+	AttachEth = "# Using LXD DHCP to statically assign our IP address\n" +
 		"auto %s\n" +
 		"iface %s inet dhcp\n"
 )
@@ -43,7 +60,7 @@ func (c CPI) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating VM id")
 	}
 	theCid := "c-" + id
-	vmCid := apiv1.NewVMCID(theCid)
+	vmCID := apiv1.NewVMCID(theCid)
 
 	containerSource := api.ContainerSource{
 		Type:  "image",
@@ -123,25 +140,49 @@ func (c CPI) CreateVMV2(
 		if device["type"] != "nic" {
 			continue
 		}
-		content := fmt.Sprintf(ATTACHETH, name, name)
+		content := fmt.Sprintf(AttachEth, name, name)
 		path := fmt.Sprintf("/etc/network/interfaces.d/%s", name)
-		err = c.writeFilesAsRootToVM(vmCid, 0644 /* rw-r--r-- */, path, content)
+		err = c.writeFileAsRootToVM(vmCID, 0644 /* rw-r--r-- */, path, content)
 		if err != nil {
 			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating network file "+path)
 		}
 	}
 
-	err = c.writeFilesAsRootToVM(vmCid, 0755 /* rwxr-xr-x */, "/etc/init.d/bosh-fix-permissions.sh", FIXPERMISSIONS)
+	err = c.writeFileAsRootToVM(vmCID, 0755 /* rwxr-xr-x */, StartupPath, AtStartup)
 	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating firboot file")
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating startup.sh file")
 	}
 
-	err = c.writeFilesAsRootToVM(vmCid, 0755 /* rwxr-xr-x */, "/etc/init.d/bosh-mount-persistent.sh", MOUNTDISK)
+	rclocal, err := c.readFileFromVM(vmCID, RcLocalPath)
 	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating mount persistent disk file")
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Reading rc.local file")
 	}
 
-	agentEnv := apiv1.AgentEnvFactory{}.ForVM(agentID, vmCid, networks, env, c.config.Agent)
+	if !strings.Contains(rclocal, StartupPath) {
+		lines := strings.Split(rclocal, "\n")
+
+		var mergedFile []string
+		// First line -- #!/bin/bash
+		mergedFile = append(mergedFile, lines[0])
+		// Our modification
+		mergedFile = append(mergedFile, "")
+		mergedFile = append(mergedFile, "# Run at every boot to fixup the VM")
+		mergedFile = append(mergedFile, StartupPath)
+		mergedFile = append(mergedFile, "")
+		// Rest of rc.local (which currently ends with 'exit 0')
+		for _, line := range lines[1:] {
+			mergedFile = append(mergedFile, line)
+		}
+
+		rclocal = strings.Join(mergedFile, "\n")
+
+		err = c.writeFileAsRootToVM(vmCID, 0755 /* rwxr-xr-x */, RcLocalPath, rclocal)
+		if err != nil {
+			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Updating rc.local file")
+		}
+	}
+
+	agentEnv := apiv1.AgentEnvFactory{}.ForVM(agentID, vmCID, networks, env, c.config.Agent)
 	agentEnv.AttachSystemDisk(apiv1.NewDiskHintFromString(""))
 
 	if props.EphemeralDisk > 0 {
@@ -156,7 +197,7 @@ func (c CPI) CreateVMV2(
 			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Create ephemeral disk")
 		}
 
-		path, err := c.attachDiskDeviceToVM(vmCid, diskCid, "/var/vcap/data")
+		path, err := c.attachDiskDeviceToVM(vmCID, diskCid, "/var/vcap/data")
 		if err != nil {
 			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Attach ephemeral disk")
 		}
@@ -164,7 +205,7 @@ func (c CPI) CreateVMV2(
 		agentEnv.AttachEphemeralDisk(apiv1.NewDiskHintFromMap(map[string]interface{}{"path": path}))
 	}
 
-	err = c.writeAgentFileToVM(vmCid, agentEnv)
+	err = c.writeAgentFileToVM(vmCID, agentEnv)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Write AgentEnv")
 	}
@@ -178,7 +219,7 @@ func (c CPI) CreateVMV2(
 	}
 	// Don't have to wait
 
-	return vmCid, networks, nil
+	return vmCID, networks, nil
 }
 
 func (c CPI) DeleteVM(cid apiv1.VMCID) error {
