@@ -13,7 +13,7 @@ function do_help() {
   echo
   echo "Useful environment variables to export..."
   echo "- BOSH_LOG_LEVEL (set to 'debug' to capture all bosh activity including request/response)"
-  echo "- LXD_SOCKET (default: /var/lib/lxd/unix.socket)"
+  echo "- LXD_SOCKET (default: /var/lib/lxd/unix.socket or /var/snap/lxd/common/lxd/unix.socket)"
   echo "- BOSH_DEPLOYMENT_DIR (default: \${HOME}/Documents/Source/bosh-deployment)"
   echo "- CONCOURSE_DIR when deploying Concourse"
   echo "- ZOOKEEPER_DIR when deploying ZooKeeper"
@@ -66,8 +66,19 @@ function do_destroy() {
 function do_deploy_bosh() {
   set -eu
   bosh_deployment="${BOSH_DEPLOYMENT_DIR:-${HOME}/Documents/Source/bosh-deployment}"
-  lxd_unix_socket="${LXD_SOCKET:-/var/lib/lxd/unix.socket}"
   cpi_path=$PWD/cpi
+
+  if [ -z "${LXD_SOCKET:-}" ]
+  then
+    if [ -S /var/lib/lxd/unix.socket ]
+    then
+      LXD_SOCKET="/var/lib/lxd/unix.socket"
+    elif [ -S /var/snap/lxd/common/lxd/unix.socket ]
+    then
+      LXD_SOCKET="/var/snap/lxd/common/lxd/unix.socket"
+    fi
+  fi
+  lxd_unix_socket="${LXD_SOCKET:-/var/lib/lxd/unix.socket}"
 
   rm -f creds/bosh.yml
 
