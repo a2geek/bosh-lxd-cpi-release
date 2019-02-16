@@ -21,21 +21,41 @@ const (
 		"if [ -d /warden-cpi-dev/vol-p-* ]\n" +
 		"then\n" +
 		"  mount --bind /warden-cpi-dev/vol-p-* /var/vcap/store\n" +
-		"  \n" +
-		"  # A restart is required upon reboot.  May be related to remounting /var/vcap/store?\n" +
-		"  (\n" +
-		"    export PATH=/var/vcap/bosh/bin/:$PATH\n" +
-		"    sleep 300\n" +
-		"    monit restart all\n" +
-		"  ) &\n" +
-		"  disown\n" +
 		"fi\n" +
 		"\n" +
 		"# Hack to fix permission issues\n" +
 		"mkdir -p /var/vcap/data/sys\n" +
 		"chmod 755 /var/vcap/data\n" +
 		"chmod 755 /var/vcap/data/sys\n" +
-		"\n"
+		"\n" +
+		"# A restart is required upon reboot.  This is somewhat monit aware.\n" +
+		"(\n" +
+		"  function zerocheck() {\n" +
+		"    nonzero=$(curl --silent --user $(cat /var/vcap/monit/monit.user) http://127.0.0.1:2822/_status?format=xml | \n" +
+		"                sed 's/></>\n</g' | \n" +
+		"                sort | \n" +
+		"                uniq -c | \n" +
+		"                grep $1 | \n" +
+		"                grep -v \">0<\" | \n" +
+		"                wc -l)\n" +
+		"    return $nonzero\n" +
+		"  }\n" +
+		"\n" +
+		"  function waitpendingaction() {\n" +
+		"    while ! zerocheck pendingaction\n" +
+		"    do\n" +
+		"      sleep 10\n" +
+		"    done\n" +
+		"  }\n" +
+		"\n" +
+		"  export PATH=/var/vcap/bosh/bin/:$PATH\n" +
+		"\n" +
+		"  waitpendingaction\n" +
+		"  monit stop all\n" +
+		"  waitpendingaction\n" +
+		"  monit start all\n" +
+		") &\n" +
+		"disown\n"
 	AttachEth = "# Using LXD DHCP to statically assign our IP address\n" +
 		"auto %s\n" +
 		"iface %s inet dhcp\n"
