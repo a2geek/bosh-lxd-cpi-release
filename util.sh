@@ -19,6 +19,9 @@ function do_help() {
   echo "- ZOOKEEPER_DIR when deploying ZooKeeper"
   echo "- POSTGRES_DIR when deploying Postgres"
   echo "- LXD_MONIT_PATCH_DIR when deploying the runtime config patch"
+  echo
+  echo "Currently set environment variables..."
+  set | egrep "^(BOSH_LOG_LEVEL|LXD_SOCKET|BOSH_DEPLOYMENT_DIR|CONCOURSE_DIR|ZOOKEEPER_DIR|POSTGRES_DIR|LXD_MONIT_PATCH_DIR)="
 }
 
 function do_deps() {
@@ -35,7 +38,35 @@ function do_deps() {
   find * -type d -name '.git' | xargs rm -rf
 }
 
+function do_deploy_cf() {
+  if [ -z "$CF_DEPLOYMENT_DIR" ]
+  then
+    echo "Please set CF_DEPLOYMENT_DIR to root of cf-deployment"
+    exit 1
+  fi
+  set -eu
+  source scripts/bosh-env.sh
+  export BOSH_DEPLOYMENT=cf
+  bosh deploy $CF_DEPLOYMENT_DIR/cf-deployment.yml \
+    -o $CF_DEPLOYMENT_DIR/operations/scale-to-one-az.yml \
+    -o $CF_DEPLOYMENT_DIR/operations/enable-privileged-container-support.yml \
+    -o $CF_DEPLOYMENT_DIR/operations/set-router-static-ips.yml \
+    -o $CF_DEPLOYMENT_DIR/operations/use-compiled-releases.yml \
+    -o $CF_DEPLOYMENT_DIR/operations/use-latest-stemcell.yml \
+    -l manifests/cloudfoundry-vars.yml
+}
+
 function do_destroy() {
+  echo "Deleting deployments via BOSH..."
+  if [ -f creds/bosh.yml ]
+  then
+    source scripts/bosh-env.sh
+    bosh --json deployments |
+      jq -r '.Tables[] | .Rows[] | .name' |
+      xargs --verbose --no-run-if-empty --max-args=1 --replace=DEPLOYMENT \
+        bosh -d DEPLOYMENT delete-deployment --force --non-interactive
+  fi
+
   echo "Destroying out all state..."
   set -x
   rm -rf .dev_builds/
@@ -133,43 +164,65 @@ function do_cloud_config() {
 }
 
 function do_runtime_config() {
-  if [ -z "$LXD_MONIT_PATCH_DIR" ]
+  source scripts/bosh-env.sh
+
+  if [ -z "${LXD_MONIT_PATCH_DIR}" ]
   then
-    echo "Please set LXD_MONIT_PATCH_DIR to root of lxd-monit-patch"
-    exit 1
+    echo "Warning: LXD_MONIT_PATCH_DIR is not set, not loading the monit-patch runtime config!"
+  else
+    bosh update-runtime-config --name monit-patch ${LXD_MONIT_PATCH_DIR}/manifests/runtime-config.yml
   fi
 
-  source scripts/bosh-env.sh
-  bosh update-runtime-config ${LXD_MONIT_PATCH_DIR}/manifests/runtime-config.yml
+  if [ -z "${BOSH_DEPLOYMENT_DIR}" ]
+  then
+    echo "Warning: BOSH_DEPLOYMENT_DIR is not set, not loading the bosh-dns runtime config! (Needed for CF)"
+  else
+    bosh update-runtime-config --name bosh-dns ${BOSH_DEPLOYMENT_DIR}/runtime-configs/dns.yml
+  fi
 }
 
 function do_upload_stemcells() {
   source scripts/bosh-env.sh
 
+  set -x
+
+  if [ "new" == "${1-}" ]
+  then
+    NEW_STEMCELLS=yes
+  fi
+
   TRUSTY=$(bosh stemcells --json | jq -r '[ .Tables[] | .Rows[] | select(.os == "ubuntu-trusty")] | length')
-  if [ 0 -ne $TRUSTY ]
+  if [ 0 -ne ${TRUSTY} -a -z "${NEW_STEMCELLS}" ]
   then
     echo "ubuntu-trusty stemcell exists"
   else
+    if [ -f stemcell/ubuntu-trusty-image -a ! -z "${NEW_STEMCELLS}" ]
+    then
+      rm stemcell/ubuntu-trusty-image
+    fi
     if [ ! -f stemcell/ubuntu-trusty-image ]
     then
       echo "Downloading ubuntu-trusty-image"
       curl --location --output stemcell/ubuntu-trusty-image \
-        https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-trusty-go_agent?v=3586.67
+        https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-trusty-go_agent
     fi
     bosh upload-stemcell stemcell/ubuntu-trusty-image
   fi
 
   XENIAL=$(bosh stemcells --json | jq -r '[ .Tables[] | .Rows[] | select(.os == "ubuntu-xenial")] | length')
-  if [ 0 -ne $XENIAL ]
+  if [ 0 -ne ${XENIAL} -a -z "${NEW_STEMCELLS}" ]
   then
     echo "ubuntu-xenial stemcell exists"
   else
+    if [ -f stemcell/ubuntu-xenial-image -a ! -z "${NEW_STEMCELLS}" ]
+    then
+      rm stemcell/ubuntu-xenial-image
+    fi
     if [ ! -f stemcell/ubuntu-xenial-image ]
     then
       echo "Downloading ubuntu-xenial-image"
       curl --location --output stemcell/ubuntu-xenial-image \
-        https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-xenial-go_agent?v=170.21
+        https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-xenial-go_agent
     fi
     bosh upload-stemcell stemcell/ubuntu-xenial-image
   fi
@@ -269,5 +322,5 @@ else
   mkdir -p stemcell
   mkdir -p release
   export BOSH_NON_INTERACTIVE=true
-  do_${1:-help}
+  do_${1:-help} ${2:-}
 fi

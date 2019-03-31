@@ -16,20 +16,23 @@ What _is_ functional:
 * A BOSH Director can be stood up.
 * Network is configured and available.
 * Disk is provisioned and attached. Does not survive a reboot (important for me because we do lose power from time-to-time).
+  - Note that this is hacked and does survive a reboot. Two items were found: The mount is lost for persistent disk, and `monit` processes do not restart successfully. The CPI injects a `/root/startup.sh` script into all VMs to resolve. `/etc/rc.local` is modified to invoke the script at startup.
 * "Simple" releases can be deployed (appears to be applications that do not require elevated privileges that LXD protects against).
 
 BOSH release status:
 
 | Release | Status | Notes |
 | --- | --- | --- |
-| [concourse-bosh-deployment](https://github.com/concourse/concourse-bosh-deployment) | Does not work | Workers fail. |
+| [concourse-bosh-deployment](https://github.com/concourse/concourse-bosh-deployment) | Deploys! | Tasks do not start. |
 | [postgres-release](https://github.com/cloudfoundry/postgres-release) | Works! | Suffers from the uptime bug. |
 | [zookeeper-release](https://github.com/cppforlife/zookeeper-release) | Works! | Issues resolved with older Trusty stemcell. <br> Suffers from the uptime bug. |
+| [cf-deployment](https://github.com/cloudfoundry/cf-deployment) | Fails when standing up `diego-cell` in the `rep` job.  Note that CF requires a relatively large amount of disk. Review the `cloud-config.yml` `vm_extensions` section. |
 
 What is _not_ functional:
-* Concourse deploys `web` and `db` but `worker` fails.
-  - Maybe something related to privileges that Garden RunC requires?
-  - If these need special privileges, maybe the cloud config needs to allow custom properties for LXD.
+* Cloud Foundry fails in deployemtn with a the following error in the `rep` job of the `diego-cell`:
+  ```
+  umount: /var/vcap/data/rep/shared/garden/instance_identity: block devices are not permitted on filesystem
+  ```
 * Only supports Unix socket at this time.
 * `bosh vms` and `bosh instances` fails with negative uptime for Postgres:
   ```
@@ -76,6 +79,10 @@ $ lxc --project bosh profile show default
 config:
   raw.lxc: |
     lxc.apparmor.profile = unconfined
+    lxc.mount.auto=proc:rw sys:rw cgroup:rw
+    lxc.cgroup.devices.allow=a
+    lxc.cap.drop=
+  security.nesting: "true"
   security.privileged: "true"
 description: Default LXD profile for project bosh
 devices:
@@ -172,13 +179,13 @@ These properties are available in the cloud properties. Note that they are used 
 
 ```
 cloud_properties:
-  instance_type:
-  ephemeral_disk:
+  instance_type: <type>
+  ephemeral_disk: <number_in_mb>
   devices:
     name_of_device:
-      type: device-type
-      parameter1: value1
-      parameter2: value2
+      type: <device-type>
+      parameter1: <value1>
+      parameter2: <value2>
 ```
 
 Regarding devices, they are direct mappings into the LXD device configuration.  Sample from the BOSH Director:
