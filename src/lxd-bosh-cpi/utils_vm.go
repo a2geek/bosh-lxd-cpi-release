@@ -15,22 +15,47 @@ func (c CPI) startVM(cid apiv1.VMCID) error {
 }
 
 func (c CPI) setVMAction(cid apiv1.VMCID, action string) error {
-	req := api.ContainerStatePut{
-		Action:   action,
-		Timeout:  30,
-		Force:    true,
-		Stateful: false,
-	}
-
-	op, err := c.client.UpdateContainerState(cid.AsString(), req, "")
+	atCurrentState, err := c.isVMAtRequestedState(cid, action)
 	if err != nil {
-		return bosherr.WrapError(err, "Set VM Action - "+action)
+		return err
 	}
+	if !atCurrentState {
+		req := api.ContainerStatePut{
+			Action:   action,
+			Timeout:  30,
+			Force:    true,
+			Stateful: false,
+		}
 
-	err = op.Wait()
-	if err != nil {
-		return bosherr.WrapError(err, "Set VM Action - wait - "+action)
+		op, err := c.client.UpdateContainerState(cid.AsString(), req, "")
+		if err != nil {
+			return bosherr.WrapError(err, "Set VM Action - update - "+action)
+		}
+
+		err = op.Wait()
+		if err != nil {
+			return bosherr.WrapError(err, "Set VM Action - wait - "+action)
+		}
 	}
 
 	return nil
+}
+
+// checkVMAction tests if this action has already been done or completed.
+func (c CPI) isVMAtRequestedState(cid apiv1.VMCID, action string) (bool, error) {
+	currentState, _, err := c.client.GetContainerState(cid.AsString())
+	if err != nil {
+		return false, bosherr.WrapError(err, "Check VM Action - "+action)
+	}
+
+	atRequestedState := false
+
+	switch action {
+	case "stop":
+		atRequestedState = currentState.StatusCode == api.Stopped || currentState.StatusCode == api.Stopping
+	case "start":
+		atRequestedState = currentState.StatusCode == api.Started || currentState.StatusCode == api.Starting
+	}
+
+	return atRequestedState, nil
 }
