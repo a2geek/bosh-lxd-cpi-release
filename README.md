@@ -2,7 +2,7 @@
 
 This is a [BOSH CPI](https://bosh.io/) implementation to support [LXD](https://linuxcontainers.org/lxd/introduction/).
 
-Please note that Go is new so the code is ugly. Working on making it functional before beautiful. ;-)
+Please note that Go is new to me so the code is ugly. Working on making it functional before beautiful. ;-)
 
 ## Requirements
 
