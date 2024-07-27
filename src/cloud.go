@@ -19,7 +19,7 @@ type LXDCloudProperties struct {
 // LXDVMCloudProperties represents the StemcellCloudProps supplied by the Bosh
 // stemcell in CreateVM.
 type LXDVMCloudProperties struct {
-	// InstantyType as described at https://github.com/dustinkirkland/instance-type
+	// InstanceType as described at https://github.com/dustinkirkland/instance-type
 	InstanceType string `json:"instance_type" yaml:"instance_type"`
 	// EphemeralDisk sized in megabytes.
 	EphemeralDisk int `json:"ephemeral_disk" yaml:"ephemeral_disk"`

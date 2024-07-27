@@ -22,10 +22,10 @@ func (c CPI) writeFileAsRootToVM(vmCID apiv1.VMCID, filemode int, path string, c
 
 func (c CPI) readFileFromVM(vmCID apiv1.VMCID, path string) (string, error) {
 	reader, _, err := c.client.GetInstanceFile(vmCID.AsString(), path)
-	defer reader.Close()
 	if err != nil {
 		return "", err
 	}
+	defer reader.Close()
 
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(reader)

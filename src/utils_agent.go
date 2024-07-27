@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
@@ -24,7 +24,7 @@ func (c CPI) writeAgentFileToVM(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) erro
 		Type:      "file",
 		WriteMode: "overwrite",
 	}
-	c.client.CreateInstanceFile(vmCID.AsString(), AGENT_PATH, agentConfigFileArgs)
+	err = c.client.CreateInstanceFile(vmCID.AsString(), AGENT_PATH, agentConfigFileArgs)
 	if err != nil {
 		return bosherr.WrapError(err, "Write AgentEnv")
 	}
@@ -39,7 +39,7 @@ func (c CPI) readAgentFileFromVM(vmCID apiv1.VMCID) (apiv1.AgentEnv, error) {
 	}
 	defer reader.Close()
 
-	bytes, err := ioutil.ReadAll(reader)
+	bytes, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, bosherr.WrapError(err, "Read AgentEnv bytes")
 	}

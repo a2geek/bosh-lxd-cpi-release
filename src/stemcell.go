@@ -7,7 +7,9 @@ import (
 	"os"
 	"path"
 	"strconv"
-	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 
 	lxdclient "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
@@ -68,7 +70,7 @@ func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) 
 		Properties: map[string]string{
 			"architecture":     props.Architecture,
 			"description":      description,
-			"os":               strings.Title(props.OsDistro),
+			"os":               cases.Title(language.English).String(props.OsDistro),
 			"root_device_name": props.RootDeviceName,
 			"root_disk_size":   strconv.Itoa(props.Disk),
 		},

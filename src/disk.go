@@ -19,7 +19,7 @@ func (c CPI) GetDisks(cid apiv1.VMCID) ([]apiv1.DiskCID, error) {
 	}
 
 	var diskcids []apiv1.DiskCID
-	for name, _ := range disks {
+	for name := range disks {
 		diskcids = append(diskcids, apiv1.NewDiskCID(name))
 	}
 

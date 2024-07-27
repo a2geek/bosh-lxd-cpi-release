@@ -191,9 +191,7 @@ func (c CPI) CreateVMV2(
 		mergedFile = append(mergedFile, StartupPath)
 		mergedFile = append(mergedFile, "")
 		// Rest of rc.local (which currently ends with 'exit 0')
-		for _, line := range lines[1:] {
-			mergedFile = append(mergedFile, line)
-		}
+		mergedFile = append(mergedFile, lines[1:]...)
 
 		rclocal = strings.Join(mergedFile, "\n")
 

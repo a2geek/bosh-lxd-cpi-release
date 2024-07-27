@@ -6,6 +6,7 @@ require (
 	github.com/canonical/lxd v0.0.0-20240723133516-3e0d93d2fdb7
 	github.com/cloudfoundry/bosh-cpi-go v0.0.0-20240720100156-4645fd6363f2
 	github.com/cloudfoundry/bosh-utils v0.0.479
+	golang.org/x/text v0.16.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -36,5 +37,4 @@ require (
 	golang.org/x/oauth2 v0.21.0 // indirect
 	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/term v0.22.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
 )
