@@ -9,7 +9,7 @@ import (
 )
 
 func (c CPI) writeFileAsRootToVM(vmCID apiv1.VMCID, filemode int, path string, content string) error {
-	fileArgs := lxd.ContainerFileArgs{
+	fileArgs := lxd.InstanceFileArgs{
 		Content:   strings.NewReader(content),
 		UID:       0, // root
 		GID:       0, // root
@@ -17,11 +17,11 @@ func (c CPI) writeFileAsRootToVM(vmCID apiv1.VMCID, filemode int, path string, c
 		Type:      "file",
 		WriteMode: "overwrite",
 	}
-	return c.client.CreateContainerFile(vmCID.AsString(), path, fileArgs)
+	return c.client.CreateInstanceFile(vmCID.AsString(), path, fileArgs)
 }
 
 func (c CPI) readFileFromVM(vmCID apiv1.VMCID, path string) (string, error) {
-	reader, _, err := c.client.GetContainerFile(vmCID.AsString(), path)
+	reader, _, err := c.client.GetInstanceFile(vmCID.AsString(), path)
 	defer reader.Close()
 	if err != nil {
 		return "", err

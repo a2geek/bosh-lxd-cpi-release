@@ -37,13 +37,13 @@ func (c CPI) attachDiskDeviceToVM(vmCID apiv1.VMCID, diskId string, devicePath s
 }
 
 func (c CPI) findDisksAttachedToVm(vmCID apiv1.VMCID) (map[string]map[string]string, error) {
-	container, _, err := c.client.GetContainer(vmCID.AsString())
+	instance, _, err := c.client.GetInstance(vmCID.AsString())
 	if err != nil {
 		return nil, err
 	}
 
 	devices := make(map[string]map[string]string)
-	for name, device := range container.Devices {
+	for name, device := range instance.Devices {
 		if device["type"] == "disk" {
 			devices[name] = device
 		}

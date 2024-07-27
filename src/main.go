@@ -69,7 +69,7 @@ func (f CPIFactory) New(_ apiv1.CallContext) (apiv1.CPI, error) {
 
 // CPI implementation
 type CPI struct {
-	client  lxdclient.ContainerServer
+	client  lxdclient.InstanceServer
 	uuidGen boshuuid.Generator
 	config  Config
 }

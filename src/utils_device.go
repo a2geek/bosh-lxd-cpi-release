@@ -6,27 +6,27 @@ import (
 )
 
 func (c CPI) addDevice(vmCID apiv1.VMCID, name string, device map[string]string) error {
-	container, etag, err := c.client.GetContainer(vmCID.AsString())
+	instance, etag, err := c.client.GetInstance(vmCID.AsString())
 	if err != nil {
-		return bosherr.WrapError(err, "Get container state")
+		return bosherr.WrapError(err, "Get instance state")
 	}
 
 	// Check if the device already exists
-	_, ok := container.Devices[name]
+	_, ok := instance.Devices[name]
 	if ok {
 		return bosherr.WrapError(err, "Device already exists: "+name)
 	}
 
-	container.Devices[name] = device
+	instance.Devices[name] = device
 
-	op, err := c.client.UpdateContainer(vmCID.AsString(), container.Writable(), etag)
+	op, err := c.client.UpdateInstance(vmCID.AsString(), instance.Writable(), etag)
 	if err != nil {
-		return bosherr.WrapError(err, "Update container state")
+		return bosherr.WrapError(err, "Update instance state")
 	}
 
 	err = op.Wait()
 	if err != nil {
-		return bosherr.WrapError(err, "Update container state - wait")
+		return bosherr.WrapError(err, "Update instance state - wait")
 	}
 
 	return nil

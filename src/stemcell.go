@@ -99,6 +99,7 @@ func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) 
 		MetaFile:        bytes.NewReader(buf.Bytes()),
 		RootfsFile:      rootfsFile,
 		ProgressHandler: dummyProgressHandler,
+		Type:            string(api.InstanceTypeVM),
 	}
 	op, err := c.client.CreateImage(image, &args)
 	if err != nil {

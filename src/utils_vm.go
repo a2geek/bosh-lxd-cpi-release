@@ -20,14 +20,14 @@ func (c CPI) setVMAction(cid apiv1.VMCID, action string) error {
 		return err
 	}
 	if !atCurrentState {
-		req := api.ContainerStatePut{
+		req := api.InstanceStatePut{
 			Action:   action,
 			Timeout:  30,
 			Force:    true,
 			Stateful: false,
 		}
 
-		op, err := c.client.UpdateContainerState(cid.AsString(), req, "")
+		op, err := c.client.UpdateInstanceState(cid.AsString(), req, "")
 		if err != nil {
 			return bosherr.WrapError(err, "Set VM Action - update - "+action)
 		}
@@ -43,7 +43,7 @@ func (c CPI) setVMAction(cid apiv1.VMCID, action string) error {
 
 // checkVMAction tests if this action has already been done or completed.
 func (c CPI) isVMAtRequestedState(cid apiv1.VMCID, action string) (bool, error) {
-	currentState, _, err := c.client.GetContainerState(cid.AsString())
+	currentState, _, err := c.client.GetInstanceState(cid.AsString())
 	if err != nil {
 		return false, bosherr.WrapError(err, "Check VM Action - "+action)
 	}

@@ -62,7 +62,7 @@ func (c CPI) AttachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
 func (c CPI) AttachDiskV2(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) (apiv1.DiskHint, error) {
 	err := c.stopVM(vmCID)
 	if err != nil {
-		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Stopping container")
+		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Stopping instance")
 	}
 
 	path, err := c.attachDiskToVM(vmCID, diskCID.AsString())
@@ -85,7 +85,7 @@ func (c CPI) AttachDiskV2(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) (apiv1.DiskH
 
 	err = c.startVM(vmCID)
 	if err != nil {
-		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Starting container")
+		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Starting instance")
 	}
 
 	return diskHint, nil
@@ -94,30 +94,30 @@ func (c CPI) AttachDiskV2(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) (apiv1.DiskH
 func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
 	err := c.stopVM(vmCID)
 	if err != nil {
-		return bosherr.WrapError(err, "Stopping container")
+		return bosherr.WrapError(err, "Stopping instance")
 	}
 
-	container, etag, err := c.client.GetContainer(vmCID.AsString())
+	instance, etag, err := c.client.GetInstance(vmCID.AsString())
 	if err != nil {
-		return bosherr.WrapError(err, "Get container state")
+		return bosherr.WrapError(err, "Get instance state")
 	}
 
 	// Check if the device already exists
-	_, ok := container.Devices[diskCID.AsString()]
+	_, ok := instance.Devices[diskCID.AsString()]
 	if !ok {
 		return bosherr.WrapError(err, "Device already exists: "+diskCID.AsString())
 	}
 
-	delete(container.Devices, diskCID.AsString())
+	delete(instance.Devices, diskCID.AsString())
 
-	op, err := c.client.UpdateContainer(vmCID.AsString(), container.Writable(), etag)
+	op, err := c.client.UpdateInstance(vmCID.AsString(), instance.Writable(), etag)
 	if err != nil {
-		return bosherr.WrapError(err, "Update container state")
+		return bosherr.WrapError(err, "Update instance state")
 	}
 
 	err = op.Wait()
 	if err != nil {
-		return bosherr.WrapError(err, "Update container state - wait")
+		return bosherr.WrapError(err, "Update instance state - wait")
 	}
 
 	agentEnv, err := c.readAgentFileFromVM(vmCID)
@@ -134,7 +134,7 @@ func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
 
 	err = c.startVM(vmCID)
 	if err != nil {
-		return bosherr.WrapError(err, "Starting container")
+		return bosherr.WrapError(err, "Starting instance")
 	}
 
 	return nil

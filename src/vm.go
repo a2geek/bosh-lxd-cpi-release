@@ -82,7 +82,7 @@ func (c CPI) CreateVMV2(
 	theCid := "c-" + id
 	vmCID := apiv1.NewVMCID(theCid)
 
-	containerSource := api.ContainerSource{
+	instanceSource := api.InstanceSource{
 		Type:  "image",
 		Alias: stemcellCID.AsString(),
 	}
@@ -108,7 +108,7 @@ func (c CPI) CreateVMV2(
 	}
 
 	// Add root device
-	imageAlias, _, err := c.client.GetImageAlias(containerSource.Alias)
+	imageAlias, _, err := c.client.GetImageAlias(instanceSource.Alias)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Image Alias locate")
 	}
@@ -131,17 +131,18 @@ func (c CPI) CreateVMV2(
 		devices[name] = settings
 	}
 
-	containersPost := api.ContainersPost{
-		ContainerPut: api.ContainerPut{
+	instancesPost := api.InstancesPost{
+		InstancePut: api.InstancePut{
 			Devices:  devices,
 			Config:   props.Config,
 			Profiles: []string{c.config.Server.Profile},
 		},
 		Name:         theCid,
 		InstanceType: props.InstanceType,
-		Source:       containerSource,
+		Source:       instanceSource,
+		Type:         api.InstanceTypeVM,
 	}
-	op, err := c.client.CreateContainer(containersPost)
+	op, err := c.client.CreateInstance(instancesPost)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating VM")
 	}
@@ -150,7 +151,7 @@ func (c CPI) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating VM")
 	}
 
-	_, etag, err := c.client.GetContainerState(theCid)
+	_, etag, err := c.client.GetInstanceState(theCid)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Retrieve state of VM")
 	}
@@ -230,10 +231,10 @@ func (c CPI) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Write AgentEnv")
 	}
 
-	containerStatePut := api.ContainerStatePut{
+	instanceStatePut := api.InstanceStatePut{
 		Action: "start",
 	}
-	op, err = c.client.UpdateContainerState(theCid, containerStatePut, etag)
+	_, err = c.client.UpdateInstanceState(theCid, instanceStatePut, etag)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Update state of VM")
 	}
@@ -253,7 +254,7 @@ func (c CPI) DeleteVM(cid apiv1.VMCID) error {
 		return bosherr.WrapError(err, "Delete VM - enumerate ephemeral disks")
 	}
 
-	op, err := c.client.DeleteContainer(cid.AsString())
+	op, err := c.client.DeleteInstance(cid.AsString())
 	if err != nil {
 		return bosherr.WrapError(err, "Delete VM")
 	}
@@ -285,22 +286,22 @@ func (c CPI) SetVMMetadata(cid apiv1.VMCID, metadata apiv1.VMMeta) error {
 		return bosherr.WrapError(err, "Unmarshal VMMeta to ActualVMMeta")
 	}
 
-	container, etag, err := c.client.GetContainer(cid.AsString())
+	instance, etag, err := c.client.GetInstance(cid.AsString())
 	if err != nil {
-		return bosherr.WrapError(err, "Get container state")
+		return bosherr.WrapError(err, "Get instance state")
 	}
 
 	description := fmt.Sprintf("%s/%s", actual.Job, actual.Index)
-	container.Description = description
+	instance.Description = description
 
-	op, err := c.client.UpdateContainer(cid.AsString(), container.Writable(), etag)
+	op, err := c.client.UpdateInstance(cid.AsString(), instance.Writable(), etag)
 	if err != nil {
-		return bosherr.WrapError(err, "Update container state")
+		return bosherr.WrapError(err, "Update instance state")
 	}
 
 	err = op.Wait()
 	if err != nil {
-		return bosherr.WrapError(err, "Update container state - wait")
+		return bosherr.WrapError(err, "Update instance state - wait")
 	}
 
 	disks, err := c.findEphemeralDisksAttachedToVM(cid)
@@ -319,7 +320,7 @@ func (c CPI) SetVMMetadata(cid apiv1.VMCID, metadata apiv1.VMMeta) error {
 }
 
 func (c CPI) HasVM(cid apiv1.VMCID) (bool, error) {
-	_, _, err := c.client.GetContainer(cid.AsString())
+	_, _, err := c.client.GetInstance(cid.AsString())
 	if err != nil {
 		return false, bosherr.WrapError(err, "HasVM")
 	}

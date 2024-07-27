@@ -16,7 +16,7 @@ func (c CPI) writeAgentFileToVM(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) erro
 	if err != nil {
 		return bosherr.WrapError(err, "AgentEnv as Bytes")
 	}
-	agentConfigFileArgs := lxd.ContainerFileArgs{
+	agentConfigFileArgs := lxd.InstanceFileArgs{
 		Content:   bytes.NewReader(agentEnvContents),
 		UID:       0,    // root
 		GID:       0,    // root
@@ -24,7 +24,7 @@ func (c CPI) writeAgentFileToVM(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) erro
 		Type:      "file",
 		WriteMode: "overwrite",
 	}
-	c.client.CreateContainerFile(vmCID.AsString(), AGENT_PATH, agentConfigFileArgs)
+	c.client.CreateInstanceFile(vmCID.AsString(), AGENT_PATH, agentConfigFileArgs)
 	if err != nil {
 		return bosherr.WrapError(err, "Write AgentEnv")
 	}
@@ -33,11 +33,11 @@ func (c CPI) writeAgentFileToVM(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) erro
 }
 
 func (c CPI) readAgentFileFromVM(vmCID apiv1.VMCID) (apiv1.AgentEnv, error) {
-	reader, _, err := c.client.GetContainerFile(vmCID.AsString(), AGENT_PATH)
-	defer reader.Close()
+	reader, _, err := c.client.GetInstanceFile(vmCID.AsString(), AGENT_PATH)
 	if err != nil {
 		return nil, bosherr.WrapError(err, "Retrieve AgentEnv")
 	}
+	defer reader.Close()
 
 	bytes, err := ioutil.ReadAll(reader)
 	if err != nil {
