@@ -3,62 +3,10 @@ package main
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/canonical/lxd/shared/api"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
-)
-
-const (
-	StartupPath = "/root/startup.sh"
-	RcLocalPath = "/etc/rc.local"
-
-	AtStartup = "#!/bin/bash\n" +
-		"\n" +
-		"# Re-mount any persistent disk\n" +
-		"# Note: assumes only 1 disk attached; may not be correct when resizing.\n" +
-		"if [ -d /warden-cpi-dev/vol-p-* ]\n" +
-		"then\n" +
-		"  mount --bind /warden-cpi-dev/vol-p-* /var/vcap/store\n" +
-		"fi\n" +
-		"\n" +
-		"# Hack to fix permission issues\n" +
-		"mkdir -p /var/vcap/data/sys\n" +
-		"chmod 755 /var/vcap/data\n" +
-		"chmod 755 /var/vcap/data/sys\n" +
-		"\n" +
-		"# A restart is required upon reboot.  This is somewhat monit aware.\n" +
-		"(\n" +
-		"  function zerocheck() {\n" +
-		"    nonzero=$(curl --silent --user $(cat /var/vcap/monit/monit.user) http://127.0.0.1:2822/_status?format=xml | \n" +
-		"                sed 's/></>\n</g' | \n" +
-		"                sort | \n" +
-		"                uniq -c | \n" +
-		"                grep $1 | \n" +
-		"                grep -v \">0<\" | \n" +
-		"                wc -l)\n" +
-		"    return $nonzero\n" +
-		"  }\n" +
-		"\n" +
-		"  function waitpendingaction() {\n" +
-		"    while ! zerocheck pendingaction\n" +
-		"    do\n" +
-		"      sleep 10\n" +
-		"    done\n" +
-		"  }\n" +
-		"\n" +
-		"  export PATH=/var/vcap/bosh/bin/:$PATH\n" +
-		"\n" +
-		"  waitpendingaction\n" +
-		"  monit stop all\n" +
-		"  waitpendingaction\n" +
-		"  monit start all\n" +
-		") &\n" +
-		"disown\n"
-	AttachEth = "# Using LXD DHCP to statically assign our IP address\n" +
-		"auto %s\n" +
-		"iface %s inet dhcp\n"
 )
 
 func (c CPI) CreateVM(
@@ -127,14 +75,9 @@ func (c CPI) CreateVMV2(
 		"size": fmt.Sprintf("%dMB", rootDeviceSize),
 	}
 
-	for name, settings := range props.Devices {
-		devices[name] = settings
-	}
-
 	instancesPost := api.InstancesPost{
 		InstancePut: api.InstancePut{
-			Devices:  devices,
-			Config:   props.Config,
+			Devices: devices,
 			Profiles: []string{c.config.Server.Profile},
 		},
 		Name:         theCid,
@@ -154,51 +97,6 @@ func (c CPI) CreateVMV2(
 	_, etag, err := c.client.GetInstanceState(theCid)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Retrieve state of VM")
-	}
-
-	// Write the eth0 file for auto configuration. This is likely a bug waiting to happen. :-(
-	for name, device := range devices {
-		if device["type"] != "nic" {
-			continue
-		}
-		content := fmt.Sprintf(AttachEth, name, name)
-		path := fmt.Sprintf("/etc/network/interfaces.d/%s", name)
-		err = c.writeFileAsRootToVM(vmCID, 0644 /* rw-r--r-- */, path, content)
-		if err != nil {
-			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating network file "+path)
-		}
-	}
-
-	err = c.writeFileAsRootToVM(vmCID, 0755 /* rwxr-xr-x */, StartupPath, AtStartup)
-	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating startup.sh file")
-	}
-
-	rclocal, err := c.readFileFromVM(vmCID, RcLocalPath)
-	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Reading rc.local file")
-	}
-
-	if !strings.Contains(rclocal, StartupPath) {
-		lines := strings.Split(rclocal, "\n")
-
-		var mergedFile []string
-		// First line -- #!/bin/bash
-		mergedFile = append(mergedFile, lines[0])
-		// Our modification
-		mergedFile = append(mergedFile, "")
-		mergedFile = append(mergedFile, "# Run at every boot to fixup the VM")
-		mergedFile = append(mergedFile, StartupPath)
-		mergedFile = append(mergedFile, "")
-		// Rest of rc.local (which currently ends with 'exit 0')
-		mergedFile = append(mergedFile, lines[1:]...)
-
-		rclocal = strings.Join(mergedFile, "\n")
-
-		err = c.writeFileAsRootToVM(vmCID, 0755 /* rwxr-xr-x */, RcLocalPath, rclocal)
-		if err != nil {
-			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Updating rc.local file")
-		}
 	}
 
 	agentEnv := apiv1.AgentEnvFactory{}.ForVM(agentID, vmCID, networks, env, c.config.Agent)

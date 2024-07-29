@@ -8,8 +8,8 @@
 - type: replace
   path: /resource_pools/name=vms/stemcell?
   value:
-    url: https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-xenial-go_agent?v=170.21
-    sha1: 0bd5f1458c065246840e4498d7c66cdb9335f908
+    url: https://storage.googleapis.com/bosh-core-stemcells/1.492/bosh-stemcell-1.492-openstack-kvm-ubuntu-jammy-go_agent.tgz
+    sha1: 448fa6f48597c030ae5e478dd63bf11def5fea2d
 
 # Configure LXD sizes
 - type: replace
@@ -17,21 +17,6 @@
   value:
     instance_type: c2-m4
     ephemeral_disk: 16_384
-    devices:
-      lxdsocket:
-        type: proxy
-        connect: unix:((lxd_unix_socket))
-        listen: unix:/warden-cpi-dev/lxd.socket
-        bind: container
-        uid: "1000"   # vcap
-        gid: "1000"   # vcap
-        mode: "0660"
-    # This configuration is required by all Bosh Agents and should be on the LXD profile.
-    # They are left here as a sample and a referene.
-    #config:
-    #  security.privileged: "true"
-    #  raw.lxc: |
-    #    lxc.apparmor.profile = unconfined
 
 # Add CPI job
 - type: replace
@@ -57,7 +42,10 @@
       profile_name: ((lxd_profile_name))
       network_name: ((lxd_network_name))
       storage_pool_name: ((lxd_storage_pool_name))
-      unix_socket: /warden-cpi-dev/lxd.socket
+      url: ((lxd_url))
+      insecure_skip_verify: ((lxd_insecure))
+      tls_client_cert: ((lxd_client_cert))
+      tls_client_key: ((lxd_client_key))
     agent:
       mbus: nats://nats:((nats_password))@((internal_ip)):4222
       blobstore:
@@ -76,7 +64,10 @@
       profile_name: ((lxd_profile_name))
       network_name: ((lxd_network_name))
       storage_pool_name: ((lxd_storage_pool_name))
-      unix_socket: ((lxd_unix_socket))
+      url: ((lxd_url))
+      insecure_skip_verify: ((lxd_insecure))
+      tls_client_cert: ((lxd_client_cert))
+      tls_client_key: ((lxd_client_key))
     agent:
       mbus: "https://mbus:((mbus_bootstrap_password))@0.0.0.0:6868"
       blobstore:

@@ -1,5 +1,5 @@
 director_name: lxd
-lxd_project_name: bosh
+lxd_project_name: default
 lxd_profile_name: default
 lxd_network_name: boshbr0
 lxd_storage_pool_name: default

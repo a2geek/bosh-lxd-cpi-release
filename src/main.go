@@ -49,7 +49,12 @@ func NewFactory(config Config) CPIFactory {
 }
 
 func (f CPIFactory) New(_ apiv1.CallContext) (apiv1.CPI, error) {
-	c, err := lxdclient.ConnectLXDUnix(f.config.Server.Socket, nil)
+	connectionArgs := &lxdclient.ConnectionArgs{
+		TLSClientCert:      f.config.Server.TLSClientCert,
+		TLSClientKey:       f.config.Server.TLSClientKey,
+		InsecureSkipVerify: f.config.Server.InsecureSkipVerify,
+	}
+	c, err := lxdclient.ConnectLXD(f.config.Server.URL, connectionArgs)
 	if err != nil {
 		return nil, err
 	}
@@ -75,5 +80,5 @@ type CPI struct {
 }
 
 func (c CPI) Info() (apiv1.Info, error) {
-	return apiv1.Info{StemcellFormats: []string{"warden-tar"}}, nil
+	return apiv1.Info{StemcellFormats: []string{"openstack-qcow2"}}, nil
 }

@@ -3,9 +3,9 @@ package main
 import (
 	"encoding/json"
 
+	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 	boshsys "github.com/cloudfoundry/bosh-utils/system"
-	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 )
 
 type Config struct {
@@ -13,22 +13,26 @@ type Config struct {
 	Agent  apiv1.AgentOptions
 }
 type LXD struct {
-	Socket      string
-	Project     string
-	Profile     string
-	Network     string
-	StoragePool string
+	URL                string
+	TLSClientCert      string
+	TLSClientKey       string
+	InsecureSkipVerify bool
+	Project            string
+	Profile            string
+	Network            string
+	StoragePool        string
 }
 
 func NewConfigFromPath(path string, fs boshsys.FileSystem) (Config, error) {
 	// This includes any default values
 	config := Config{
 		Server: LXD{
-			Socket:      "/var/lib/lxd/unix.socket",
-			Project:     "default",
-			Profile:     "default",
-			Network:     "lxdbr0", // Default network bridge?
-			StoragePool: "default",
+			URL:                "https://localhost:8443",
+			InsecureSkipVerify: false,
+			Project:            "default",
+			Profile:            "default",
+			Network:            "lxdbr0", // Default network bridge?
+			StoragePool:        "default",
 		},
 	}
 

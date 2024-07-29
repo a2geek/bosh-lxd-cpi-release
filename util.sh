@@ -13,29 +13,17 @@ function do_help() {
   echo
   echo "Useful environment variables to export..."
   echo "- BOSH_LOG_LEVEL (set to 'debug' to capture all bosh activity including request/response)"
-  echo "- LXD_SOCKET (default: /var/lib/lxd/unix.socket or /var/snap/lxd/common/lxd/unix.socket)"
+  echo "- LXD_URL (set to HTTPS url of LXD server - not localhost)"
+  echo "- LXD_INSECURE (default: false)"
+  echo "- LXD_CLIENT_CERT (set to path of LXD TLS client certificate)"
+  echo "- LXD_CLIENT_KEY (set to path of LXD TLS client key)"
   echo "- BOSH_DEPLOYMENT_DIR (default: \${HOME}/Documents/Source/bosh-deployment)"
   echo "- CONCOURSE_DIR when deploying Concourse"
   echo "- ZOOKEEPER_DIR when deploying ZooKeeper"
   echo "- POSTGRES_DIR when deploying Postgres"
-  echo "- LXD_MONIT_PATCH_DIR when deploying the runtime config patch"
   echo
   echo "Currently set environment variables..."
-  set | egrep "^(BOSH_LOG_LEVEL|LXD_SOCKET|BOSH_DEPLOYMENT_DIR|CONCOURSE_DIR|ZOOKEEPER_DIR|POSTGRES_DIR|LXD_MONIT_PATCH_DIR)="
-}
-
-function do_deps() {
-  export GOPATH=$PWD
-
-  cd src
-
-  # Remove all deps
-  #find * -maxdepth 3 -type d | grep -v '^lxd-bosh-cpi$' | xargs rm -rf
-
-  go get -d -t -v lxd-bosh-cpi/...
-
-  # Remove all .git folders
-  find * -type d -name '.git' | xargs rm -rf
+  set | egrep "^(BOSH_LOG_LEVEL|LXD_URL|LXD_INSECURE|LXD_CLIENT_CERT|LXD_CLIENT_KEY|BOSH_DEPLOYMENT_DIR|CONCOURSE_DIR|ZOOKEEPER_DIR|POSTGRES_DIR)="
 }
 
 function do_deploy_cf() {
@@ -99,29 +87,20 @@ function do_deploy_bosh() {
   bosh_deployment="${BOSH_DEPLOYMENT_DIR:-${HOME}/Documents/Source/bosh-deployment}"
   cpi_path=$PWD/cpi
 
-  if [ -z "${LXD_SOCKET:-}" ]
+  if [ -z "${LXD_URL:-}" ]
   then
-    if [ -S /var/lib/lxd/unix.socket ]
-    then
-      LXD_SOCKET="/var/lib/lxd/unix.socket"
-    elif [ -S /var/snap/lxd/common/lxd/unix.socket ]
-    then
-      LXD_SOCKET="/var/snap/lxd/common/lxd/unix.socket"
-    fi
+    echo "LXD_URL must be set."
+    exit 1
   fi
-  lxd_unix_socket="${LXD_SOCKET:-/var/lib/lxd/unix.socket}"
+  lxd_url="${LXD_URL}"
+  lxd_insecure="${LXD_INSECURE:-false}"
+  lxd_client_cert="${LXD_CLIENT_CERT:-}"
+  lxd_client_key="${LXD_CLIENT_KEY:-}"
 
   rm -f creds/bosh.yml
 
   echo "-----> `date`: Create dev release"
   bosh create-release --force --tarball $cpi_path
-
-  extra_ops_files=()
-  if [ ! -z "${LXD_MONIT_PATCH_DIR:-}" ]
-  then
-    echo "-----> `date`: Adding lxd-monit-patch"
-    extra_ops_files+=("--ops-file=${LXD_MONIT_PATCH_DIR}/manifests/operations/add-to-director.yml")
-  fi
 
   echo "-----> `date`: Create env"
   bosh create-env ${bosh_deployment}/bosh.yml \
@@ -129,12 +108,14 @@ function do_deploy_bosh() {
     --ops-file=${bosh_deployment}/bbr.yml \
     --ops-file=${bosh_deployment}/uaa.yml \
     --ops-file=${bosh_deployment}/credhub.yml \
-    "${extra_ops_files[@]}" \
     --state=state.json \
     --vars-store=creds/bosh.yml \
     --vars-file=manifests/bosh-vars.yml \
     --var=cpi_path=$cpi_path \
-    --var=lxd_unix_socket=$lxd_unix_socket
+    --var=lxd_url=$lxd_url \
+    --var=lxd_insecure=$lxd_insecure \
+    --var-file=lxd_client_cert=$lxd_client_cert \
+    --var-file=lxd_client_key=$lxd_client_key
 }
 
 function do_capture_requests() {
@@ -165,13 +146,6 @@ function do_cloud_config() {
 
 function do_runtime_config() {
   source scripts/bosh-env.sh
-
-  if [ -z "${LXD_MONIT_PATCH_DIR}" ]
-  then
-    echo "Warning: LXD_MONIT_PATCH_DIR is not set, not loading the monit-patch runtime config!"
-  else
-    bosh update-runtime-config --name monit-patch ${LXD_MONIT_PATCH_DIR}/manifests/runtime-config.yml
-  fi
 
   if [ -z "${BOSH_DEPLOYMENT_DIR}" ]
   then

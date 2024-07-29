@@ -23,9 +23,4 @@ type LXDVMCloudProperties struct {
 	InstanceType string `json:"instance_type" yaml:"instance_type"`
 	// EphemeralDisk sized in megabytes.
 	EphemeralDisk int `json:"ephemeral_disk" yaml:"ephemeral_disk"`
-	// Devices is formatted as a map of maps. The key for the primary entry is the device name
-	// and the secondary map keys are all the device properties.
-	Devices map[string]map[string]string `json:"devices" yaml:"devices"`
-	// Config is a map describing https://github.com/lxc/lxd/blob/master/doc/containers.md
-	Config map[string]string `json:"config" yaml:"config"`
 }

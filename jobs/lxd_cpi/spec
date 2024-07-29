@@ -10,10 +10,25 @@ packages:
 - lxd_cpi
 
 properties:
-  lxd_cpi.lxd.unix_socket:
-    description: "Unix socket used to connect to LXD daemon (must be on same host)"
-    example: "/var/lib/lxd/unix.socket"
-    #default: "/var/snap/lxd/common/lxd/unix.socket"
+  lxd_cpi.lxd.url:
+    description: URL of LXD server (cannot be localhost as this URL is used to both create bosh and by bosh)
+    example: "https://lxdserver:8443"
+  lxd_cpi.lxd.insecure_skip_verify:
+    description: Indicates if the SSL connection should be validated (set to false for self-signed certificates)
+    default: "false"
+  lxd_cpi.lxd.tls_client_cert:
+    description: Client public certificate to use for TLS connection
+    example: |
+      -----BEGIN CERTIFICATE-----
+      <snip>
+      -----END CERTIFICATE-----
+  lxd_cpi.lxd.tls_client_key:
+    description: Client private key to use for TLS connection
+    example: |
+      -----BEGIN RSA PRIVATE KEY-----
+      <snip>
+      -----END RSA PRIVATE KEY-----
+
   lxd_cpi.lxd.project_name:
     description: "Name of LXD Project with which to place VMs and Stemcells [default]"
     default: "default"

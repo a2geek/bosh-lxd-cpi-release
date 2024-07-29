@@ -2,10 +2,7 @@
 name: lxd_cpi
 
 dependencies:
-- golang-1.10-linux
+- golang-1.22-linux
 
 files:
-- "**/*.go"
-- "**/*.c"
-- "**/*.h"
-- "**/*.s"
+- "**/*"

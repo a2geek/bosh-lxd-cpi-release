@@ -2,7 +2,10 @@
 
 config = {
   "Server" => {
-    "Socket" => p("lxd_cpi.lxd.unix_socket"),
+    "URL" => p("lxd_cpi.lxd.url"),
+    "InsecureSkipVerify" => p("lxd_cpi.lxd.insecure_skip_verify"),
+    "TLSClientCert" => p("lxd_cpi.lxd.tls_client_cert"),
+    "TLSClientKey" => p("lxd_cpi.lxd.tls_client_key"),
     "Project" => p("lxd_cpi.lxd.project_name"),
     "Profile" => p("lxd_cpi.lxd.profile_name"),
     "Network" => p("lxd_cpi.lxd.network_name"),
