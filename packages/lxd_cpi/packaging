@@ -2,10 +2,11 @@
 
 set -ex
 
+platform=$(uname | tr '[:upper:]' '[:lower:]')
 if [ -z "$BOSH_PACKAGES_DIR" ]; then
-	pkg_dir=$(readlink -nf /var/vcap/packages/golang-1.22-linux)
+	pkg_dir=$(readlink -nf /var/vcap/packages/golang-1.22-${platform})
 else
-	pkg_dir=$BOSH_PACKAGES_DIR/golang-1.22-linux
+	pkg_dir=$BOSH_PACKAGES_DIR/golang-1.22-${platform}
 fi
 
 source ${pkg_dir}/bosh/compile.env
@@ -17,4 +18,10 @@ export GOCACHE=${GOPATH}/.cache
 
 mkdir -p $BOSH_INSTALL_TARGET/bin
 
-go build -mod=vendor -o $BOSH_INSTALL_TARGET/bin/cpi .
+export GOARCH=arm64
+export GOOS=darwin
+go build -mod=vendor -o $BOSH_INSTALL_TARGET/bin/cpi-darwin .
+
+export GOARCH=amd64
+export GOOS=linux
+go build -mod=vendor -o $BOSH_INSTALL_TARGET/bin/cpi-linux .

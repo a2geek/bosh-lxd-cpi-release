@@ -1,9 +1,9 @@
 director_name: lxd
-lxd_project_name: default
+lxd_project_name: boshdev
 lxd_profile_name: default
 lxd_network_name: boshbr0
-lxd_storage_pool_name: default
-internal_cidr: 10.245.0.0/16
+lxd_storage_pool_name: boshdir
+internal_cidr: 10.245.0.0/24
 internal_gw: 10.245.0.1
 internal_ip: 10.245.0.11
 credhub_encryption_password: topsecret
