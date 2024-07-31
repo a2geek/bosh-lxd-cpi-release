@@ -3,6 +3,7 @@ package main
 import (
 	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"os"
 	"path"
@@ -53,20 +54,38 @@ func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) 
 		Filename: path.Base(imagePath),
 	}
 	fmt.Fprintf(os.Stderr, "%v\n", image)
-	rootfsFile, err := os.Open(imagePath)
-	if err != nil {
-		return apiv1.StemcellCID{}, bosherr.WrapError(err, "rootfs open")
-	}
-	defer rootfsFile.Close()
 
-	rootfsInfo, err := rootfsFile.Stat()
+	tarGzip, err := os.Open(imagePath)
 	if err != nil {
-		return apiv1.StemcellCID{}, bosherr.WrapError(err, "rootfs stat")
+		return apiv1.StemcellCID{}, bosherr.WrapError(err, "tgz open")
+	}
+	defer tarGzip.Close()
+
+	gz, err := gzip.NewReader(tarGzip)
+	if err != nil {
+		return apiv1.StemcellCID{}, bosherr.WrapError(err, "gzip open")
+	}
+	defer gz.Close()
+
+	// Search for a biggish file (100MiB+) to bypass the smaller metadata details. Which are ignored. Bug or feature?
+	tarFile := tar.NewReader(gz)
+	found := false
+	createDate := int64(0)
+	for !found {
+		h, err := tarFile.Next()
+		if err != nil {
+			return apiv1.StemcellCID{}, bosherr.WrapErrorf(err, "tar.next for imagePath '%s'", imagePath)
+		}
+		found = h.Size > 104857600
+		createDate = h.ModTime.Unix()
+	}
+	if !found {
+		return apiv1.StemcellCID{}, bosherr.WrapError(err, "unable to locate stemcell in archive")
 	}
 
 	metadata := api.ImageMetadata{
 		Architecture: props.Architecture,
-		CreationDate: rootfsInfo.ModTime().Unix(),
+		CreationDate: createDate,
 		Properties: map[string]string{
 			"architecture":     props.Architecture,
 			"description":      description,
@@ -99,7 +118,7 @@ func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) 
 
 	args := lxdclient.ImageCreateArgs{
 		MetaFile:        bytes.NewReader(buf.Bytes()),
-		RootfsFile:      rootfsFile,
+		RootfsFile:      tarFile,
 		ProgressHandler: dummyProgressHandler,
 		Type:            string(api.InstanceTypeVM),
 	}
