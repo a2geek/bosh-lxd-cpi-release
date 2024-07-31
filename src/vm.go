@@ -72,12 +72,12 @@ func (c CPI) CreateVMV2(
 		"type": "disk",
 		"pool": c.config.Server.StoragePool,
 		"path": "/",
-		"size": fmt.Sprintf("%dMB", rootDeviceSize),
+		"size": fmt.Sprintf("%dMiB", rootDeviceSize),
 	}
 
 	instancesPost := api.InstancesPost{
 		InstancePut: api.InstancePut{
-			Devices: devices,
+			Devices:  devices,
 			Profiles: []string{c.config.Server.Profile},
 		},
 		Name:         theCid,

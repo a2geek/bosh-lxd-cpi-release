@@ -14,7 +14,7 @@ func (c CPI) createDisk(size int, name string) error {
 		Type: "custom",
 		StorageVolumePut: api.StorageVolumePut{
 			Config: map[string]string{
-				"size": fmt.Sprintf("%dMB", size),
+				"size": fmt.Sprintf("%dMiB", size),
 			},
 		},
 	}
