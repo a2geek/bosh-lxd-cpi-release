@@ -26,6 +26,28 @@ function do_help() {
   set | egrep "^(BOSH_LOG_LEVEL|LXD_URL|LXD_INSECURE|LXD_CLIENT_CERT|LXD_CLIENT_KEY|BOSH_DEPLOYMENT_DIR|CONCOURSE_DIR|ZOOKEEPER_DIR|POSTGRES_DIR)="
 }
 
+function do_init_lxd() {
+  set -eu
+
+  project=$(lxc project list --format csv | grep "boshdev" | cut -d, -f1)
+  if [ -z "${project}" ]
+  then
+    lxc project create boshdev -c features.images=true -c features.storage.volumes=true
+  fi
+  lxc project list boshdev
+
+  # note that a bridge is apparently "managed" and can not be set in the project itself
+  network=$(lxc network list --format csv | grep "boshdevbr0" | cut -d, -f1)
+  if [ -z "${network}" ]
+  then
+    lxc network create boshdevbr0 --type bridge ipv4.address=10.245.0.1/24 ipv4.nat=true ipv6.address=none dns.mode=none
+  fi
+  lxc network list
+
+  lxc storage create --project boshdev boshdir dir source=/storage/boshdev-disks
+  lxc storage list default
+}
+
 function do_deploy_cf() {
   if [ -z "$CF_DEPLOYMENT_DIR" ]
   then
