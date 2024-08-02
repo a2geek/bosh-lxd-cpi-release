@@ -5,6 +5,7 @@
         "boshlog",
         "boshsys",
         "boshuuid",
+        "CDROM",
         "cloudfoundry",
         "diskcids",
         "Distro",
