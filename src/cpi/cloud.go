@@ -1,4 +1,4 @@
-package main
+package cpi
 
 // LXDCloudProperties represents the StemcellCloudProps supplied by the Bosh
 // stemcell in CreateStemcell.

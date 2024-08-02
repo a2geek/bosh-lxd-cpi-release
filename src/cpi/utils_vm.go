@@ -1,4 +1,4 @@
-package main
+package cpi
 
 import (
 	"github.com/canonical/lxd/shared/api"

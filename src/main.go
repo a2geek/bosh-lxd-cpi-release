@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bosh-lxd-cpi/config"
+	"bosh-lxd-cpi/cpi"
 	"flag"
 	"os"
 
@@ -9,7 +11,6 @@ import (
 	"github.com/cloudfoundry/bosh-cpi-go/rpc"
 	boshlog "github.com/cloudfoundry/bosh-utils/logger"
 	boshsys "github.com/cloudfoundry/bosh-utils/system"
-	boshuuid "github.com/cloudfoundry/bosh-utils/uuid"
 )
 
 var (
@@ -22,7 +23,7 @@ func main() {
 
 	flag.Parse()
 
-	config, err := NewConfigFromPath(*configPathOpt, fs)
+	config, err := config.NewConfigFromPath(*configPathOpt, fs)
 	if err != nil {
 		logger.Error("main", "Loading config %s", err.Error())
 		os.Exit(1)
@@ -41,10 +42,10 @@ func main() {
 
 // CPIFactory implementation.
 type CPIFactory struct {
-	config Config
+	config config.Config
 }
 
-func NewFactory(config Config) CPIFactory {
+func NewFactory(config config.Config) CPIFactory {
 	return CPIFactory{config}
 }
 
@@ -64,21 +65,5 @@ func (f CPIFactory) New(_ apiv1.CallContext) (apiv1.CPI, error) {
 		c = c.UseProject(f.config.Server.Project)
 	}
 
-	cpi := CPI{
-		client:  c,
-		uuidGen: boshuuid.NewGenerator(),
-		config:  f.config,
-	}
-	return cpi, nil
-}
-
-// CPI implementation
-type CPI struct {
-	client  lxdclient.InstanceServer
-	uuidGen boshuuid.Generator
-	config  Config
-}
-
-func (c CPI) Info() (apiv1.Info, error) {
-	return apiv1.Info{StemcellFormats: []string{"openstack-qcow2"}}, nil
+	return cpi.NewCPI(c, f.config), nil
 }
