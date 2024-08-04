@@ -2,7 +2,6 @@ package agentmgr
 
 import (
 	"encoding/json"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,23 +28,6 @@ func NewConfigDriveManager(config Config) (AgentManager, error) {
 	err = mgr.createDisk()
 	if err != nil {
 		return nil, bosherr.WrapError(err, "unable to create config disk")
-	}
-	return mgr, nil
-}
-
-// NewConfigDriveManagerFromData will allow AgentEnv settings updates on an existing config drive
-func NewConfigDriveManagerFromData(config Config, data []byte) (AgentManager, error) {
-	name, err := tempFileName("fat32")
-	if err != nil {
-		return nil, bosherr.WrapError(err, "unable to generate agent config disk temp file")
-	}
-	err = os.WriteFile(name, data, 0666)
-	if err != nil {
-		return nil, bosherr.WrapError(err, "unable to store config disk to temp file")
-	}
-	mgr := configDriveManager{
-		diskFileName: name,
-		config:       config,
 	}
 	return mgr, nil
 }
@@ -131,13 +113,7 @@ func (c configDriveManager) writeFile(fs filesystem.FileSystem, path string, con
 }
 
 func (c configDriveManager) ToBytes() ([]byte, error) {
-	f, err := os.Open(c.diskFileName)
-	defer f.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	return io.ReadAll(f)
+	return os.ReadFile(c.diskFileName)
 }
 
 func (c configDriveManager) createDisk() error {

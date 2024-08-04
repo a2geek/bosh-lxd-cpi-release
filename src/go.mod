@@ -7,7 +7,6 @@ require (
 	github.com/cloudfoundry/bosh-cpi-go v0.0.0-20240720100156-4645fd6363f2
 	github.com/cloudfoundry/bosh-utils v0.0.479
 	github.com/diskfs/go-diskfs v1.4.0
-	github.com/rn/iso9660wrap v0.0.0-20180101235755-3a04f8ca150a
 	golang.org/x/text v0.16.0
 	gopkg.in/yaml.v2 v2.4.0
 )

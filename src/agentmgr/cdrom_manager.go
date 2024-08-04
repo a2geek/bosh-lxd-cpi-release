@@ -1,11 +1,16 @@
 package agentmgr
 
 import (
-	"io"
+	"encoding/json"
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
-	"github.com/rn/iso9660wrap"
+	diskfs "github.com/diskfs/go-diskfs"
+	"github.com/diskfs/go-diskfs/disk"
+	"github.com/diskfs/go-diskfs/filesystem"
+	"github.com/diskfs/go-diskfs/filesystem/iso9660"
 )
 
 func NewCDROMManager(config Config) (AgentManager, error) {
@@ -14,38 +19,96 @@ func NewCDROMManager(config Config) (AgentManager, error) {
 		return nil, err
 	}
 	mgr := cdromManager{
-		filename: name,
-		config:   config,
+		diskFileName: name,
+		config:       config,
 	}
 	return mgr, nil
 }
 
 type cdromManager struct {
-	filename string
-	config   Config
+	diskFileName string
+	config       Config
 }
 
 func (m cdromManager) Update(agentEnv apiv1.AgentEnv) error {
+	// Based on sample: https://github.com/diskfs/go-diskfs/blob/master/examples/iso_create.go
+
+	var diskSize int64 = 5 * 1024 * 1024 // 5 MB
+	image, err := diskfs.Create(m.diskFileName, diskSize, diskfs.Raw, diskfs.SectorSizeDefault)
+	if err != nil {
+		return err
+	}
+
+	image.LogicalBlocksize = 2048
+	fspec := disk.FilesystemSpec{
+		Partition:   0,
+		FSType:      filesystem.TypeISO9660,
+		VolumeLabel: m.config.Label,
+	}
+	fs, err := image.CreateFilesystem(fspec)
+	if err != nil {
+		return err
+	}
+
+	// The AgentEnv goes into userdata
 	buf, err := agentEnv.AsBytes()
 	if err != nil {
 		return err
 	}
 
-	f, err := os.OpenFile(m.filename, os.O_RDWR|os.O_CREATE, 0600)
+	err = m.writeFile(fs, m.config.UserdataPath, buf)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 
-	return iso9660wrap.WriteBuffer(f, buf, m.config.Filename)
+	// Metadata contains the SSH key
+	metadata := metadataContentsType{
+		// TODO uncertain if this is actually needed for our configurations...
+		// PublicKeys: map[string]publicKeyType{
+		// 	"0": {
+		// 		"openssh-key": c.config.VMPublicKey,
+		// 	},
+		// },
+	}
+	metaDataContent, err := json.Marshal(metadata)
+	if err != nil {
+		return err
+	}
+
+	err = m.writeFile(fs, m.config.MetadataPath, metaDataContent)
+	if err != nil {
+		return err
+	}
+
+	iso, ok := fs.(*iso9660.FileSystem)
+	if !ok {
+		return fmt.Errorf("not an iso9660 filesystem")
+	}
+	return iso.Finalize(iso9660.FinalizeOptions{})
 }
 
 func (m cdromManager) ToBytes() ([]byte, error) {
-	f, err := os.Open(m.filename)
-	defer f.Close()
-	if err != nil {
-		return nil, err
+	return os.ReadFile(m.diskFileName)
+}
+
+func (m cdromManager) writeFile(fs filesystem.FileSystem, path string, contents []byte) error {
+	if path == "" {
+		return nil
 	}
 
-	return io.ReadAll(f)
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+
+	rw, err := fs.OpenFile(path, os.O_CREATE|os.O_RDWR)
+	if err != nil {
+		return err
+	}
+
+	_, err = rw.Write(contents)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

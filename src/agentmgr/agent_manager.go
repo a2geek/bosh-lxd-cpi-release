@@ -27,24 +27,7 @@ func NewAgentManager(config Config) (AgentManager, error) {
 		return nil, err
 	}
 	if a == nil {
-		return nil, fmt.Errorf("Unknown stemcell configuration type '%s'", config.SourceType)
-	}
-	return a, nil
-}
-
-// NewAgentManagerFromData will allow AgentEnv settings updates on an existing config drive
-func NewAgentManagerFromData(config Config, data []byte) (AgentManager, error) {
-	var a AgentManager
-	var err error
-	switch config.SourceType {
-	case "ConfigDrive":
-		a, err = NewConfigDriveManagerFromData(config, data)
-	}
-	if err != nil {
-		return nil, err
-	}
-	if a == nil {
-		return nil, fmt.Errorf("Unknown stemcell configuration type '%s'", config.SourceType)
+		return nil, fmt.Errorf("unknown stemcell configuration type '%s'", config.SourceType)
 	}
 	return a, nil
 }

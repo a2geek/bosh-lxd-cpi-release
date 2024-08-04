@@ -39,3 +39,6 @@ creds/
 stemcell/
 release/
 bosh-client.*
+/env.sh
+/NOTES.md
+
