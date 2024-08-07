@@ -10,8 +10,9 @@ import (
 
 func (c CPI) createDisk(size int, name string) error {
 	storageVolumeRequest := api.StorageVolumesPost{
-		Name: name,
-		Type: "custom",
+		Name:        name,
+		Type:        "custom",
+		ContentType: "block",
 		StorageVolumePut: api.StorageVolumePut{
 			Config: map[string]string{
 				"size": fmt.Sprintf("%dMiB", size),
@@ -28,9 +29,9 @@ func (c CPI) attachDiskToVM(vmCID apiv1.VMCID, diskId string) (string, error) {
 
 func (c CPI) attachDiskDeviceToVM(vmCID apiv1.VMCID, diskId string, devicePath string) (string, error) {
 	device := map[string]string{
-		"type":   "disk",
-		"pool":   c.config.Server.StoragePool,
-		"path":   devicePath,
+		"type": "disk",
+		"pool": c.config.Server.StoragePool,
+		//"path":   devicePath,
 		"source": diskId,
 	}
 	return devicePath, c.addDevice(vmCID, diskId, device)

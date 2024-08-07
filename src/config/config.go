@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bosh-lxd-cpi/agentmgr"
 	"encoding/json"
 
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
@@ -9,8 +10,9 @@ import (
 )
 
 type Config struct {
-	Server LXD
-	Agent  apiv1.AgentOptions
+	Server      LXD
+	Agent       apiv1.AgentOptions
+	AgentConfig agentmgr.Config
 }
 type LXD struct {
 	URL                string

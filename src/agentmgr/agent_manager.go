@@ -18,8 +18,8 @@ func NewAgentManager(config Config) (AgentManager, error) {
 	var a AgentManager
 	var err error
 	switch config.SourceType {
-	case "ConfigDrive":
-		a, err = NewConfigDriveManager(config)
+	case "FAT32":
+		a, err = NewFAT32Manager(config)
 	case "CDROM":
 		a, err = NewCDROMManager(config)
 	}

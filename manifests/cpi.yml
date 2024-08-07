@@ -37,7 +37,7 @@
 - type: replace
   path: /instance_groups/name=bosh/properties/lxd_cpi?
   value:
-    lxd:
+    lxd: &lxd_settings
       project_name: ((lxd_project_name))
       profile_name: ((lxd_profile_name))
       network_name: ((lxd_network_name))
@@ -54,23 +54,21 @@
           endpoint: http://((internal_ip)):25250
           user: agent
           password: ((blobstore_agent_password))
+    agent_config: &agent_config_settings
+      type: CDROM
+      label: "config-2"
+      metadata_path: "ec2/latest/meta-data.json"
+      userdata_path: "ec2/latest/user-data"
 
 # This is for initial standup of VM (bootstrap?)
 - type: replace
   path: /cloud_provider/properties/lxd_cpi?
   value:
-    lxd:
-      project_name: ((lxd_project_name))
-      profile_name: ((lxd_profile_name))
-      network_name: ((lxd_network_name))
-      storage_pool_name: ((lxd_storage_pool_name))
-      url: ((lxd_url))
-      insecure_skip_verify: ((lxd_insecure))
-      tls_client_cert: ((lxd_client_cert))
-      tls_client_key: ((lxd_client_key))
+    lxd: *lxd_settings
     agent:
       mbus: "https://mbus:((mbus_bootstrap_password))@0.0.0.0:6868"
       blobstore:
         provider: local
         options:
           blobstore_path: /var/vcap/micro_bosh/data/cache
+    agent_config: *agent_config_settings

@@ -19,6 +19,12 @@ config = {
       "Provider" => p("lxd_cpi.agent.blobstore.provider"),
       "Options"  => p("lxd_cpi.agent.blobstore.options")
     }
+  },
+  "AgentConfig" => {
+    "SourceType" => p("lxd_cpi.agent_config.type"),
+    "Label" => p("lxd_cpi.agent_config.label"),
+    "MetadataPath" => p("lxd_cpi.agent_config.metadata_path"),
+    "UserdataPath" => p("lxd_cpi.agent_config.userdata_path")
   }
 }
 

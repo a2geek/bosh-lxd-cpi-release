@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
@@ -56,6 +57,11 @@ func (m cdromManager) Update(agentEnv apiv1.AgentEnv) error {
 		return err
 	}
 
+	err = m.mkdirAll(fs, filepath.Dir(m.config.UserdataPath))
+	if err != nil {
+		return err
+	}
+
 	err = m.writeFile(fs, m.config.UserdataPath, buf)
 	if err != nil {
 		return err
@@ -75,6 +81,11 @@ func (m cdromManager) Update(agentEnv apiv1.AgentEnv) error {
 		return err
 	}
 
+	err = m.mkdirAll(fs, filepath.Dir(m.config.MetadataPath))
+	if err != nil {
+		return err
+	}
+
 	err = m.writeFile(fs, m.config.MetadataPath, metaDataContent)
 	if err != nil {
 		return err
@@ -84,7 +95,10 @@ func (m cdromManager) Update(agentEnv apiv1.AgentEnv) error {
 	if !ok {
 		return fmt.Errorf("not an iso9660 filesystem")
 	}
-	return iso.Finalize(iso9660.FinalizeOptions{})
+	return iso.Finalize(iso9660.FinalizeOptions{
+		RockRidge:        true,
+		VolumeIdentifier: m.config.Label,
+	})
 }
 
 func (m cdromManager) ToBytes() ([]byte, error) {
@@ -110,5 +124,21 @@ func (m cdromManager) writeFile(fs filesystem.FileSystem, path string, contents 
 		return err
 	}
 
+	return rw.Close()
+}
+
+func (m cdromManager) mkdirAll(fs filesystem.FileSystem, fullPath string) error {
+	paths := strings.Split(fullPath, "/")
+	var dir string
+	for _, path := range paths {
+		if dir != "" {
+			dir += "/"
+		}
+		dir += path
+		err := fs.Mkdir(dir)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }

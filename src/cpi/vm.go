@@ -27,12 +27,13 @@ func (c CPI) CreateVMV2(
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating VM id")
 	}
-	theCid := "c-" + id
+	theCid := "vm-" + id
 	vmCID := apiv1.NewVMCID(theCid)
 
 	instanceSource := api.InstanceSource{
-		Type:  "image",
-		Alias: stemcellCID.AsString(),
+		Type:    "image",
+		Alias:   stemcellCID.AsString(),
+		Project: c.config.Server.Project,
 	}
 	props := LXDVMCloudProperties{}
 	err = cloudProps.As(&props)
@@ -43,7 +44,7 @@ func (c CPI) CreateVMV2(
 	devices := make(map[string]map[string]string)
 	eth := 0
 	for _, net := range networks {
-		net.SetPreconfigured()
+		//net.SetPreconfigured()
 		name := fmt.Sprintf("eth%d", eth)
 		devices[name] = map[string]string{
 			"name":         name,
@@ -79,6 +80,9 @@ func (c CPI) CreateVMV2(
 		InstancePut: api.InstancePut{
 			Devices:  devices,
 			Profiles: []string{c.config.Server.Profile},
+			Config: map[string]string{
+				"raw.qemu": "-bios bios-256k.bin",
+			},
 		},
 		Name:         theCid,
 		InstanceType: props.InstanceType,
@@ -130,11 +134,15 @@ func (c CPI) CreateVMV2(
 	instanceStatePut := api.InstanceStatePut{
 		Action: "start",
 	}
-	_, err = c.client.UpdateInstanceState(theCid, instanceStatePut, etag)
+	op, err = c.client.UpdateInstanceState(theCid, instanceStatePut, etag)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Update state of VM")
 	}
-	// Don't have to wait
+
+	err = op.Wait()
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Starting VM")
+	}
 
 	return vmCID, networks, nil
 }
@@ -192,7 +200,7 @@ func (c CPI) SetVMMetadata(cid apiv1.VMCID, metadata apiv1.VMMeta) error {
 
 	op, err := c.client.UpdateInstance(cid.AsString(), instance.Writable(), etag)
 	if err != nil {
-		return bosherr.WrapError(err, "Update instance state")
+		return bosherr.WrapErrorf(err, "Update instance state; status=%s", instance.Status)
 	}
 
 	err = op.Wait()

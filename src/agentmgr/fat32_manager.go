@@ -15,13 +15,13 @@ import (
 	"github.com/diskfs/go-diskfs/partition/mbr"
 )
 
-// NewConfigDriveManager will initialize a new config drive for AgentEnv settings
-func NewConfigDriveManager(config Config) (AgentManager, error) {
+// NewFAT32Manager will initialize a new config drive for AgentEnv settings
+func NewFAT32Manager(config Config) (AgentManager, error) {
 	name, err := tempFileName("fat32")
 	if err != nil {
 		return nil, bosherr.WrapError(err, "unable to generate agent config disk temp file")
 	}
-	mgr := configDriveManager{
+	mgr := fat32Manager{
 		diskFileName: name,
 		config:       config,
 	}
@@ -38,12 +38,12 @@ type metadataContentsType struct {
 }
 type publicKeyType map[string]string
 
-type configDriveManager struct {
+type fat32Manager struct {
 	diskFileName string
 	config       Config
 }
 
-func (c configDriveManager) Update(agentEnv apiv1.AgentEnv) error {
+func (c fat32Manager) Update(agentEnv apiv1.AgentEnv) error {
 	disk, err := diskfs.Open(c.diskFileName)
 	if err != nil {
 		return err
@@ -94,7 +94,7 @@ func (c configDriveManager) Update(agentEnv apiv1.AgentEnv) error {
 	return nil
 }
 
-func (c configDriveManager) writeFile(fs filesystem.FileSystem, path string, contents []byte) error {
+func (c fat32Manager) writeFile(fs filesystem.FileSystem, path string, contents []byte) error {
 	if !strings.HasPrefix(path, "/") {
 		path = "/" + path
 	}
@@ -112,13 +112,13 @@ func (c configDriveManager) writeFile(fs filesystem.FileSystem, path string, con
 	return nil
 }
 
-func (c configDriveManager) ToBytes() ([]byte, error) {
+func (c fat32Manager) ToBytes() ([]byte, error) {
 	return os.ReadFile(c.diskFileName)
 }
 
-func (c configDriveManager) createDisk() error {
+func (c fat32Manager) createDisk() error {
 	// Note that the sizes are rough guesstimates.
-	// diskSize = 35MB; minimim size is 32MB but...
+	// diskSize = 35MB; minimum size is 32MB but...
 	// partition start of 2048 is ~1MB into disk.
 	// partition size of 68000 is about 33.25MB.
 

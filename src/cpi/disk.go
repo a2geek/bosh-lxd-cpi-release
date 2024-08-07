@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	DISK_EPHEMERAL_PREFIX  = "vol-e-"
-	DISK_PERSISTENT_PREFIX = "vol-p-"
+	DISK_EPHEMERAL_PREFIX     = "vol-e-"
+	DISK_PERSISTENT_PREFIX    = "vol-p-"
+	DISK_CONFIGURATION_PREFIX = "vol-c-"
 )
 
 func (c CPI) GetDisks(cid apiv1.VMCID) ([]apiv1.DiskCID, error) {

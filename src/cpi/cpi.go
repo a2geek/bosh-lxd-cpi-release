@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 
 	lxdclient "github.com/canonical/lxd/client"
+	boshlog "github.com/cloudfoundry/bosh-utils/logger"
 	boshuuid "github.com/cloudfoundry/bosh-utils/uuid"
 )
 
@@ -14,13 +15,15 @@ type CPI struct {
 	client  lxdclient.InstanceServer
 	uuidGen boshuuid.Generator
 	config  config.Config
+	logger  boshlog.Logger
 }
 
-func NewCPI(client lxdclient.InstanceServer, cfg config.Config) CPI {
+func NewCPI(client lxdclient.InstanceServer, cfg config.Config, logger boshlog.Logger) CPI {
 	return CPI{
 		client:  client,
 		uuidGen: boshuuid.NewGenerator(),
 		config:  cfg,
+		logger:  logger,
 	}
 }
 

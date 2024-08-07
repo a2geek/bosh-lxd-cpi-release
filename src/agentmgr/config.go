@@ -1,9 +1,9 @@
 package agentmgr
 
 type Config struct {
-	// ConfigDrive or CDROM
+	// FAT32 or CDROM
 	SourceType string
-	// ConfigDrive and CDROM
+	// FAT32 and CDROM
 	Label        string
 	MetadataPath string
 	UserdataPath string

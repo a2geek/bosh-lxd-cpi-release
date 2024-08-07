@@ -15,10 +15,16 @@ import (
 
 var (
 	configPathOpt = flag.String("configPath", "", "Path to configuration file")
+	logLevelOpt   = flag.String("logLevel", "", "Set log level (NONE, ERROR, WARN, INFO, DEBUG)")
 )
 
 func main() {
-	logger := boshlog.NewLogger(boshlog.LevelNone)
+	loglevel, err := boshlog.Levelify(*logLevelOpt)
+	if err != nil {
+		loglevel = boshlog.LevelError
+	}
+
+	logger := boshlog.NewLogger(loglevel)
 	fs := boshsys.NewOsFileSystem(logger)
 
 	flag.Parse()
@@ -29,7 +35,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	cpiFactory := NewFactory(config)
+	cpiFactory := NewFactory(config, logger)
 
 	cli := rpc.NewFactory(logger).NewCLI(cpiFactory)
 
@@ -43,10 +49,11 @@ func main() {
 // CPIFactory implementation.
 type CPIFactory struct {
 	config config.Config
+	logger boshlog.Logger
 }
 
-func NewFactory(config config.Config) CPIFactory {
-	return CPIFactory{config}
+func NewFactory(config config.Config, logger boshlog.Logger) CPIFactory {
+	return CPIFactory{config, logger}
 }
 
 func (f CPIFactory) New(_ apiv1.CallContext) (apiv1.CPI, error) {
@@ -65,5 +72,5 @@ func (f CPIFactory) New(_ apiv1.CallContext) (apiv1.CPI, error) {
 		c = c.UseProject(f.config.Server.Project)
 	}
 
-	return cpi.NewCPI(c, f.config), nil
+	return cpi.NewCPI(c, f.config, f.logger), nil
 }
