@@ -44,7 +44,6 @@ func (c CPI) CreateVMV2(
 	devices := make(map[string]map[string]string)
 	eth := 0
 	for _, net := range networks {
-		//net.SetPreconfigured()
 		name := fmt.Sprintf("eth%d", eth)
 		devices[name] = map[string]string{
 			"name":         name,
@@ -95,7 +94,7 @@ func (c CPI) CreateVMV2(
 	}
 	err = op.Wait()
 	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating VM")
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating VM - wait")
 	}
 
 	_, etag, err := c.client.GetInstanceState(theCid)
@@ -104,7 +103,7 @@ func (c CPI) CreateVMV2(
 	}
 
 	agentEnv := apiv1.AgentEnvFactory{}.ForVM(agentID, vmCID, networks, env, c.config.Agent)
-	agentEnv.AttachSystemDisk(apiv1.NewDiskHintFromString(""))
+	agentEnv.AttachSystemDisk(apiv1.NewDiskHintFromString("/dev/sda"))
 
 	if props.EphemeralDisk > 0 {
 		diskId, err := c.uuidGen.Generate()
@@ -118,12 +117,14 @@ func (c CPI) CreateVMV2(
 			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Create ephemeral disk")
 		}
 
-		path, err := c.attachDiskDeviceToVM(vmCID, diskCid, "/var/vcap/data")
+		//path, err := c.attachDiskDeviceToVM(vmCID, diskCid, "/var/vcap/data")
+		_, err = c.attachDiskDeviceToVM(vmCID, diskCid, "/var/vcap/data")
 		if err != nil {
 			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Attach ephemeral disk")
 		}
 
-		agentEnv.AttachEphemeralDisk(apiv1.NewDiskHintFromMap(map[string]interface{}{"path": path}))
+		//agentEnv.AttachEphemeralDisk(apiv1.NewDiskHintFromMap(map[string]interface{}{"path": path}))
+		agentEnv.AttachEphemeralDisk(apiv1.NewDiskHintFromString("/dev/sdb"))
 	}
 
 	err = c.writeAgentFileToVM(vmCID, agentEnv)
