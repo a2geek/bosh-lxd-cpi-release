@@ -86,23 +86,23 @@ function do_destroy() {
   rm -f cpi
   rm -f state.json
 
-  lxc --project bosh list --format json |
+  lxc --project boshdev list --format json |
     jq -r '.[] | .name | select(test("c-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"))' |
     xargs --verbose --no-run-if-empty --max-args=1 lxc delete -f
-  lxc --project bosh image list --format json |
+  lxc --project boshdev image list --format json |
     jq -r '.[] | select(.aliases[0].name // "not present" | test("img-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) | .fingerprint' |
     xargs --verbose --no-run-if-empty --max-args=1 lxc image delete
   # NO JSON AVAILABLE?!
-  lxc storage volume list default |
+  lxc storage volume list boshdir |
     grep custom |
     cut -d"|" -f3 |
-    xargs --verbose --no-run-if-empty --max-args=1  lxc storage volume delete default
+    xargs --verbose --no-run-if-empty --max-args=1  lxc storage volume delete boshdir
 
   echo "Visual confirmation:"
-  lxc --project bosh list
-  lxc --project bosh image list
-  lxc --project bosh storage list
-  lxc --project bosh storage volume list default
+  lxc --project boshdev list
+  lxc --project boshdev image list
+  lxc --project boshdev storage list
+  lxc --project boshdev storage volume list default
 }
 
 function do_deploy_bosh() {
@@ -138,6 +138,7 @@ function do_deploy_bosh() {
     --ops-file=${bosh_deployment}/bbr.yml \
     --ops-file=${bosh_deployment}/uaa.yml \
     --ops-file=${bosh_deployment}/credhub.yml \
+    --ops-file=${bosh_deployment}/misc/dns.yml \
     --state=state.json \
     --vars-store=creds/bosh.yml \
     --vars-file=manifests/bosh-vars.yml \
@@ -199,40 +200,22 @@ function do_upload_stemcells() {
     NEW_STEMCELLS=yes
   fi
 
-  TRUSTY=$(bosh stemcells --json | jq -r '[ .Tables[] | .Rows[] | select(.os == "ubuntu-trusty")] | length')
-  if [ 0 -ne ${TRUSTY} -a -z "${NEW_STEMCELLS}" ]
+  JAMMY=$(bosh stemcells --json | jq -r '[ .Tables[] | .Rows[] | select(.os == "ubuntu-jammy")] | length')
+  if [ 0 -ne ${JAMMY} -a -z "${NEW_STEMCELLS}" ]
   then
-    echo "ubuntu-trusty stemcell exists"
+    echo "ubuntu-jammy stemcell exists"
   else
-    if [ -f stemcell/ubuntu-trusty-image -a ! -z "${NEW_STEMCELLS}" ]
+    if [ -f stemcell/ubuntu-jammy-image -a ! -z "${NEW_STEMCELLS}" ]
     then
-      rm stemcell/ubuntu-trusty-image
+      rm stemcell/ubuntu-jammy-image
     fi
-    if [ ! -f stemcell/ubuntu-trusty-image ]
+    if [ ! -f stemcell/ubuntu-jammy-image ]
     then
-      echo "Downloading ubuntu-trusty-image"
-      curl --location --output stemcell/ubuntu-trusty-image \
-        https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-trusty-go_agent
+      echo "Downloading ubuntu-jammy-image"
+      curl --location --output stemcell/ubuntu-jammy-image \
+        https://bosh.io/d/stemcells/bosh-openstack-kvm-ubuntu-jammy-go_agent
     fi
-    bosh upload-stemcell stemcell/ubuntu-trusty-image
-  fi
-
-  XENIAL=$(bosh stemcells --json | jq -r '[ .Tables[] | .Rows[] | select(.os == "ubuntu-xenial")] | length')
-  if [ 0 -ne ${XENIAL} -a -z "${NEW_STEMCELLS}" ]
-  then
-    echo "ubuntu-xenial stemcell exists"
-  else
-    if [ -f stemcell/ubuntu-xenial-image -a ! -z "${NEW_STEMCELLS}" ]
-    then
-      rm stemcell/ubuntu-xenial-image
-    fi
-    if [ ! -f stemcell/ubuntu-xenial-image ]
-    then
-      echo "Downloading ubuntu-xenial-image"
-      curl --location --output stemcell/ubuntu-xenial-image \
-        https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-xenial-go_agent
-    fi
-    bosh upload-stemcell stemcell/ubuntu-xenial-image
+    bosh upload-stemcell stemcell/ubuntu-jammy-image
   fi
 }
 

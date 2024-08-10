@@ -49,7 +49,8 @@ func (afm agentFileManager) tempFileName(ext string) (string, error) {
 
 // agentFileName ensures we have a consistent name and path for the agent file
 func (afm agentFileManager) agentFileName(vmCID apiv1.VMCID) string {
-	return filepath.Join(afm.config.FileStorePath, vmCID.AsString())
+	path := filepath.Join(afm.config.FileStorePath, vmCID.AsString())
+	return fmt.Sprintf("%s.json", path)
 }
 
 // Read pulls an existing AgentEnv from our local copy

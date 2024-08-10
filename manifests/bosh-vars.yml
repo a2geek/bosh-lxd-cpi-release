@@ -6,3 +6,5 @@ lxd_storage_pool_name: boshdir
 internal_cidr: 10.245.0.0/24
 internal_gw: 10.245.0.1
 internal_ip: 10.245.0.11
+internal_dns: 
+  - 192.168.1.1
