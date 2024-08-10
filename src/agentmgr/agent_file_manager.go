@@ -4,17 +4,27 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/diskfs/go-diskfs/filesystem"
 )
 
-// Note that AGENT_DIR is assumed to be created by the cpi control script
-const AGENT_DIR = "/var/vcap/store/agent-data"
+func newAgentFileManager(config Config) (agentFileManager, error) {
+	err := os.MkdirAll(config.FileStorePath, os.ModePerm)
+	if err != nil {
+		return agentFileManager{}, err
+	}
+	afm := agentFileManager{
+		config: config,
+	}
+	return afm, nil
+}
 
 type agentFileManager struct {
 	agentEnvFactory apiv1.AgentEnvFactory
+	config          Config
 }
 
 // tempFileName create a config file with the associated extension
@@ -39,7 +49,7 @@ func (afm agentFileManager) tempFileName(ext string) (string, error) {
 
 // agentFileName ensures we have a consistent name and path for the agent file
 func (afm agentFileManager) agentFileName(vmCID apiv1.VMCID) string {
-	return fmt.Sprintf("%s/%s.json", AGENT_DIR, vmCID.AsString())
+	return filepath.Join(afm.config.FileStorePath, vmCID.AsString())
 }
 
 // Read pulls an existing AgentEnv from our local copy

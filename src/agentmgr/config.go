@@ -7,4 +7,6 @@ type Config struct {
 	Label        string
 	MetadataPath string
 	UserdataPath string
+	// Agent file store location
+	FileStorePath string
 }

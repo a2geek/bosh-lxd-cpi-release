@@ -64,3 +64,6 @@ properties:
     description: "Path to the metadata file for Agent configuration"
   lxd_cpi.agent_config.userdata_path:
     description: "Path to the userdata file for Agent configuration"
+  lxd_cpi.agent_config.filestore_path:
+    description: "Path to where agent data should be stored on the Bosh VM"
+    default: "/var/vcap/store/agent-data"

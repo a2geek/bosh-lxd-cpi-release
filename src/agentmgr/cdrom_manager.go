@@ -14,15 +14,18 @@ import (
 )
 
 func NewCDROMManager(config Config) (AgentManager, error) {
+	afm, err := newAgentFileManager(config)
+	if err != nil {
+		return cdromManager{}, err
+	}
 	mgr := cdromManager{
-		config: config,
+		agentFileManager: afm,
 	}
 	return mgr, nil
 }
 
 type cdromManager struct {
 	agentFileManager
-	config Config
 }
 
 func (m cdromManager) Write(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) ([]byte, error) {

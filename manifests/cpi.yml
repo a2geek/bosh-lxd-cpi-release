@@ -59,6 +59,7 @@
       label: "config-2"
       metadata_path: "ec2/latest/meta-data.json"
       userdata_path: "ec2/latest/user-data"
+      filestore_path: "/var/vcap/store/agent-data"
 
 # This is for initial standup of VM (bootstrap?)
 - type: replace
@@ -71,4 +72,6 @@
         provider: local
         options:
           blobstore_path: /var/vcap/micro_bosh/data/cache
-    agent_config: *agent_config_settings
+    agent_config: 
+      <<: *agent_config_settings
+      filestore_path: "/tmp"

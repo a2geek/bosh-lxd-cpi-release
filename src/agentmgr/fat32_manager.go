@@ -15,8 +15,12 @@ import (
 
 // NewFAT32Manager will initialize a new config drive for AgentEnv settings
 func NewFAT32Manager(config Config) (AgentManager, error) {
+	afm, err := newAgentFileManager(config)
+	if err != nil {
+		return cdromManager{}, err
+	}
 	mgr := fat32Manager{
-		config: config,
+		agentFileManager: afm,
 	}
 	return mgr, nil
 }
@@ -29,7 +33,6 @@ type publicKeyType map[string]string
 
 type fat32Manager struct {
 	agentFileManager
-	config Config
 }
 
 func (c fat32Manager) Write(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) ([]byte, error) {
