@@ -23,18 +23,17 @@ func (c CPI) createDisk(size int, name string) error {
 	return c.client.CreateStoragePoolVolume(c.config.Server.StoragePool, storageVolumeRequest)
 }
 
-func (c CPI) attachDiskToVM(vmCID apiv1.VMCID, diskId string) (string, error) {
-	return c.attachDiskDeviceToVM(vmCID, diskId, "/warden-cpi-dev/"+diskId)
+func (c CPI) attachDiskToVM(vmCID apiv1.VMCID, diskId string) error {
+	return c.attachDiskDeviceToVM(vmCID, diskId)
 }
 
-func (c CPI) attachDiskDeviceToVM(vmCID apiv1.VMCID, diskId string, devicePath string) (string, error) {
+func (c CPI) attachDiskDeviceToVM(vmCID apiv1.VMCID, diskId string) error {
 	device := map[string]string{
-		"type": "disk",
-		"pool": c.config.Server.StoragePool,
-		//"path":   devicePath,
+		"type":   "disk",
+		"pool":   c.config.Server.StoragePool,
 		"source": diskId,
 	}
-	return devicePath, c.addDevice(vmCID, diskId, device)
+	return c.addDevice(vmCID, diskId, device)
 }
 
 func (c CPI) findDisksAttachedToVm(vmCID apiv1.VMCID) (map[string]map[string]string, error) {

@@ -117,13 +117,11 @@ func (c CPI) CreateVMV2(
 			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Create ephemeral disk")
 		}
 
-		//path, err := c.attachDiskDeviceToVM(vmCID, diskCid, "/var/vcap/data")
-		_, err = c.attachDiskDeviceToVM(vmCID, diskCid, "/var/vcap/data")
+		err = c.attachDiskDeviceToVM(vmCID, diskCid)
 		if err != nil {
 			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Attach ephemeral disk")
 		}
 
-		//agentEnv.AttachEphemeralDisk(apiv1.NewDiskHintFromMap(map[string]interface{}{"path": path}))
 		agentEnv.AttachEphemeralDisk(apiv1.NewDiskHintFromString("/dev/sdb"))
 	}
 

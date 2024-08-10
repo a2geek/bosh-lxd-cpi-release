@@ -2,6 +2,7 @@ package cpi
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
@@ -66,14 +67,26 @@ func (c CPI) AttachDiskV2(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) (apiv1.DiskH
 		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Stopping instance")
 	}
 
-	path, err := c.attachDiskToVM(vmCID, diskCID.AsString())
-	if err != nil {
-		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Attach disk")
-	}
-
 	agentEnv, err := c.readAgentFileFromVM(vmCID)
 	if err != nil {
 		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Read AgentEnv")
+	}
+
+	// Not seeing a device mapping in LXD itself, but it's buried in the AgentEnv (and not exposed, so searching the JSON)
+	rawBytes, err := agentEnv.AsBytes()
+	json := string(rawBytes)
+	var path string
+	if !strings.Contains(json, "/dev/sdc") {
+		path = "/dev/sdc"
+	} else if !strings.Contains(json, "/dev/sdd") {
+		path = "/dev/sdd"
+	} else {
+		return apiv1.NewDiskHintFromString(""), bosherr.Error("Unable to find device for persistent disk")
+	}
+
+	err = c.attachDiskToVM(vmCID, diskCID.AsString())
+	if err != nil {
+		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Attach disk")
 	}
 
 	diskHint := apiv1.NewDiskHintFromMap(map[string]interface{}{"path": path})

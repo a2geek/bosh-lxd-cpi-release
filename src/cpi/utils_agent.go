@@ -45,7 +45,7 @@ func (c CPI) writeAgentFileToVM(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) erro
 		return err
 	}
 
-	_, err = c.attachDiskDeviceToVM(vmCID, diskName, "")
+	err = c.attachDiskDeviceToVM(vmCID, diskName)
 	return err
 }
 
