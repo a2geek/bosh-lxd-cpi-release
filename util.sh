@@ -154,6 +154,10 @@ function do_capture_requests() {
     echo "Expecting to find 'log' file."
     exit 1
   fi
+  if [ -e requests ] 
+  then
+    rm -rf requests
+  fi
   mkdir -p requests
   num=0
   grep "STDIN: " log | while read LINE
