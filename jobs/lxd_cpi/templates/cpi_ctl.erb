@@ -2,13 +2,14 @@
 
 LOG_DIR=/var/vcap/sys/log/lxd_cpi
 RUN_DIR=/var/vcap/sys/run/lxd_cpi
+AGENT_DIR=/var/vcap/store/agent-data
 PIDFILE=$RUN_DIR/cpi.pid
 
 case $1 in
 
   start)
-    mkdir -p           $RUN_DIR $LOG_DIR
-    chown -R vcap:vcap $RUN_DIR $LOG_DIR
+    mkdir -p           $RUN_DIR $LOG_DIR $AGENT_DIR
+    chown -R vcap:vcap $RUN_DIR $LOG_DIR $AGENT_DIR
 
     echo 1 > $PIDFILE
     ;;

@@ -41,4 +41,4 @@ release/
 bosh-client.*
 /env.sh
 /NOTES.md
-
+/log

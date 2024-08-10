@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	bosherr "github.com/cloudfoundry/bosh-utils/errors"
-
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	diskfs "github.com/diskfs/go-diskfs"
 	"github.com/diskfs/go-diskfs/disk"
@@ -17,17 +15,8 @@ import (
 
 // NewFAT32Manager will initialize a new config drive for AgentEnv settings
 func NewFAT32Manager(config Config) (AgentManager, error) {
-	name, err := tempFileName("fat32")
-	if err != nil {
-		return nil, bosherr.WrapError(err, "unable to generate agent config disk temp file")
-	}
 	mgr := fat32Manager{
-		diskFileName: name,
-		config:       config,
-	}
-	err = mgr.createDisk()
-	if err != nil {
-		return nil, bosherr.WrapError(err, "unable to create config disk")
+		config: config,
 	}
 	return mgr, nil
 }
@@ -39,93 +28,25 @@ type metadataContentsType struct {
 type publicKeyType map[string]string
 
 type fat32Manager struct {
-	diskFileName string
-	config       Config
+	agentFileManager
+	config Config
 }
 
-func (c fat32Manager) Update(agentEnv apiv1.AgentEnv) error {
-	disk, err := diskfs.Open(c.diskFileName)
+func (c fat32Manager) Write(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) ([]byte, error) {
+	diskFileName, err := c.tempFileName("fat32")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// The partition table doesn't appear to get populated? Manually populating it.
-	table, err := disk.GetPartitionTable()
-	if err != nil {
-		return err
-	}
-	disk.Table = table
-
-	fs, err := disk.GetFilesystem(1)
-	if err != nil {
-		return err
-	}
-
-	// Metadata contains the SSH key
-	metadata := metadataContentsType{
-		// TODO uncertain if this is actually needed for our configurations...
-		// PublicKeys: map[string]publicKeyType{
-		// 	"0": {
-		// 		"openssh-key": c.config.VMPublicKey,
-		// 	},
-		// },
-	}
-	metaDataContent, err := json.Marshal(metadata)
-	if err != nil {
-		return err
-	}
-
-	err = c.writeFile(fs, c.config.MetadataPath, metaDataContent)
-	if err != nil {
-		return err
-	}
-
-	// The AgentEnv appears to be what goes into userdata
-	userDataContent, err := agentEnv.AsBytes()
-	if err != nil {
-		return err
-	}
-
-	err = c.writeFile(fs, c.config.UserdataPath, userDataContent)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c fat32Manager) writeFile(fs filesystem.FileSystem, path string, contents []byte) error {
-	if !strings.HasPrefix(path, "/") {
-		path = "/" + path
-	}
-
-	rw, err := fs.OpenFile(path, os.O_CREATE|os.O_RDWR)
-	if err != nil {
-		return err
-	}
-
-	_, err = rw.Write(contents)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c fat32Manager) ToBytes() ([]byte, error) {
-	return os.ReadFile(c.diskFileName)
-}
-
-func (c fat32Manager) createDisk() error {
 	// Note that the sizes are rough guesstimates.
 	// diskSize = 35MB; minimum size is 32MB but...
 	// partition start of 2048 is ~1MB into disk.
 	// partition size of 68000 is about 33.25MB.
 
 	diskSize := uint64(35 * 1024 * 1024)
-	image, err := diskfs.Create(c.diskFileName, int64(diskSize), diskfs.Raw, diskfs.SectorSizeDefault)
+	image, err := diskfs.Create(diskFileName, int64(diskSize), diskfs.Raw, diskfs.SectorSizeDefault)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	table := &mbr.Table{
@@ -142,7 +63,7 @@ func (c fat32Manager) createDisk() error {
 	}
 	err = image.Partition(table)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	fs, err := image.CreateFilesystem(disk.FilesystemSpec{
@@ -151,12 +72,47 @@ func (c fat32Manager) createDisk() error {
 		VolumeLabel: c.config.Label,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	configPath := filepath.Dir(c.config.UserdataPath)
 	if !strings.HasPrefix(configPath, "/") {
 		configPath = "/" + configPath
 	}
-	return fs.Mkdir(configPath)
+	err = fs.Mkdir(configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Metadata contains the SSH key
+	metadata := metadataContentsType{
+		// TODO uncertain if this is actually needed for our configurations...
+		// PublicKeys: map[string]publicKeyType{
+		// 	"0": {
+		// 		"openssh-key": c.config.VMPublicKey,
+		// 	},
+		// },
+	}
+	metaDataContent, err := json.Marshal(metadata)
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.writeFile(fs, c.config.MetadataPath, metaDataContent)
+	if err != nil {
+		return nil, err
+	}
+
+	// The AgentEnv appears to be what goes into userdata
+	userDataContent, err := c.writeAgentEnv(vmCID, agentEnv)
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.writeFile(fs, c.config.UserdataPath, userDataContent)
+	if err != nil {
+		return nil, err
+	}
+
+	return os.ReadFile(diskFileName)
 }
