@@ -11,17 +11,6 @@ import (
 	"github.com/diskfs/go-diskfs/filesystem"
 )
 
-func newAgentFileManager(config Config) (agentFileManager, error) {
-	err := os.MkdirAll(config.FileStorePath, os.ModePerm)
-	if err != nil {
-		return agentFileManager{}, err
-	}
-	afm := agentFileManager{
-		config: config,
-	}
-	return afm, nil
-}
-
 type agentFileManager struct {
 	agentEnvFactory apiv1.AgentEnvFactory
 	config          Config

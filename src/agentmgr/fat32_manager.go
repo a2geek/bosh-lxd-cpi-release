@@ -14,15 +14,13 @@ import (
 )
 
 // NewFAT32Manager will initialize a new config drive for AgentEnv settings
-func NewFAT32Manager(config Config) (AgentManager, error) {
-	afm, err := newAgentFileManager(config)
-	if err != nil {
-		return cdromManager{}, err
-	}
+func NewFAT32Manager(config Config) AgentManager {
 	mgr := fat32Manager{
-		agentFileManager: afm,
+		agentFileManager{
+			config: config,
+		},
 	}
-	return mgr, nil
+	return mgr
 }
 
 // These are "stolen" out of the Bosh Agent itself.

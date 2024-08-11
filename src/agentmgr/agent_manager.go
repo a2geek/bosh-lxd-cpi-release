@@ -15,15 +15,11 @@ type AgentManager interface {
 // NewAgentManager will initialize a new config drive for AgentEnv settings
 func NewAgentManager(config Config) (AgentManager, error) {
 	var a AgentManager
-	var err error
 	switch config.SourceType {
 	case "FAT32":
-		a, err = NewFAT32Manager(config)
+		a = NewFAT32Manager(config)
 	case "CDROM":
-		a, err = NewCDROMManager(config)
-	}
-	if err != nil {
-		return nil, err
+		a = NewCDROMManager(config)
 	}
 	if a == nil {
 		return nil, fmt.Errorf("unknown stemcell configuration type '%s'", config.SourceType)

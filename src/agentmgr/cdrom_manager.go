@@ -13,15 +13,13 @@ import (
 	"github.com/diskfs/go-diskfs/filesystem/iso9660"
 )
 
-func NewCDROMManager(config Config) (AgentManager, error) {
-	afm, err := newAgentFileManager(config)
-	if err != nil {
-		return cdromManager{}, err
-	}
+func NewCDROMManager(config Config) AgentManager {
 	mgr := cdromManager{
-		agentFileManager: afm,
+		agentFileManager{
+			config: config,
+		},
 	}
-	return mgr, nil
+	return mgr
 }
 
 type cdromManager struct {
