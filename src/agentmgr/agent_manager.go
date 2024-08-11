@@ -10,6 +10,7 @@ import (
 type AgentManager interface {
 	Read(apiv1.VMCID) (apiv1.AgentEnv, error)
 	Write(apiv1.VMCID, apiv1.AgentEnv) ([]byte, error)
+	Delete(apiv1.VMCID) error
 }
 
 // NewAgentManager will initialize a new config drive for AgentEnv settings

@@ -1,7 +1,6 @@
 package cpi
 
 import (
-	"bosh-lxd-cpi/agentmgr"
 	"bytes"
 	"fmt"
 
@@ -11,17 +10,12 @@ import (
 )
 
 func (c CPI) writeAgentFileToVM(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) error {
-	agentmgr, err := agentmgr.NewAgentManager(c.config.AgentConfig)
-	if err != nil {
-		return err
-	}
-
 	uuid, err := c.uuidGen.Generate()
 	if err != nil {
 		return err
 	}
 
-	diskImage, err := agentmgr.Write(vmCID, agentEnv)
+	diskImage, err := c.agentMgr.Write(vmCID, agentEnv)
 	if err != nil {
 		return err
 	}
@@ -50,10 +44,5 @@ func (c CPI) writeAgentFileToVM(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) erro
 }
 
 func (c CPI) readAgentFileFromVM(vmCID apiv1.VMCID) (apiv1.AgentEnv, error) {
-	mgr, err := agentmgr.NewAgentManager(c.config.AgentConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return mgr.Read(vmCID)
+	return c.agentMgr.Read(vmCID)
 }

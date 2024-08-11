@@ -146,18 +146,18 @@ func (c CPI) CreateVMV2(
 	return vmCID, networks, nil
 }
 
-func (c CPI) DeleteVM(cid apiv1.VMCID) error {
-	err := c.stopVM(cid)
+func (c CPI) DeleteVM(vmCID apiv1.VMCID) error {
+	err := c.stopVM(vmCID)
 	if err != nil {
 		return bosherr.WrapError(err, "Delete VM - stop")
 	}
 
-	disks, err := c.findEphemeralDisksAttachedToVM(cid)
+	disks, err := c.findEphemeralDisksAttachedToVM(vmCID)
 	if err != nil {
 		return bosherr.WrapError(err, "Delete VM - enumerate ephemeral disks")
 	}
 
-	op, err := c.client.DeleteInstance(cid.AsString())
+	op, err := c.client.DeleteInstance(vmCID.AsString())
 	if err != nil {
 		return bosherr.WrapError(err, "Delete VM")
 	}
@@ -173,7 +173,7 @@ func (c CPI) DeleteVM(cid apiv1.VMCID) error {
 		}
 	}
 
-	return nil
+	return c.agentMgr.Delete(vmCID)
 }
 
 func (c CPI) CalculateVMCloudProperties(res apiv1.VMResources) (apiv1.VMCloudProps, error) {

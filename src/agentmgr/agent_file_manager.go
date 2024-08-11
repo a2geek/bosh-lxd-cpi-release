@@ -53,6 +53,12 @@ func (afm agentFileManager) Read(vmCID apiv1.VMCID) (apiv1.AgentEnv, error) {
 	return afm.agentEnvFactory.FromBytes(data)
 }
 
+// Delete cleans the local copy of AgentEnv
+func (afm agentFileManager) Delete(vmCID apiv1.VMCID) error {
+	fileName := afm.agentFileName(vmCID)
+	return os.Remove(fileName)
+}
+
 // writeAgentEnv has two functions: (1) persist local copy and (2) return the bytes for disk creation
 func (afm agentFileManager) writeAgentEnv(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) ([]byte, error) {
 	fileName := afm.agentFileName(vmCID)
