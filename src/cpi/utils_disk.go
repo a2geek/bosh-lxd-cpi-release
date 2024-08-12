@@ -8,6 +8,12 @@ import (
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 )
 
+const (
+	DISK_EPHEMERAL_PREFIX     = "vol-e-"
+	DISK_PERSISTENT_PREFIX    = "vol-p-"
+	DISK_CONFIGURATION_PREFIX = "vol-c-"
+)
+
 func (c CPI) createDisk(size int, name string) error {
 	storageVolumeRequest := api.StorageVolumesPost{
 		Name:        name,

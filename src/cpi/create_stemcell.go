@@ -14,7 +14,6 @@ import (
 
 	lxdclient "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
-	"github.com/canonical/lxd/shared/ioprogress"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 	yaml "gopkg.in/yaml.v2"
@@ -117,10 +116,9 @@ func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) 
 	}
 
 	args := lxdclient.ImageCreateArgs{
-		MetaFile:        bytes.NewReader(buf.Bytes()),
-		RootfsFile:      tarFile,
-		ProgressHandler: dummyProgressHandler,
-		Type:            string(api.InstanceTypeVM),
+		MetaFile:   bytes.NewReader(buf.Bytes()),
+		RootfsFile: tarFile,
+		Type:       string(api.InstanceTypeVM),
 	}
 	op, err := c.client.CreateImage(image, &args)
 	if err != nil {
@@ -145,25 +143,4 @@ func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) 
 	}
 
 	return apiv1.NewStemcellCID(alias), nil
-}
-
-func (c CPI) DeleteStemcell(cid apiv1.StemcellCID) error {
-	alias := cid.AsString()
-	imageAlias, _, err := c.client.GetImageAlias(alias)
-	if err != nil {
-		return err
-	}
-	op, err := c.client.DeleteImage(imageAlias.Target)
-	if err != nil {
-		return err
-	}
-	err = op.Wait()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func dummyProgressHandler(progress ioprogress.ProgressData) {
-	// DO NOTHING!
 }

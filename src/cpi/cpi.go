@@ -4,8 +4,6 @@ import (
 	"bosh-lxd-cpi/agentmgr"
 	"bosh-lxd-cpi/config"
 
-	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
-
 	lxdclient "github.com/canonical/lxd/client"
 	boshlog "github.com/cloudfoundry/bosh-utils/logger"
 	boshuuid "github.com/cloudfoundry/bosh-utils/uuid"
@@ -33,8 +31,4 @@ func NewCPI(client lxdclient.InstanceServer, cfg config.Config, logger boshlog.L
 		agentMgr: am,
 	}
 	return cpi, err
-}
-
-func (c CPI) Info() (apiv1.Info, error) {
-	return apiv1.Info{StemcellFormats: []string{"openstack-qcow2"}}, nil
 }

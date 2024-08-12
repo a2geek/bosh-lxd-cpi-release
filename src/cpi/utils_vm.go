@@ -41,7 +41,7 @@ func (c CPI) setVMAction(cid apiv1.VMCID, action string) error {
 	return nil
 }
 
-// checkVMAction tests if this action has already been done or completed.
+// isVMAtRequestedState tests if this action has already been done or completed.
 func (c CPI) isVMAtRequestedState(cid apiv1.VMCID, action string) (bool, error) {
 	currentState, _, err := c.client.GetInstanceState(cid.AsString())
 	if err != nil {
