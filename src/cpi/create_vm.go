@@ -97,11 +97,6 @@ func (c CPI) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating VM - wait")
 	}
 
-	_, etag, err := c.client.GetInstanceState(theCid)
-	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Retrieve state of VM")
-	}
-
 	agentEnv := apiv1.AgentEnvFactory{}.ForVM(agentID, vmCID, networks, env, c.config.Agent)
 	agentEnv.AttachSystemDisk(apiv1.NewDiskHintFromString("/dev/sda"))
 
@@ -130,18 +125,6 @@ func (c CPI) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Write AgentEnv")
 	}
 
-	instanceStatePut := api.InstanceStatePut{
-		Action: "start",
-	}
-	op, err = c.client.UpdateInstanceState(theCid, instanceStatePut, etag)
-	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Update state of VM")
-	}
-
-	err = op.Wait()
-	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Starting VM")
-	}
-
-	return vmCID, networks, nil
+	err = c.startVM(vmCID)
+	return vmCID, networks, err
 }

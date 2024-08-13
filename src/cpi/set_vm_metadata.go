@@ -13,7 +13,7 @@ func (c CPI) SetVMMetadata(cid apiv1.VMCID, metadata apiv1.VMMeta) error {
 		return bosherr.WrapError(err, "Unmarshal VMMeta to ActualVMMeta")
 	}
 
-	instance, etag, err := c.client.GetInstance(cid.AsString())
+	instance, _, err := c.client.GetInstance(cid.AsString())
 	if err != nil {
 		return bosherr.WrapError(err, "Get instance state")
 	}
@@ -21,7 +21,7 @@ func (c CPI) SetVMMetadata(cid apiv1.VMCID, metadata apiv1.VMMeta) error {
 	description := fmt.Sprintf("%s/%s", actual.Job, actual.Index)
 	instance.Description = description
 
-	op, err := c.client.UpdateInstance(cid.AsString(), instance.Writable(), etag)
+	op, err := c.client.UpdateInstance(cid.AsString(), instance.Writable(), "")
 	if err != nil {
 		return bosherr.WrapErrorf(err, "Update instance state; status=%s", instance.Status)
 	}

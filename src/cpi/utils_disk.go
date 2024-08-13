@@ -72,13 +72,29 @@ func (c CPI) findEphemeralDisksAttachedToVM(cid apiv1.VMCID) ([]string, error) {
 	return ephemeral, nil
 }
 
+func (c CPI) findConfigurationDisksAttachedToVM(cid apiv1.VMCID) ([]string, error) {
+	disks, err := c.findDisksAttachedToVm(cid)
+	if err != nil {
+		return nil, err
+	}
+
+	// this should only be 1, but there are likely still bugs
+	var configuration []string
+	for name := range disks {
+		if strings.HasPrefix(name, DISK_CONFIGURATION_PREFIX) {
+			configuration = append(configuration, name)
+		}
+	}
+	return configuration, nil
+}
+
 func (c CPI) setDiskMetadata(cid apiv1.DiskCID, description string) error {
-	volume, etag, err := c.client.GetStoragePoolVolume(c.config.Server.StoragePool, "custom", cid.AsString())
+	volume, _, err := c.client.GetStoragePoolVolume(c.config.Server.StoragePool, "custom", cid.AsString())
 	if err != nil {
 		return err
 	}
 
 	volume.Description = description
 
-	return c.client.UpdateStoragePoolVolume(c.config.Server.StoragePool, "custom", cid.AsString(), volume.Writable(), etag)
+	return c.client.UpdateStoragePoolVolume(c.config.Server.StoragePool, "custom", cid.AsString(), volume.Writable(), "")
 }

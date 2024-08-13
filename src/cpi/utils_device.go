@@ -6,28 +6,44 @@ import (
 )
 
 func (c CPI) addDevice(vmCID apiv1.VMCID, name string, device map[string]string) error {
-	instance, etag, err := c.client.GetInstance(vmCID.AsString())
+	instance, _, err := c.client.GetInstance(vmCID.AsString())
 	if err != nil {
-		return bosherr.WrapError(err, "Get instance state")
+		return bosherr.WrapErrorf(err, "addDevice(%s) - GetInstance", vmCID.AsString())
 	}
 
 	// Check if the device already exists
 	_, ok := instance.Devices[name]
 	if ok {
-		return bosherr.WrapError(err, "Device already exists: "+name)
+		return bosherr.WrapErrorf(err, "addDevice(%s) - %s device already exists ", vmCID.AsString(), name)
 	}
 
 	instance.Devices[name] = device
 
-	op, err := c.client.UpdateInstance(vmCID.AsString(), instance.Writable(), etag)
+	op, err := c.client.UpdateInstance(vmCID.AsString(), instance.Writable(), "")
 	if err != nil {
-		return bosherr.WrapError(err, "Update instance state")
+		return bosherr.WrapErrorf(err, "addDevice(%s) - Update instance state", vmCID.AsString())
 	}
 
 	err = op.Wait()
-	if err != nil {
-		return bosherr.WrapError(err, "Update instance state - wait")
+	if c.checkError(err) != nil {
+		return bosherr.WrapErrorf(err, "addDevice(%s) - Update instance state - wait", vmCID.AsString())
 	}
 
 	return nil
+}
+
+func (c CPI) removeDevice(vmCID apiv1.VMCID, deviceName string) error {
+	instance, _, err := c.client.GetInstance(vmCID.AsString())
+	if err != nil {
+		return bosherr.WrapErrorf(err, "removeDevice(%s) - Get instance state", vmCID.AsString())
+	}
+
+	delete(instance.Devices, deviceName)
+
+	op, err := c.client.UpdateInstance(vmCID.AsString(), instance.Writable(), "")
+	if c.checkError(err) != nil {
+		return bosherr.WrapErrorf(err, "removeDevice(%s) - Update instance state", vmCID.AsString())
+	}
+
+	return op.Wait()
 }

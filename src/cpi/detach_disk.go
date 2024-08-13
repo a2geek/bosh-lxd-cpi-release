@@ -6,12 +6,12 @@ import (
 )
 
 func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
-	err := c.stopVM(vmCID)
+	err := c.freezeVM(vmCID)
 	if err != nil {
 		return bosherr.WrapError(err, "Stopping instance")
 	}
 
-	instance, etag, err := c.client.GetInstance(vmCID.AsString())
+	instance, _, err := c.client.GetInstance(vmCID.AsString())
 	if err != nil {
 		return bosherr.WrapError(err, "Get instance state")
 	}
@@ -24,7 +24,7 @@ func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
 
 	delete(instance.Devices, diskCID.AsString())
 
-	op, err := c.client.UpdateInstance(vmCID.AsString(), instance.Writable(), etag)
+	op, err := c.client.UpdateInstance(vmCID.AsString(), instance.Writable(), "")
 	if err != nil {
 		return bosherr.WrapError(err, "Update instance state")
 	}
@@ -34,7 +34,7 @@ func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
 		return bosherr.WrapError(err, "Update instance state - wait")
 	}
 
-	agentEnv, err := c.readAgentFileFromVM(vmCID)
+	agentEnv, err := c.agentMgr.Read(vmCID)
 	if err != nil {
 		return bosherr.WrapError(err, "Retrieve AgentEnv")
 	}
@@ -46,7 +46,7 @@ func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
 		return bosherr.WrapError(err, "Write AgentEnv")
 	}
 
-	err = c.startVM(vmCID)
+	err = c.unfreezeVM(vmCID)
 	if err != nil {
 		return bosherr.WrapError(err, "Starting instance")
 	}

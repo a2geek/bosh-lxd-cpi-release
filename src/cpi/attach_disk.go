@@ -13,18 +13,21 @@ func (c CPI) AttachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
 }
 
 func (c CPI) AttachDiskV2(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) (apiv1.DiskHint, error) {
-	err := c.stopVM(vmCID)
+	err := c.freezeVM(vmCID)
 	if err != nil {
 		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Stopping instance")
 	}
 
-	agentEnv, err := c.readAgentFileFromVM(vmCID)
+	agentEnv, err := c.agentMgr.Read(vmCID)
 	if err != nil {
 		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Read AgentEnv")
 	}
 
 	// Not seeing a device mapping in LXD itself, but it's buried in the AgentEnv (and not exposed, so searching the JSON)
 	rawBytes, err := agentEnv.AsBytes()
+	if err != nil {
+		return apiv1.NewDiskHintFromString(""), err
+	}
 	json := string(rawBytes)
 	var path string
 	if !strings.Contains(json, "/dev/sdc") {
@@ -48,7 +51,7 @@ func (c CPI) AttachDiskV2(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) (apiv1.DiskH
 		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Write AgentEnv")
 	}
 
-	err = c.startVM(vmCID)
+	err = c.unfreezeVM(vmCID)
 	if err != nil {
 		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Starting instance")
 	}
