@@ -87,15 +87,13 @@ function do_destroy() {
   rm -f state.json
 
   lxc --project boshdev list --format json |
-    jq -r '.[] | .name | select(test("c-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"))' |
+    jq -r '.[] | .name | select(test("vm-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"))' |
     xargs --verbose --no-run-if-empty --max-args=1 lxc delete -f
   lxc --project boshdev image list --format json |
     jq -r '.[] | select(.aliases[0].name // "not present" | test("img-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) | .fingerprint' |
     xargs --verbose --no-run-if-empty --max-args=1 lxc image delete
-  # NO JSON AVAILABLE?!
-  lxc storage volume list boshdir |
-    grep custom |
-    cut -d"|" -f3 |
+  lxc storage volume list --format json |
+    jq -r '.[] | select(.pool == "boshdir") | .name' |
     xargs --verbose --no-run-if-empty --max-args=1  lxc storage volume delete boshdir
 
   echo "Visual confirmation:"
@@ -147,6 +145,9 @@ function do_deploy_bosh() {
     --var=lxd_insecure=$lxd_insecure \
     --var-file=lxd_client_cert=$lxd_client_cert \
     --var-file=lxd_client_key=$lxd_client_key "${bosh_args[@]}"
+
+  cat creds/bosh.yml | jq -r '.jumpbox.private_key' > creds/jumpbox.pk
+  chmod 600 creds/jumpbox.pk
 }
 
 function do_capture_requests() {
@@ -222,23 +223,23 @@ function do_upload_stemcells() {
 function do_upload_releases() {
   source scripts/bosh-env.sh
 
-  # See https://github.com/concourse/concourse-bosh-deployment/issues/77
-  BBR=$(bosh --json releases | jq -r '[ .Tables[] | .Rows[] | select(.name == "backup-and-restore-sdk") ] | length')
-  if [ 0 -ne $BBR ]
-  then
-    echo "bbr release exists"
-  else
-    if [ ! -f release/backup-and-restore-sdk ]
-    then
-      echo "Downloading backup-and-restore-sdk"
-      curl --location --output release/backup-and-restore-sdk \
-        https://bosh.io/d/github.com/cloudfoundry-incubator/backup-and-restore-sdk-release?v=1.11.2
-    fi
-    bosh upload-release release/backup-and-restore-sdk
-  fi
+  # # See https://github.com/concourse/concourse-bosh-deployment/issues/77
+  # BBR=$(bosh --json releases | jq -r '[ .Tables[] | .Rows[] | select(.name == "backup-and-restore-sdk") ] | length')
+  # if [ 0 -ne $BBR ]
+  # then
+  #   echo "bbr release exists"
+  # else
+  #   if [ ! -f release/backup-and-restore-sdk ]
+  #   then
+  #     echo "Downloading backup-and-restore-sdk"
+  #     curl --location --output release/backup-and-restore-sdk \
+  #       https://bosh.io/d/github.com/cloudfoundry-incubator/backup-and-restore-sdk-release?v=1.11.2
+  #   fi
+  #   bosh upload-release release/backup-and-restore-sdk
+  # fi
 
   POSTGRES=$(bosh --json releases | jq -r '[ .Tables[] | .Rows[] | select(.name == "postgres-release") ] | length')
-  if [ 0 -ne $BBR ]
+  if [ 0 -ne $POSTGRES ]
   then
     echo "postgres release exists"
   else
@@ -281,10 +282,7 @@ function do_deploy_postgres() {
   rm -f creds/postgres.yml
   source scripts/bosh-env.sh
   export BOSH_DEPLOYMENT=postgres
-  bosh deploy $POSTGRES_DIR/templates/postgres.yml \
-       -o $POSTGRES_DIR/templates/operations/add_static_ips.yml \
-       -o $POSTGRES_DIR/templates/operations/set_properties.yml \
-       -o $POSTGRES_DIR/templates/operations/use_bbr.yml \
+  bosh deploy manifests/postgres.yml \
        --vars-store=creds/postgres.yml \
        -l manifests/postgres-vars.yml
 }
