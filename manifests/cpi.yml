@@ -8,8 +8,8 @@
 - type: replace
   path: /resource_pools/name=vms/stemcell?
   value:
-    url: https://storage.googleapis.com/bosh-core-stemcells/1.492/bosh-stemcell-1.492-openstack-kvm-ubuntu-jammy-go_agent.tgz
-    sha1: 448fa6f48597c030ae5e478dd63bf11def5fea2d
+    url: https://bosh.io/d/stemcells/bosh-openstack-kvm-ubuntu-jammy-go_agent?v=1.506
+    sha1: aeecfaf2b62c9ae8190c7e8539e816257c8f944d
 
 # Configure LXD sizes
 - type: replace
@@ -48,12 +48,12 @@
       tls_client_key: ((lxd_client_key))
     agent:
       mbus: nats://nats:((nats_password))@((internal_ip)):4222
-      blobstore:
-        provider: dav
-        options:
-          endpoint: http://((internal_ip)):25250
-          user: agent
-          password: ((blobstore_agent_password))
+    #   blobstore:
+    #     provider: dav
+    #     options:
+    #       endpoint: http://((internal_ip)):25250
+    #       user: agent
+    #       password: ((blobstore_agent_password))
     agent_config: &agent_config_settings
       type: CDROM
       label: "config-2"
@@ -68,10 +68,10 @@
     lxd: *lxd_settings
     agent:
       mbus: "https://mbus:((mbus_bootstrap_password))@0.0.0.0:6868"
-      blobstore:
-        provider: local
-        options:
-          blobstore_path: /var/vcap/micro_bosh/data/cache
+    #   blobstore:
+    #     provider: local
+    #     options:
+    #       blobstore_path: /var/vcap/micro_bosh/data/cache
     agent_config: 
       <<: *agent_config_settings
       filestore_path: "/tmp"
