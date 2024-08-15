@@ -1,4 +1,5 @@
 deployment_name: concourse
+azs: [z1]
 network_name: default
 web_vm_type: default
 db_persistent_disk_type: default

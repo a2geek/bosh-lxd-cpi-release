@@ -20,7 +20,6 @@ function do_help() {
   echo "- LXD_CLIENT_KEY (set to path of LXD TLS client key)"
   echo "- BOSH_DEPLOYMENT_DIR (default: \${HOME}/Documents/Source/bosh-deployment)"
   echo "- CONCOURSE_DIR when deploying Concourse"
-  echo "- ZOOKEEPER_DIR when deploying ZooKeeper"
   echo "- POSTGRES_DIR when deploying Postgres"
   echo
   echo "Currently set environment variables..."
@@ -60,7 +59,6 @@ function do_deploy_cf() {
   export BOSH_DEPLOYMENT=cf
   bosh deploy $CF_DEPLOYMENT_DIR/cf-deployment.yml \
     -o $CF_DEPLOYMENT_DIR/operations/scale-to-one-az.yml \
-    -o $CF_DEPLOYMENT_DIR/operations/enable-privileged-container-support.yml \
     -o $CF_DEPLOYMENT_DIR/operations/set-router-static-ips.yml \
     -o $CF_DEPLOYMENT_DIR/operations/use-compiled-releases.yml \
     -o $CF_DEPLOYMENT_DIR/operations/use-latest-stemcell.yml \
@@ -146,7 +144,7 @@ function do_deploy_bosh() {
     --var-file=lxd_client_cert=$lxd_client_cert \
     --var-file=lxd_client_key=$lxd_client_key "${bosh_args[@]}"
 
-  cat creds/bosh.yml | jq -r '.jumpbox.private_key' > creds/jumpbox.pk
+  bosh interpolate creds/bosh.yml --path /jumpbox_ssh/private_key > creds/jumpbox.pk
   chmod 600 creds/jumpbox.pk
 }
 
@@ -285,21 +283,6 @@ function do_deploy_postgres() {
   bosh deploy manifests/postgres.yml \
        --vars-store=creds/postgres.yml \
        -l manifests/postgres-vars.yml
-}
-
-function do_deploy_zookeeper() {
-  if [ -z "$ZOOKEEPER_DIR" ]
-  then
-    echo "Please set ZOOKEEPER_DIR to root of zookeeper-release"
-    exit 1
-  fi
-  set -eu
-  source scripts/bosh-env.sh
-  export BOSH_DEPLOYMENT=zookeeper
-  bosh deploy $ZOOKEEPER_DIR/manifests/zookeeper.yml \
-       --vars-store=creds/zookeeper.yml
-  bosh run-errand smoke-tests
-  bosh run-errand status
 }
 
 if [[ "$0" == "bash" ]]
