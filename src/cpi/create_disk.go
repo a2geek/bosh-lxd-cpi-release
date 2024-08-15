@@ -15,7 +15,6 @@ func (c CPI) CreateDisk(size int,
 	theCid := DISK_PERSISTENT_PREFIX + id
 	diskCid := apiv1.NewDiskCID(theCid)
 
-	// FIXME: default is assumed to be name
 	err = c.createDisk(size, theCid)
 	if err != nil {
 		return apiv1.DiskCID{}, bosherr.WrapError(err, "Creating volume")
