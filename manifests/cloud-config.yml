@@ -40,7 +40,7 @@ networks:
   type: manual
   subnets:
   - azs: [z1,z2,z3]
-    range: 10.245.0.0/16
+    range: 10.245.0.0/24
     dns: [192.168.1.1]
     reserved: 10.245.0.2-10.245.0.10
     gateway: 10.245.0.1
