@@ -77,7 +77,6 @@ function do_destroy() {
   fi
 
   echo "Destroying out all state..."
-  set -x
   rm -rf .dev_builds/
   rm -rf dev_releases/
   rm -rf creds/
@@ -122,8 +121,6 @@ function do_deploy_bosh() {
   then
     bosh_args+=(--ops-file=${bosh_deployment}/jumpbox-user.yml)
   fi
-
-  rm -f creds/bosh.yml
 
   echo "-----> `date`: Create dev release"
   bosh create-release --force --tarball $cpi_path
@@ -191,8 +188,6 @@ function do_runtime_config() {
 
 function do_upload_stemcells() {
   source scripts/bosh-env.sh
-
-  set -x
 
   if [ "new" == "${1-}" ]
   then
