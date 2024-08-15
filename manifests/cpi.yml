@@ -47,13 +47,7 @@
       tls_client_cert: ((lxd_client_cert))
       tls_client_key: ((lxd_client_key))
     agent:
-      mbus: nats://nats:((nats_password))@((internal_ip)):4222
-    #   blobstore:
-    #     provider: dav
-    #     options:
-    #       endpoint: http://((internal_ip)):25250
-    #       user: agent
-    #       password: ((blobstore_agent_password))
+      mbus: nats://((internal_ip)):4222
     agent_config: &agent_config_settings
       type: CDROM
       label: "config-2"
@@ -68,10 +62,6 @@
     lxd: *lxd_settings
     agent:
       mbus: "https://mbus:((mbus_bootstrap_password))@0.0.0.0:6868"
-    #   blobstore:
-    #     provider: local
-    #     options:
-    #       blobstore_path: /var/vcap/micro_bosh/data/cache
     agent_config: 
       <<: *agent_config_settings
       filestore_path: "/tmp"
