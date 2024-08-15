@@ -21,14 +21,9 @@ func (c CPI) SetVMMetadata(cid apiv1.VMCID, metadata apiv1.VMMeta) error {
 	description := fmt.Sprintf("%s/%s", actual.Job, actual.Index)
 	instance.Description = description
 
-	op, err := c.client.UpdateInstance(cid.AsString(), instance.Writable(), "")
+	err = wait(c.client.UpdateInstance(cid.AsString(), instance.Writable(), ""))
 	if err != nil {
 		return bosherr.WrapErrorf(err, "Update instance state; status=%s", instance.Status)
-	}
-
-	err = op.Wait()
-	if err != nil {
-		return bosherr.WrapError(err, "Update instance state - wait")
 	}
 
 	disks, err := c.findEphemeralDisksAttachedToVM(cid)

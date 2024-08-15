@@ -27,17 +27,12 @@ func (c CPI) writeAgentFileToVM(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) erro
 	diskName := DISK_CONFIGURATION_PREFIX + uuid
 
 	buf := bytes.NewBuffer(diskImage)
-	op, err := c.client.CreateStoragePoolVolumeFromISO(c.config.Server.StoragePool, lxdclient.StoragePoolVolumeBackupArgs{
+	err = wait(c.client.CreateStoragePoolVolumeFromISO(c.config.Server.StoragePool, lxdclient.StoragePoolVolumeBackupArgs{
 		Name:       diskName,
 		BackupFile: buf,
-	})
+	}))
 	if err != nil {
 		return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Create", vmCID.AsString())
-	}
-
-	err = op.Wait()
-	if err != nil {
-		return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Create - Wait", vmCID.AsString())
 	}
 
 	configuration, err := c.findConfigurationDisksAttachedToVM(vmCID)
@@ -46,7 +41,7 @@ func (c CPI) writeAgentFileToVM(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) erro
 	}
 	for _, configDiskName := range configuration {
 		err = c.removeDevice(vmCID, configDiskName)
-		if c.checkError(err) != nil {
+		if err != nil {
 			return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Remove", vmCID.AsString())
 		}
 		err = c.client.DeleteStoragePoolVolume(c.config.Server.StoragePool, "custom", configDiskName)
@@ -56,7 +51,7 @@ func (c CPI) writeAgentFileToVM(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) erro
 	}
 
 	err = c.attachDiskDeviceToVM(vmCID, diskName)
-	if c.checkError(err) != nil {
+	if err != nil {
 		return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Attach", vmCID.AsString())
 	}
 	return nil

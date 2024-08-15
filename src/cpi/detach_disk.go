@@ -24,14 +24,9 @@ func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
 
 	delete(instance.Devices, diskCID.AsString())
 
-	op, err := c.client.UpdateInstance(vmCID.AsString(), instance.Writable(), "")
+	err = wait(c.client.UpdateInstance(vmCID.AsString(), instance.Writable(), ""))
 	if err != nil {
 		return bosherr.WrapError(err, "Update instance state")
-	}
-
-	err = op.Wait()
-	if err != nil {
-		return bosherr.WrapError(err, "Update instance state - wait")
 	}
 
 	agentEnv, err := c.agentMgr.Read(vmCID)

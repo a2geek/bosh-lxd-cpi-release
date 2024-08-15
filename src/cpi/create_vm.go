@@ -88,13 +88,9 @@ func (c CPI) CreateVMV2(
 		Source:       instanceSource,
 		Type:         api.InstanceTypeVM,
 	}
-	op, err := c.client.CreateInstance(instancesPost)
+	err = wait(c.client.CreateInstance(instancesPost))
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating VM")
-	}
-	err = op.Wait()
-	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating VM - wait")
 	}
 
 	agentEnv := apiv1.AgentEnvFactory{}.ForVM(agentID, vmCID, networks, env, c.config.Agent)

@@ -11,20 +11,22 @@ func (c CPI) DeleteVM(vmCID apiv1.VMCID) error {
 		return bosherr.WrapError(err, "Delete VM - stop")
 	}
 
-	disks, err := c.findEphemeralDisksAttachedToVM(vmCID)
+	ephemeralDisks, err := c.findEphemeralDisksAttachedToVM(vmCID)
 	if err != nil {
 		return bosherr.WrapError(err, "Delete VM - enumerate ephemeral disks")
 	}
 
-	op, err := c.client.DeleteInstance(vmCID.AsString())
+	configurationDisks, err := c.findConfigurationDisksAttachedToVM(vmCID)
+	if err != nil {
+		return bosherr.WrapError(err, "Delete VM - enumerate configuration disks")
+	}
+
+	err = wait(c.client.DeleteInstance(vmCID.AsString()))
 	if err != nil {
 		return bosherr.WrapError(err, "Delete VM")
 	}
-	err = op.Wait()
-	if err != nil {
-		return bosherr.WrapError(err, "Delete VM - wait")
-	}
 
+	disks := append(ephemeralDisks, configurationDisks...)
 	for _, disk := range disks {
 		err = c.client.DeleteStoragePoolVolume(c.config.Server.StoragePool, "custom", disk)
 		if err != nil {

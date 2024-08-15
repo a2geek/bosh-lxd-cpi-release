@@ -35,14 +35,9 @@ func (c CPI) setVMAction(cid apiv1.VMCID, action string) error {
 			Stateful: false,
 		}
 
-		op, err := c.client.UpdateInstanceState(cid.AsString(), req, "")
+		err = wait(c.client.UpdateInstanceState(cid.AsString(), req, ""))
 		if err != nil {
 			return bosherr.WrapErrorf(err, "setVMAction(%s) - update", action)
-		}
-
-		err = op.Wait()
-		if err != nil {
-			return bosherr.WrapErrorf(err, "setVMAction(%s) - wait", action)
 		}
 	}
 

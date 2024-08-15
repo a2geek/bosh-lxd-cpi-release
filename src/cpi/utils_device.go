@@ -19,14 +19,9 @@ func (c CPI) addDevice(vmCID apiv1.VMCID, name string, device map[string]string)
 
 	instance.Devices[name] = device
 
-	op, err := c.client.UpdateInstance(vmCID.AsString(), instance.Writable(), "")
+	err = wait(c.client.UpdateInstance(vmCID.AsString(), instance.Writable(), ""))
 	if err != nil {
 		return bosherr.WrapErrorf(err, "addDevice(%s) - Update instance state", vmCID.AsString())
-	}
-
-	err = op.Wait()
-	if c.checkError(err) != nil {
-		return bosherr.WrapErrorf(err, "addDevice(%s) - Update instance state - wait", vmCID.AsString())
 	}
 
 	return nil
@@ -40,10 +35,9 @@ func (c CPI) removeDevice(vmCID apiv1.VMCID, deviceName string) error {
 
 	delete(instance.Devices, deviceName)
 
-	op, err := c.client.UpdateInstance(vmCID.AsString(), instance.Writable(), "")
-	if c.checkError(err) != nil {
+	err = wait(c.client.UpdateInstance(vmCID.AsString(), instance.Writable(), ""))
+	if checkError(err) != nil {
 		return bosherr.WrapErrorf(err, "removeDevice(%s) - Update instance state", vmCID.AsString())
 	}
-
-	return op.Wait()
+	return nil
 }

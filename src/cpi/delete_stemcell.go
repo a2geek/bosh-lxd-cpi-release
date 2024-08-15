@@ -10,13 +10,5 @@ func (c CPI) DeleteStemcell(cid apiv1.StemcellCID) error {
 	if err != nil {
 		return err
 	}
-	op, err := c.client.DeleteImage(imageAlias.Target)
-	if err != nil {
-		return err
-	}
-	err = op.Wait()
-	if err != nil {
-		return err
-	}
-	return nil
+	return wait(c.client.DeleteImage(imageAlias.Target))
 }
