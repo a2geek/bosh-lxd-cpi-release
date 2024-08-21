@@ -6,7 +6,7 @@ import (
 )
 
 func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
-	err := c.freezeVM(vmCID)
+	err := c.stopVM(vmCID)
 	if err != nil {
 		return bosherr.WrapError(err, "Stopping instance")
 	}
@@ -41,7 +41,7 @@ func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
 		return bosherr.WrapError(err, "Write AgentEnv")
 	}
 
-	err = c.unfreezeVM(vmCID)
+	err = c.startVM(vmCID)
 	if err != nil {
 		return bosherr.WrapError(err, "Starting instance")
 	}

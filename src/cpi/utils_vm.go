@@ -14,14 +14,6 @@ func (c CPI) startVM(cid apiv1.VMCID) error {
 	return c.setVMAction(cid, "start")
 }
 
-func (c CPI) freezeVM(cid apiv1.VMCID) error {
-	return c.setVMAction(cid, "freeze")
-}
-
-func (c CPI) unfreezeVM(cid apiv1.VMCID) error {
-	return c.setVMAction(cid, "unfreeze")
-}
-
 func (c CPI) setVMAction(cid apiv1.VMCID, action string) error {
 	atCurrentState, err := c.isVMAtRequestedState(cid, action)
 	if err != nil {
