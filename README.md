@@ -1,158 +1,223 @@
 # BOSH LXD CPI
 
-This is a [BOSH CPI](https://bosh.io/) implementation to support [LXD](https://linuxcontainers.org/lxd/introduction/).
+> Incomplete. Would love PRs if people are still playing with BOSH in 2024!
 
-Please note that Go is new to me so the code is ugly. Working on making it functional before beautiful. ;-)
+This is a [BOSH CPI](https://bosh.io/) implementation to support [LXD](https://canonical.com/lxd) ... and likely [Incus](https://linuxcontainers.org/incus/introduction/).  It appears that both LXD and Incus are trying to keep comparable/compatible, so LXD comments hopefully apploy to Incus as well.
 
 ## Requirements
 
-As this depends on LXD, which is Linux only, this is also Linux only.  See the [LXD Introduction](https://linuxcontainers.org/lxd/introduction/).
+LXD 5.21, LXD supports BIOS boots for VMs, which all the BOSH Stemcells use. Without this feature, they must be UEFI boot devices and VMs are not an option.
 
-The current development environment is Ubuntu 18.04. LXD has been installed via a Snap and [this guide](https://linuxcontainers.org/lxd/getting-started-cli/) was generally followed.
+> A note on BIOS. This option is specified in the VM create call, or from the command-line with `--config raw.qemu="-bios bios-256k.bin"`. There is an environment variable the snap install of LXD sets up that points to the directory holding the various BIOS files. At this time, this is not configurable.
+
+As this depends on LXD, which is Linux only, this is also Linux only.
+
+The current development environment is Ubuntu 22.04. LXD has been installed via a Snap and [this guide](https://documentation.ubuntu.com/lxd/en/latest/tutorial/first_steps/) was generally followed.
 
 ## Current State
 
 What _is_ functional:
+
 * A BOSH Director can be stood up.
 * Network is configured and available.
-* Disk is provisioned and attached. Does not survive a reboot (important for me because we do lose power from time-to-time).
-  - Note that this is hacked and does survive a reboot. Two items were found: The mount is lost for persistent disk, and `monit` processes do not restart successfully. The CPI injects a `/root/startup.sh` script into all VMs to resolve. `/etc/rc.local` is modified to invoke the script at startup.
-* "Simple" releases can be deployed (appears to be applications that do not require elevated privileges that LXD protects against).
+* Disk is provisioned and attached.
 
-BOSH release status:
+Problem areas:
 
-| Release | Status | Notes |
-| --- | --- | --- |
-| [concourse-bosh-deployment](https://github.com/concourse/concourse-bosh-deployment) | Deploys! | Tasks do not start. |
-| [postgres-release](https://github.com/cloudfoundry/postgres-release) | Works! | Suffers from the uptime bug. |
-| [zookeeper-release](https://github.com/cppforlife/zookeeper-release) | Works! | Issues resolved with older Trusty stemcell. <br> Suffers from the uptime bug. |
-| [cf-deployment](https://github.com/cloudfoundry/cf-deployment) | Fails when standing up `diego-cell` in the `rep` job.  Note that CF requires a relatively large amount of disk. Review the `cloud-config.yml` `vm_extensions` section. |
-
-What is _not_ functional:
-* Cloud Foundry fails in deployemtn with a the following error in the `rep` job of the `diego-cell`:
-  ```
-  umount: /var/vcap/data/rep/shared/garden/instance_identity: block devices are not permitted on filesystem
-  ```
-* Only supports Unix socket at this time.
-* `bosh vms` and `bosh instances` fails with negative uptime for Postgres:
-  ```
-  $ bosh -d postgres vms
-  Using environment '10.245.0.11' as client 'admin'
-
-  Task 17. Done
-
-  Unmarshaling vm info response: '{"vm_cid":"c-b4b2c88b-3941-4e37-5991-6e3858610410","active":true,"vm_created_at":"2019-01-04T03:58:00Z","cloud_properties":{"ephemeral_disk":2048,"instance_type":"c1-m2"},"disk_cid":"vol-p-2786a14e-6199-479b-7e06-22d260816507","disk_cids":["vol-p-2786a14e-6199-479b-7e06-22d260816507"],"ips":["10.245.0.12"],"dns":[],"agent_id":"7db1a505-76bf-401e-bf02-42e63189b5b4","job_name":"postgres","index":0,"job_state":"running","state":"started","resource_pool":"small","vm_type":"small","vitals":{"cpu":{"sys":"2.3","user":"3.8","wait":"0.0"},"disk":{"ephemeral":{"inode_percent":"0","percent":"2"},"persistent":{"inode_percent":"0","percent":"0"},"system":{"inode_percent":"2","percent":"27"}},"load":["1.35","1.16","0.89"],"mem":{"kb":"28528","percent":"1"},"swap":{"kb":"232448","percent":"1"},"uptime":{"secs":977141}},"processes":[{"name":"postgres","state":"running","uptime":{"secs":-972769},"mem":{"kb":59752,"percent":2.9},"cpu":{"total":0}},{"name":"pg_janitor","state":"running","uptime":{"secs":-972770},"mem":{"kb":23560,"percent":1.1},"cpu":{"total":0}}],"resurrection_paused":false,"az":"z1","id":"248d04db-2a15-44c5-8e97-a9fcbda3e35c","bootstrap":true,"ignore":false}':
-    json: cannot unmarshal number -972769 into Go struct field VMInfoVitalsUptime.secs of type uint64
-
-  Exit code 1
-  ```
-  This appears to likely be related to [this non-issue in Monit](https://bitbucket.org/tildeslash/monit/issues/310/monit-in-lxc-containers)... that still has a useful patch.
+* The agent sometimes fails. (It doesn't communicate back to BOSH, and I can't get into the VM to understand why.) For example, Concourse deploys but Postgres (DB only) does not.
+* There are sometimes issues with BOSH DNS. When a lookup against 169.254.0.2:53 is tried, to appears to work.
+* CF doesn't get far.
 
 ## LXD Setup
 
 Note that the LXD configuration should be somewhat flexible. Review `manifests/bosh-vars.yml` for current set of configuration options.
 
-```
+```yaml
 director_name: lxd
-lxd_project_name: bosh
+lxd_project_name: boshdev
 lxd_profile_name: default
-lxd_network_name: boshbr0
-lxd_storage_pool_name: default
-internal_cidr: 10.245.0.0/16
+lxd_network_name: boshdevbr0
+lxd_storage_pool_name: boshpool
+internal_cidr: 10.245.0.0/24
 internal_gw: 10.245.0.1
 internal_ip: 10.245.0.11
-credhub_encryption_password: topsecret
 ```
+
 This CPI is designed to operate against a LXD Project. This should be able to keep the BOSH stemcells, vms, and disks (sort of) separate from any other activity on the LXD host.
 
-Current setup of my machine (note these commands are for the project `bosh`):
+Current setup of my machine (note these commands are for the project `boshdev`):
 
-```
-$ lxc project show bosh
-description: BOSH environment
+```bash
+$ lxc project switch boshdev
+$ lxc project show boshdev
+name: boshdev
+description: ""
 config:
   features.images: "true"
+  features.networks: "true"
   features.profiles: "true"
-name: bosh
+  features.storage.buckets: "true"
+  features.storage.volumes: "true"
 
-$ lxc --project bosh profile show default
-config:
-  raw.lxc: |
-    lxc.apparmor.profile = unconfined
-    lxc.mount.auto=proc:rw sys:rw cgroup:rw
-    lxc.cgroup.devices.allow=a
-    lxc.cap.drop=
-  security.nesting: "true"
-  security.privileged: "true"
-description: Default LXD profile for project bosh
-devices:
-  root:
-    path: /
-    pool: default
-    type: disk
+$ lxc profile show default
 name: default
+description: Default LXD profile for project boshdev
+config: {}
+devices: {}
 
-# Project doesn't apply to network(?)
-$ lxc network show lxdbr0
-config:
-  ipv4.address: 10.94.147.1/24
-  ipv4.nat: "true"
-  ipv6.address: none
+# Project doesn't apply to network when its a managed bridge
+$ lxc --project default network show boshdevbr0
+name: boshdevbr0
 description: ""
-name: lxdbr0
 type: bridge
 managed: true
 status: Created
+config:
+  dns.mode: none
+  ipv4.address: 10.245.0.1/24
+  ipv4.nat: "true"
+  ipv6.address: none
+used_by: []
 locations:
 - none
 
-# This is my storage pool. Whatever you setup should be fine.
-# Again, a storage pool is available to all projects.
-$ lxc storage show default
-config:
-  size: 150GB
-  source: /var/snap/lxd/common/lxd/disks/default.img
-  zfs.pool_name: default
+# Note that the directory driver is apparently very slow and caused timeouts.
+# LXD/Incus documentation suggest ZFS or BTRFS are the best drivers. I found a doc on creating a ZFS pool and set that up.
+$ zpool create -m none lxd-storage mirror /dev/sdb1 /dev/sdc1
+$ lxc storage create boshpool zfs source=lxd-storage
+$ lxc storage show boshpool
+name: boshpool
 description: ""
-name: default
 driver: zfs
 status: Created
-locations:
-- none
+config:
+  source: lxd-storage
+  volatile.initial_source: lxd-storage
+  zfs.pool_name: lxd-storage
+```
+
+## Authentication
+
+This CPI uses the LXD certificate authentication [using BOSH](https://bosh.io/docs/director-certs/#generate).
+
+## Partitioning
+
+```bash
+# sgdisk --zap-all /dev/sdb
+Caution! After loading partitions, the CRC doesn't check out!
+Warning! Main partition table CRC mismatch! Loaded backup partition table
+instead of main partition table!
+
+Warning! One or more CRCs don't match. You should repair the disk!
+Main header: OK
+Backup header: OK
+Main partition table: ERROR
+Backup partition table: OK
+
+****************************************************************************
+Caution: Found protective or hybrid MBR and corrupt GPT. Using GPT, but disk
+verification and recovery are STRONGLY recommended.
+****************************************************************************
+GPT data structures destroyed! You may now partition the disk using fdisk or
+other utilities.
+# sgdisk --zap-all /dev/sdc
+Caution! After loading partitions, the CRC doesn't check out!
+Warning! Main partition table CRC mismatch! Loaded backup partition table
+instead of main partition table!
+
+Warning! One or more CRCs don't match. You should repair the disk!
+Main header: OK
+Backup header: OK
+Main partition table: ERROR
+Backup partition table: OK
+
+****************************************************************************
+Caution: Found protective or hybrid MBR and corrupt GPT. Using GPT, but disk
+verification and recovery are STRONGLY recommended.
+****************************************************************************
+GPT data structures destroyed! You may now partition the disk using fdisk or
+other utilities.
+# sgdisk -E /dev/sdb
+Creating new GPT entries in memory.
+2000409230
+# sgdisk -E /dev/sdc
+Creating new GPT entries in memory.
+1953525134
+# sgdisk --new 1:2048:1953525134 /dev/sdc
+Creating new GPT entries in memory.
+The operation has completed successfully.
+# sgdisk --new 1:2048:1953525134 /dev/sdb
+Creating new GPT entries in memory.
+The operation has completed successfully.
+# sgdisk --verify /dev/sdb
+
+Caution: Partition 1 doesn't end on a 2048-sector boundary. This may
+result in problems with some disk encryption tools.
+
+No problems found. 46886110 free sectors (22.4 GiB) available in 2
+segments, the largest of which is 46884096 (22.4 GiB) in size.
+# sgdisk --verify /dev/sdc
+
+Caution: Partition 1 doesn't end on a 2048-sector boundary. This may
+result in problems with some disk encryption tools.
+
+No problems found. 2014 free sectors (1007.0 KiB) available in 1
+segments, the largest of which is 2014 (1007.0 KiB) in size.
+# lsblk
+NAME                      MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+<snip>
+sdb                         8:16   0 953.9G  0 disk 
+└─sdb1                      8:17   0 931.5G  0 part 
+sdc                         8:32   0 931.5G  0 disk 
+└─sdc1                      8:33   0 931.5G  0 part 
+<snip>
 ```
 
 ## Tinkering
 
-If you wish to tinker with this, here is how I'm using the scripts:
+If you wish to tinker with this, here is how I'm working with the tools.
 
+First, create a handy environment script (I call it `env.sh`, and it's in `.gitignore` so no secrets are ever at risk).
+
+```bash
+export LXD_URL="https://<server>:8443"
+export LXD_INSECURE="true"
+export LXD_CLIENT_CERT="$PWD/bosh-client.crt"
+export LXD_CLIENT_KEY="$PWD/bosh-client.key"
+#export BOSH_LOG_LEVEL="DEBUG"
+export BOSH_JUMPBOX_ENABLE="yes, please"
+export POSTGRES_DIR="<...>/postgres-release"
+export BOSH_DEPLOYMENT_DIR="<...>/bosh-deployment"
+export CONCOURSE_DIR="<...>/concourse-bosh-deployment"
+export CF_DEPLOYMENT_DIR="<...>/cf-deployment"
 ```
-# I have the Ubuntu LXD Snap installed, and the
-# socket location is different, configure it like this:
-$ export LXD_SOCKET=/var/snap/lxd/common/lxd/unix.socket
 
-# This project needs the bosh-deployment project available.
-# Set the location with BOSH_DEPLOYMENT_DIR.
-$ export BOSH_DEPLOYMENT_DIR=...
+This script can then be source in with `source ./env.sh`.
 
-# 'util.sh' has all the pieces currently being used.
-# Source it in to setup the 'util' alias.
-$ source ./util.sh
+Second, the `util.sh` script is setup to be sourced in. Note that it must be an actual Bash shell (and not something from an IDE like VS Code).
+
+```bash
+$ source ./util.sh 
 'util' now available.
+```
 
-# Note: 'util' assumes you are in the root of this project.
+> Note: 'util' assumes you are in the root of this project.
 
-# Run alone to get a list of commands (not fancy but functional):
-$ util
+Run alone to get a list of commands (not fancy but functional):
+
+```bash
+$  util
 Subcommands:
 - capture_requests
 - cloud_config
 - deploy_bosh
+- deploy_cf
 - deploy_concourse
 - deploy_postgres
-- deploy_zookeeper
-- deps
 - destroy
 - help
+- init_lxd
+- runtime_config
 - upload_releases
 - upload_stemcells
 
@@ -162,46 +227,67 @@ Notes:
 
 Useful environment variables to export...
 - BOSH_LOG_LEVEL (set to 'debug' to capture all bosh activity including request/response)
-- LXD_SOCKET (default: /var/lib/lxd/unix.socket)
+- BOSH_JUMPBOX_ENABLE (set to any value enable jumpbox user)
+- LXD_URL (set to HTTPS url of LXD server - not localhost)
+- LXD_INSECURE (default: false)
+- LXD_CLIENT_CERT (set to path of LXD TLS client certificate)
+- LXD_CLIENT_KEY (set to path of LXD TLS client key)
 - BOSH_DEPLOYMENT_DIR (default: ${HOME}/Documents/Source/bosh-deployment)
 - CONCOURSE_DIR when deploying Concourse
-- ZOOKEEPER_DIR when deploying ZooKeeper
 - POSTGRES_DIR when deploying Postgres
 
-# Most likely you want to deploy the bosh director:
+Currently set environment variables...
+BOSH_DEPLOYMENT_DIR=<...>/bosh-deployment
+CONCOURSE_DIR=<...>/concourse-bosh-deployment
+LXD_CLIENT_CERT=<...>/bosh-lxd-cpi-release/bosh-client.crt
+LXD_CLIENT_KEY=<...>/bosh-lxd-cpi-release/bosh-client.key
+LXD_INSECURE=true
+LXD_URL=https://<server>:8443
+POSTGRES_DIR=<...>/postgres-release
+```
+
+Most likely you want to deploy the bosh director:
+
+```bash
 $ util deploy_bosh
-... hopefully this works!
+<lots of output>
 ```
 
-## Cloud configuration
+... and hopefully this works! This particular deploy operation will create a `creds/jumpbox.pk` so an SSH connection can be established:
 
-These properties are available in the cloud properties. Note that they are used for the BOSH Director (`manifests/cpi.yml`) as well as the default cloud configuration (`manifests/cloud-config.yml`).
+```bash
+$ ssh -i creds/jumpbox.pk jumpbox@10.245.0.11
+Unauthorized use is strictly prohibited. All access and activity
+is subject to logging and monitoring.
+Welcome to Ubuntu 22.04.4 LTS (GNU/Linux 5.15.0-117-generic x86_64)
 
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+Last login: Wed Aug 21 23:52:09 UTC 2024 from 192.168.1.254 on pts/0
+Last login: Wed Aug 21 23:52:12 2024 from 192.168.1.254
+To run a command as administrator (user "root"), use "sudo <command>".
+See "man sudo_root" for details.
+
+bosh/0:~$ sudo -i
+bosh/0:~# monit summary
+The Monit daemon 5.2.5 uptime: 3h 51m 
+
+Process 'nats'                      running
+Process 'bosh_nats_sync'            running
+Process 'postgres'                  running
+Process 'blobstore_nginx'           running
+Process 'director'                  running
+Process 'worker_1'                  running
+Process 'worker_2'                  running
+Process 'worker_3'                  running
+Process 'worker_4'                  running
+Process 'director_scheduler'        running
+Process 'director_sync_dns'         running
+Process 'director_nginx'            running
+Process 'health_monitor'            running
+Process 'lxd_cpi'                   running
+Process 'uaa'                       running
+Process 'credhub'                   running
+System 'system_0db11f4b-1cfc-47a8-5dd5-6f13a053d7b7' running
 ```
-cloud_properties:
-  instance_type: <type>
-  ephemeral_disk: <number_in_mb>
-  devices:
-    name_of_device:
-      type: <device-type>
-      parameter1: <value1>
-      parameter2: <value2>
-```
-
-Regarding devices, they are direct mappings into the LXD device configuration.  Sample from the BOSH Director:
-
-```
-devices:
-  lxdsocket:
-    type: proxy
-    connect: unix:((lxd_unix_socket))
-    listen: unix:/warden-cpi-dev/lxd.socket
-    bind: container
-    uid: "1000"   # vcap
-    gid: "1000"   # vcap
-    mode: "0660"
-```
-
-Additional information:
-* [Instance Types](https://github.com/dustinkirkland/instance-type)
-* [Devices](https://github.com/lxc/lxd/blob/master/doc/containers.md#devices-configuration)
