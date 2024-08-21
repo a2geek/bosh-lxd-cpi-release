@@ -2,7 +2,10 @@
 
 config = {
   "Server" => {
-    "Socket" => p("lxd_cpi.lxd.unix_socket"),
+    "URL" => p("lxd_cpi.lxd.url"),
+    "InsecureSkipVerify" => p("lxd_cpi.lxd.insecure_skip_verify"),
+    "TLSClientCert" => p("lxd_cpi.lxd.tls_client_cert"),
+    "TLSClientKey" => p("lxd_cpi.lxd.tls_client_key"),
     "Project" => p("lxd_cpi.lxd.project_name"),
     "Profile" => p("lxd_cpi.lxd.profile_name"),
     "Network" => p("lxd_cpi.lxd.network_name"),
@@ -11,11 +14,13 @@ config = {
   "Agent" => {
     "Mbus" => p("lxd_cpi.agent.mbus"),
     "NTP"  => p("lxd_cpi.agent.ntp"),
-
-    "Blobstore" => {
-      "Provider" => p("lxd_cpi.agent.blobstore.provider"),
-      "Options"  => p("lxd_cpi.agent.blobstore.options")
-    }
+  },
+  "AgentConfig" => {
+    "SourceType" => p("lxd_cpi.agent_config.type"),
+    "Label" => p("lxd_cpi.agent_config.label"),
+    "MetadataPath" => p("lxd_cpi.agent_config.metadata_path"),
+    "UserdataPath" => p("lxd_cpi.agent_config.userdata_path"),
+    "FileStorePath" => p("lxd_cpi.agent_config.filestore_path")
   }
 }
 

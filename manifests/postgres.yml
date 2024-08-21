@@ -1,0 +1,53 @@
+instance_groups:
+- azs:
+  - z1
+  instances: 1
+  jobs:
+  - name: postgres
+    properties:
+      databases:
+        databases:
+        - citext: true
+          name: sandbox
+        port: 5524
+        roles:
+        - name: pgadmin
+          password: ((pgadmin_database_password))
+          permissions:
+          - CONNECTION LIMIT 50
+    provides:
+      postgres:
+        as: postgres-database
+    release: postgres
+  - consumes:
+      database:
+        from: postgres-database
+    name: bbr-postgres-db
+    properties:
+      release_level_backup: true
+    release: postgres
+  name: postgres
+  networks:
+  - name: default
+    static_ips:
+    - ((postgres_host_or_ip))
+  persistent_disk_type: ((postgres_disk))
+  stemcell: default
+  vm_type: small
+name: postgres
+releases:
+- name: postgres
+  version: latest
+stemcells:
+- alias: default
+  os: ubuntu-jammy
+  version: latest
+update:
+  canaries: 1
+  canary_watch_time: 30000-600000
+  max_in_flight: 1
+  serial: true
+  update_watch_time: 5000-600000
+variables:
+- name: pgadmin_database_password
+  type: password

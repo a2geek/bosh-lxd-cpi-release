@@ -1,0 +1,19 @@
+{
+  "method": "create_stemcell",
+  "arguments": [
+      "~/Downloads/bosh-stemcell-1.492-openstack-kvm-ubuntu-jammy-go_agent/image",
+      {
+          "name": "bosh-warden-boshlite-ubuntu-xenial-go_agent",
+          "version": "1.492",
+          "infrastructure": "openstack",
+          "hypervisor": "kvm",
+          "disk": 5120,
+          "disk_format": "qcow2",
+          "container_format": "bare",
+          "os_type": "linux",
+          "os_distro": "ubuntu",
+          "architecture": "x86_64",
+          "auto_disk_config": "true"
+      }
+  ]
+}

@@ -1,1 +1,2 @@
 postgres_host_or_ip: 10.245.0.251
+postgres_disk: 10GB

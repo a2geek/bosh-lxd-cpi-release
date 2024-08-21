@@ -3,4 +3,5 @@
 pkgs_dir=${BOSH_PACKAGES_DIR:-/var/vcap/packages}
 jobs_dir=${BOSH_JOBS_DIR:-/var/vcap/jobs}
 
-exec $pkgs_dir/lxd_cpi/bin/cpi -configPath $jobs_dir/lxd_cpi/config/cpi.json
+platform=$(uname | tr '[:upper:]' '[:lower:]')
+exec $pkgs_dir/lxd_cpi/bin/cpi-${platform} -configPath $jobs_dir/lxd_cpi/config/cpi.json

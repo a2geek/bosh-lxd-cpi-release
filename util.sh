@@ -13,29 +13,39 @@ function do_help() {
   echo
   echo "Useful environment variables to export..."
   echo "- BOSH_LOG_LEVEL (set to 'debug' to capture all bosh activity including request/response)"
-  echo "- LXD_SOCKET (default: /var/lib/lxd/unix.socket or /var/snap/lxd/common/lxd/unix.socket)"
+  echo "- BOSH_JUMPBOX_ENABLE (set to any value enable jumpbox user)"
+  echo "- LXD_URL (set to HTTPS url of LXD server - not localhost)"
+  echo "- LXD_INSECURE (default: false)"
+  echo "- LXD_CLIENT_CERT (set to path of LXD TLS client certificate)"
+  echo "- LXD_CLIENT_KEY (set to path of LXD TLS client key)"
   echo "- BOSH_DEPLOYMENT_DIR (default: \${HOME}/Documents/Source/bosh-deployment)"
   echo "- CONCOURSE_DIR when deploying Concourse"
-  echo "- ZOOKEEPER_DIR when deploying ZooKeeper"
   echo "- POSTGRES_DIR when deploying Postgres"
-  echo "- LXD_MONIT_PATCH_DIR when deploying the runtime config patch"
   echo
   echo "Currently set environment variables..."
-  set | egrep "^(BOSH_LOG_LEVEL|LXD_SOCKET|BOSH_DEPLOYMENT_DIR|CONCOURSE_DIR|ZOOKEEPER_DIR|POSTGRES_DIR|LXD_MONIT_PATCH_DIR)="
+  set | egrep "^(BOSH_LOG_LEVEL|LXD_URL|LXD_INSECURE|LXD_CLIENT_CERT|LXD_CLIENT_KEY|BOSH_DEPLOYMENT_DIR|CONCOURSE_DIR|ZOOKEEPER_DIR|POSTGRES_DIR)="
 }
 
-function do_deps() {
-  export GOPATH=$PWD
+function do_init_lxd() {
+  set -eu
 
-  cd src
+  project=$(lxc project list --format csv | grep "boshdev" | cut -d, -f1)
+  if [ -z "${project}" ]
+  then
+    lxc project create boshdev -c features.images=true -c features.storage.volumes=true
+  fi
+  lxc project list boshdev
 
-  # Remove all deps
-  #find * -maxdepth 3 -type d | grep -v '^lxd-bosh-cpi$' | xargs rm -rf
+  # note that a bridge is apparently "managed" and can not be set in the project itself
+  network=$(lxc network list --format csv | grep "boshdevbr0" | cut -d, -f1)
+  if [ -z "${network}" ]
+  then
+    lxc network create boshdevbr0 --type bridge ipv4.address=10.245.0.1/24 ipv4.nat=true ipv6.address=none dns.mode=none
+  fi
+  lxc network list
 
-  go get -d -t -v lxd-bosh-cpi/...
-
-  # Remove all .git folders
-  find * -type d -name '.git' | xargs rm -rf
+  lxc storage create --project boshdev boshdir dir source=/storage/boshdev-disks
+  lxc storage list default
 }
 
 function do_deploy_cf() {
@@ -49,7 +59,6 @@ function do_deploy_cf() {
   export BOSH_DEPLOYMENT=cf
   bosh deploy $CF_DEPLOYMENT_DIR/cf-deployment.yml \
     -o $CF_DEPLOYMENT_DIR/operations/scale-to-one-az.yml \
-    -o $CF_DEPLOYMENT_DIR/operations/enable-privileged-container-support.yml \
     -o $CF_DEPLOYMENT_DIR/operations/set-router-static-ips.yml \
     -o $CF_DEPLOYMENT_DIR/operations/use-compiled-releases.yml \
     -o $CF_DEPLOYMENT_DIR/operations/use-latest-stemcell.yml \
@@ -57,41 +66,28 @@ function do_deploy_cf() {
 }
 
 function do_destroy() {
-  echo "Deleting deployments via BOSH..."
-  if [ -f creds/bosh.yml ]
-  then
-    source scripts/bosh-env.sh
-    bosh --json deployments |
-      jq -r '.Tables[] | .Rows[] | .name' |
-      xargs --verbose --no-run-if-empty --max-args=1 --replace=DEPLOYMENT \
-        bosh -d DEPLOYMENT delete-deployment --force --non-interactive
-  fi
-
-  echo "Destroying out all state..."
-  set -x
+  echo "Destroying all state..."
   rm -rf .dev_builds/
   rm -rf dev_releases/
   rm -rf creds/
   rm -f cpi
   rm -f state.json
 
-  lxc --project bosh list --format json |
-    jq -r '.[] | .name | select(test("c-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"))' |
+  lxc --project boshdev list --format json |
+    jq -r '.[] | .name | select(test("vm-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"))' |
     xargs --verbose --no-run-if-empty --max-args=1 lxc delete -f
-  lxc --project bosh image list --format json |
+  lxc --project boshdev image list --format json |
     jq -r '.[] | select(.aliases[0].name // "not present" | test("img-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) | .fingerprint' |
     xargs --verbose --no-run-if-empty --max-args=1 lxc image delete
-  # NO JSON AVAILABLE?!
-  lxc storage volume list default |
-    grep custom |
-    cut -d"|" -f3 |
-    xargs --verbose --no-run-if-empty --max-args=1  lxc storage volume delete default
+  lxc storage volume list --format json |
+    jq -r '.[] | select(.pool == "boshpool") | .name' |
+    xargs --verbose --no-run-if-empty --max-args=1  lxc storage volume delete boshpool
 
   echo "Visual confirmation:"
-  lxc --project bosh list
-  lxc --project bosh image list
-  lxc --project bosh storage list
-  lxc --project bosh storage volume list default
+  lxc --project boshdev list
+  lxc --project boshdev image list
+  lxc --project boshdev storage list
+  lxc --project boshdev storage volume list default
 }
 
 function do_deploy_bosh() {
@@ -99,29 +95,25 @@ function do_deploy_bosh() {
   bosh_deployment="${BOSH_DEPLOYMENT_DIR:-${HOME}/Documents/Source/bosh-deployment}"
   cpi_path=$PWD/cpi
 
-  if [ -z "${LXD_SOCKET:-}" ]
+  if [ -z "${LXD_URL:-}" ]
   then
-    if [ -S /var/lib/lxd/unix.socket ]
-    then
-      LXD_SOCKET="/var/lib/lxd/unix.socket"
-    elif [ -S /var/snap/lxd/common/lxd/unix.socket ]
-    then
-      LXD_SOCKET="/var/snap/lxd/common/lxd/unix.socket"
-    fi
+    echo "LXD_URL must be set."
+    exit 1
   fi
-  lxd_unix_socket="${LXD_SOCKET:-/var/lib/lxd/unix.socket}"
+  lxd_url="${LXD_URL}"
+  lxd_insecure="${LXD_INSECURE:-false}"
+  lxd_client_cert="${LXD_CLIENT_CERT:-}"
+  lxd_client_key="${LXD_CLIENT_KEY:-}"
+  jumpbox_enable="${BOSH_JUMPBOX_ENABLE:-}"
 
-  rm -f creds/bosh.yml
+  bosh_args=()
+  if [ ! -z "${jumpbox_enable}" ]
+  then
+    bosh_args+=(--ops-file=${bosh_deployment}/jumpbox-user.yml)
+  fi
 
   echo "-----> `date`: Create dev release"
   bosh create-release --force --tarball $cpi_path
-
-  extra_ops_files=()
-  if [ ! -z "${LXD_MONIT_PATCH_DIR:-}" ]
-  then
-    echo "-----> `date`: Adding lxd-monit-patch"
-    extra_ops_files+=("--ops-file=${LXD_MONIT_PATCH_DIR}/manifests/operations/add-to-director.yml")
-  fi
 
   echo "-----> `date`: Create env"
   bosh create-env ${bosh_deployment}/bosh.yml \
@@ -129,12 +121,18 @@ function do_deploy_bosh() {
     --ops-file=${bosh_deployment}/bbr.yml \
     --ops-file=${bosh_deployment}/uaa.yml \
     --ops-file=${bosh_deployment}/credhub.yml \
-    "${extra_ops_files[@]}" \
+    --ops-file=${bosh_deployment}/misc/dns.yml \
     --state=state.json \
     --vars-store=creds/bosh.yml \
     --vars-file=manifests/bosh-vars.yml \
     --var=cpi_path=$cpi_path \
-    --var=lxd_unix_socket=$lxd_unix_socket
+    --var=lxd_url=$lxd_url \
+    --var=lxd_insecure=$lxd_insecure \
+    --var-file=lxd_client_cert=$lxd_client_cert \
+    --var-file=lxd_client_key=$lxd_client_key "${bosh_args[@]}"
+
+  bosh interpolate creds/bosh.yml --path /jumpbox_ssh/private_key > creds/jumpbox.pk
+  chmod 600 creds/jumpbox.pk
 }
 
 function do_capture_requests() {
@@ -142,6 +140,10 @@ function do_capture_requests() {
   then
     echo "Expecting to find 'log' file."
     exit 1
+  fi
+  if [ -e requests ] 
+  then
+    rm -rf requests
   fi
   mkdir -p requests
   num=0
@@ -166,13 +168,6 @@ function do_cloud_config() {
 function do_runtime_config() {
   source scripts/bosh-env.sh
 
-  if [ -z "${LXD_MONIT_PATCH_DIR}" ]
-  then
-    echo "Warning: LXD_MONIT_PATCH_DIR is not set, not loading the monit-patch runtime config!"
-  else
-    bosh update-runtime-config --name monit-patch ${LXD_MONIT_PATCH_DIR}/manifests/runtime-config.yml
-  fi
-
   if [ -z "${BOSH_DEPLOYMENT_DIR}" ]
   then
     echo "Warning: BOSH_DEPLOYMENT_DIR is not set, not loading the bosh-dns runtime config! (Needed for CF)"
@@ -184,70 +179,50 @@ function do_runtime_config() {
 function do_upload_stemcells() {
   source scripts/bosh-env.sh
 
-  set -x
-
   if [ "new" == "${1-}" ]
   then
     NEW_STEMCELLS=yes
   fi
 
-  TRUSTY=$(bosh stemcells --json | jq -r '[ .Tables[] | .Rows[] | select(.os == "ubuntu-trusty")] | length')
-  if [ 0 -ne ${TRUSTY} -a -z "${NEW_STEMCELLS}" ]
+  JAMMY=$(bosh stemcells --json | jq -r '[ .Tables[] | .Rows[] | select(.os == "ubuntu-jammy")] | length')
+  if [ 0 -ne ${JAMMY} -a -z "${NEW_STEMCELLS}" ]
   then
-    echo "ubuntu-trusty stemcell exists"
+    echo "ubuntu-jammy stemcell exists"
   else
-    if [ -f stemcell/ubuntu-trusty-image -a ! -z "${NEW_STEMCELLS}" ]
+    if [ -f stemcell/ubuntu-jammy-image -a ! -z "${NEW_STEMCELLS}" ]
     then
-      rm stemcell/ubuntu-trusty-image
+      rm stemcell/ubuntu-jammy-image
     fi
-    if [ ! -f stemcell/ubuntu-trusty-image ]
+    if [ ! -f stemcell/ubuntu-jammy-image ]
     then
-      echo "Downloading ubuntu-trusty-image"
-      curl --location --output stemcell/ubuntu-trusty-image \
-        https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-trusty-go_agent
+      echo "Downloading ubuntu-jammy-image"
+      curl --location --output stemcell/ubuntu-jammy-image \
+        https://bosh.io/d/stemcells/bosh-openstack-kvm-ubuntu-jammy-go_agent
     fi
-    bosh upload-stemcell stemcell/ubuntu-trusty-image
-  fi
-
-  XENIAL=$(bosh stemcells --json | jq -r '[ .Tables[] | .Rows[] | select(.os == "ubuntu-xenial")] | length')
-  if [ 0 -ne ${XENIAL} -a -z "${NEW_STEMCELLS}" ]
-  then
-    echo "ubuntu-xenial stemcell exists"
-  else
-    if [ -f stemcell/ubuntu-xenial-image -a ! -z "${NEW_STEMCELLS}" ]
-    then
-      rm stemcell/ubuntu-xenial-image
-    fi
-    if [ ! -f stemcell/ubuntu-xenial-image ]
-    then
-      echo "Downloading ubuntu-xenial-image"
-      curl --location --output stemcell/ubuntu-xenial-image \
-        https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-xenial-go_agent
-    fi
-    bosh upload-stemcell stemcell/ubuntu-xenial-image
+    bosh upload-stemcell stemcell/ubuntu-jammy-image
   fi
 }
 
 function do_upload_releases() {
   source scripts/bosh-env.sh
 
-  # See https://github.com/concourse/concourse-bosh-deployment/issues/77
-  BBR=$(bosh --json releases | jq -r '[ .Tables[] | .Rows[] | select(.name == "backup-and-restore-sdk") ] | length')
-  if [ 0 -ne $BBR ]
-  then
-    echo "bbr release exists"
-  else
-    if [ ! -f release/backup-and-restore-sdk ]
-    then
-      echo "Downloading backup-and-restore-sdk"
-      curl --location --output release/backup-and-restore-sdk \
-        https://bosh.io/d/github.com/cloudfoundry-incubator/backup-and-restore-sdk-release?v=1.11.2
-    fi
-    bosh upload-release release/backup-and-restore-sdk
-  fi
+  # # See https://github.com/concourse/concourse-bosh-deployment/issues/77
+  # BBR=$(bosh --json releases | jq -r '[ .Tables[] | .Rows[] | select(.name == "backup-and-restore-sdk") ] | length')
+  # if [ 0 -ne $BBR ]
+  # then
+  #   echo "bbr release exists"
+  # else
+  #   if [ ! -f release/backup-and-restore-sdk ]
+  #   then
+  #     echo "Downloading backup-and-restore-sdk"
+  #     curl --location --output release/backup-and-restore-sdk \
+  #       https://bosh.io/d/github.com/cloudfoundry-incubator/backup-and-restore-sdk-release?v=1.11.2
+  #   fi
+  #   bosh upload-release release/backup-and-restore-sdk
+  # fi
 
   POSTGRES=$(bosh --json releases | jq -r '[ .Tables[] | .Rows[] | select(.name == "postgres-release") ] | length')
-  if [ 0 -ne $BBR ]
+  if [ 0 -ne $POSTGRES ]
   then
     echo "postgres release exists"
   else
@@ -290,27 +265,9 @@ function do_deploy_postgres() {
   rm -f creds/postgres.yml
   source scripts/bosh-env.sh
   export BOSH_DEPLOYMENT=postgres
-  bosh deploy $POSTGRES_DIR/templates/postgres.yml \
-       -o $POSTGRES_DIR/templates/operations/add_static_ips.yml \
-       -o $POSTGRES_DIR/templates/operations/set_properties.yml \
-       -o $POSTGRES_DIR/templates/operations/use_bbr.yml \
+  bosh deploy manifests/postgres.yml \
        --vars-store=creds/postgres.yml \
        -l manifests/postgres-vars.yml
-}
-
-function do_deploy_zookeeper() {
-  if [ -z "$ZOOKEEPER_DIR" ]
-  then
-    echo "Please set ZOOKEEPER_DIR to root of zookeeper-release"
-    exit 1
-  fi
-  set -eu
-  source scripts/bosh-env.sh
-  export BOSH_DEPLOYMENT=zookeeper
-  bosh deploy $ZOOKEEPER_DIR/manifests/zookeeper.yml \
-       --vars-store=creds/zookeeper.yml
-  bosh run-errand smoke-tests
-  bosh run-errand status
 }
 
 if [[ "$0" == "bash" ]]

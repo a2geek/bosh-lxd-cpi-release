@@ -10,10 +10,25 @@ packages:
 - lxd_cpi
 
 properties:
-  lxd_cpi.lxd.unix_socket:
-    description: "Unix socket used to connect to LXD daemon (must be on same host)"
-    example: "/var/lib/lxd/unix.socket"
-    #default: "/var/snap/lxd/common/lxd/unix.socket"
+  lxd_cpi.lxd.url:
+    description: URL of LXD server (cannot be localhost as this URL is used to both create bosh and by bosh)
+    example: "https://lxdserver:8443"
+  lxd_cpi.lxd.insecure_skip_verify:
+    description: Indicates if the SSL connection should be validated (set to false for self-signed certificates)
+    default: "false"
+  lxd_cpi.lxd.tls_client_cert:
+    description: Client public certificate to use for TLS connection
+    example: |
+      -----BEGIN CERTIFICATE-----
+      <snip>
+      -----END CERTIFICATE-----
+  lxd_cpi.lxd.tls_client_key:
+    description: Client private key to use for TLS connection
+    example: |
+      -----BEGIN RSA PRIVATE KEY-----
+      <snip>
+      -----END RSA PRIVATE KEY-----
+
   lxd_cpi.lxd.project_name:
     description: "Name of LXD Project with which to place VMs and Stemcells [default]"
     default: "default"
@@ -33,9 +48,16 @@ properties:
   lxd_cpi.agent.ntp:
     description: "NTP configuration used by deployed BOSH agents"
     default: []
-  lxd_cpi.agent.blobstore.provider:
-    description: "Provider type for the blobstore used by deployed BOSH agents (e.g. dav, s3)"
-    default: "dav"
-  lxd_cpi.agent.blobstore.options:
-    description: "Options for the blobstore used by deployed BOSH agents"
-    default: {}
+
+  lxd_cpi.agent_config.type:
+    description: "Agent configuration type for stemcell: FAT32 or CDROM"
+    default: "FAT32"
+  lxd_cpi.agent_config.label:
+    description: "Disk label for configuration device"
+  lxd_cpi.agent_config.metadata_path:
+    description: "Path to the metadata file for Agent configuration"
+  lxd_cpi.agent_config.userdata_path:
+    description: "Path to the userdata file for Agent configuration"
+  lxd_cpi.agent_config.filestore_path:
+    description: "Path to where agent data should be stored on the Bosh VM"
+    default: "/var/vcap/store/agent-data"

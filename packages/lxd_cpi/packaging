@@ -1,19 +1,27 @@
-# 'Blatently' borrowed from bosh-warden-cpi-release. Thanks!
+# Pieces borrowed from other Go CPI implementations
+
 set -ex
 
+platform=$(uname | tr '[:upper:]' '[:lower:]')
 if [ -z "$BOSH_PACKAGES_DIR" ]; then
-	pkg_dir=$(readlink -nf /var/vcap/packages/golang-1.10-linux)
+	pkg_dir=$(readlink -nf /var/vcap/packages/golang-1.22-${platform})
 else
-	pkg_dir=$BOSH_PACKAGES_DIR/golang-1.10-linux
+	pkg_dir=$BOSH_PACKAGES_DIR/golang-1.22-${platform}
 fi
 
 source ${pkg_dir}/bosh/compile.env
 
-mkdir ../src && cp -a * ../src/ && mv ../src ./src
+# Since HOME is not set we must set GOPATH and GOCACHE
+mkdir -p /tmp/go/.cache
+export GOPATH=/tmp/go
+export GOCACHE=${GOPATH}/.cache
 
-if [ ! -d $BOSH_INSTALL_TARGET/bin ]
-then
-  mkdir $BOSH_INSTALL_TARGET/bin
-fi
+mkdir -p $BOSH_INSTALL_TARGET/bin
 
-go build -o $BOSH_INSTALL_TARGET/bin/cpi src/lxd-bosh-cpi/*.go
+export GOARCH=arm64
+export GOOS=darwin
+go build -mod=vendor -o $BOSH_INSTALL_TARGET/bin/cpi-darwin .
+
+export GOARCH=amd64
+export GOOS=linux
+go build -mod=vendor -o $BOSH_INSTALL_TARGET/bin/cpi-linux .

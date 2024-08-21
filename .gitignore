@@ -31,10 +31,14 @@ bat.spec
 *.sublime-workspace
 
 tmp/
-cpi
+/cpi
 creds.yml
 state.json
 requests/
 creds/
 stemcell/
 release/
+bosh-client.*
+/env.sh
+/NOTES.md
+/log

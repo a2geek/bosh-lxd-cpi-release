@@ -8,30 +8,15 @@
 - type: replace
   path: /resource_pools/name=vms/stemcell?
   value:
-    url: https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-xenial-go_agent?v=170.21
-    sha1: 0bd5f1458c065246840e4498d7c66cdb9335f908
+    url: https://bosh.io/d/stemcells/bosh-openstack-kvm-ubuntu-jammy-go_agent?v=1.506
+    sha1: aeecfaf2b62c9ae8190c7e8539e816257c8f944d
 
 # Configure LXD sizes
 - type: replace
   path: /resource_pools/name=vms/cloud_properties?
   value:
-    instance_type: c2-m4
+    instance_type: c4-m8
     ephemeral_disk: 16_384
-    devices:
-      lxdsocket:
-        type: proxy
-        connect: unix:((lxd_unix_socket))
-        listen: unix:/warden-cpi-dev/lxd.socket
-        bind: container
-        uid: "1000"   # vcap
-        gid: "1000"   # vcap
-        mode: "0660"
-    # This configuration is required by all Bosh Agents and should be on the LXD profile.
-    # They are left here as a sample and a referene.
-    #config:
-    #  security.privileged: "true"
-    #  raw.lxc: |
-    #    lxc.apparmor.profile = unconfined
 
 # Add CPI job
 - type: replace
@@ -52,34 +37,31 @@
 - type: replace
   path: /instance_groups/name=bosh/properties/lxd_cpi?
   value:
-    lxd:
+    lxd: &lxd_settings
       project_name: ((lxd_project_name))
       profile_name: ((lxd_profile_name))
       network_name: ((lxd_network_name))
       storage_pool_name: ((lxd_storage_pool_name))
-      unix_socket: /warden-cpi-dev/lxd.socket
+      url: ((lxd_url))
+      insecure_skip_verify: ((lxd_insecure))
+      tls_client_cert: ((lxd_client_cert))
+      tls_client_key: ((lxd_client_key))
     agent:
-      mbus: nats://nats:((nats_password))@((internal_ip)):4222
-      blobstore:
-        provider: dav
-        options:
-          endpoint: http://((internal_ip)):25250
-          user: agent
-          password: ((blobstore_agent_password))
+      mbus: nats://((internal_ip)):4222
+    agent_config: &agent_config_settings
+      type: CDROM
+      label: "config-2"
+      metadata_path: "ec2/latest/meta-data.json"
+      userdata_path: "ec2/latest/user-data"
+      filestore_path: "/var/vcap/store/agent-data"
 
 # This is for initial standup of VM (bootstrap?)
 - type: replace
   path: /cloud_provider/properties/lxd_cpi?
   value:
-    lxd:
-      project_name: ((lxd_project_name))
-      profile_name: ((lxd_profile_name))
-      network_name: ((lxd_network_name))
-      storage_pool_name: ((lxd_storage_pool_name))
-      unix_socket: ((lxd_unix_socket))
+    lxd: *lxd_settings
     agent:
       mbus: "https://mbus:((mbus_bootstrap_password))@0.0.0.0:6868"
-      blobstore:
-        provider: local
-        options:
-          blobstore_path: /var/vcap/micro_bosh/data/cache
+    agent_config: 
+      <<: *agent_config_settings
+      filestore_path: "/tmp"

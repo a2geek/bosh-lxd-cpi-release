@@ -6,22 +6,22 @@ azs:
 vm_types:
 - name: default
   cloud_properties:
-    instance_type: c1-m4
+    instance_type: c2-m4
     ephemeral_disk: 10_240
 # Required by postgres-release, cf-deployment
 - name: small
   cloud_properties:
-    instance_type: c1-m2
-    ephemeral_disk: 2048
+    instance_type: c2-m4
+    ephemeral_disk: 10_240
 # Used by cf-deployment
 - name: minimal
   cloud_properties:
-    instance_type: c1-m1
-    ephemeral_disk: 2048
+    instance_type: c2-m2
+    ephemeral_disk: 10_240
 - name: small-highmem
   cloud_properties:
-    instance_type: c1-m4
-    ephemeral_disk: 2048
+    instance_type: c2-m8
+    ephemeral_disk: 10_240
 
 disk_types:
 - name: default
@@ -40,8 +40,8 @@ networks:
   type: manual
   subnets:
   - azs: [z1,z2,z3]
-    range: 10.245.0.0/16
-    dns: [8.8.8.8]
+    range: 10.245.0.0/24
+    dns: [192.168.1.1]
     reserved: 10.245.0.2-10.245.0.10
     gateway: 10.245.0.1
     static: 10.245.0.250-10.245.0.254
