@@ -66,17 +66,7 @@ function do_deploy_cf() {
 }
 
 function do_destroy() {
-  echo "Deleting deployments via BOSH..."
-  if [ -f creds/bosh.yml ]
-  then
-    source scripts/bosh-env.sh
-    bosh --json deployments |
-      jq -r '.Tables[] | .Rows[] | .name' |
-      xargs --verbose --no-run-if-empty --max-args=1 --replace=DEPLOYMENT \
-        bosh -d DEPLOYMENT delete-deployment --force --non-interactive
-  fi
-
-  echo "Destroying out all state..."
+  echo "Destroying all state..."
   rm -rf .dev_builds/
   rm -rf dev_releases/
   rm -rf creds/
@@ -90,8 +80,8 @@ function do_destroy() {
     jq -r '.[] | select(.aliases[0].name // "not present" | test("img-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) | .fingerprint' |
     xargs --verbose --no-run-if-empty --max-args=1 lxc image delete
   lxc storage volume list --format json |
-    jq -r '.[] | select(.pool == "boshdir") | .name' |
-    xargs --verbose --no-run-if-empty --max-args=1  lxc storage volume delete boshdir
+    jq -r '.[] | select(.pool == "boshpool") | .name' |
+    xargs --verbose --no-run-if-empty --max-args=1  lxc storage volume delete boshpool
 
   echo "Visual confirmation:"
   lxc --project boshdev list
