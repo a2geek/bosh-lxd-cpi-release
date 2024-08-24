@@ -13,10 +13,10 @@ func (c CPI) AttachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
 }
 
 func (c CPI) AttachDiskV2(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) (apiv1.DiskHint, error) {
-	err := c.stopVM(vmCID)
-	if err != nil {
-		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Stopping instance")
-	}
+	// err := c.stopVM(vmCID)
+	// if err != nil {
+	// 	return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Stopping instance")
+	// }
 
 	agentEnv, err := c.agentMgr.Read(vmCID)
 	if err != nil {
@@ -51,10 +51,10 @@ func (c CPI) AttachDiskV2(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) (apiv1.DiskH
 		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Write AgentEnv")
 	}
 
-	err = c.startVM(vmCID)
-	if err != nil {
-		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Starting instance")
-	}
+	// err = c.startVM(vmCID)
+	// if err != nil {
+	// 	return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Starting instance")
+	// }
 
 	return diskHint, nil
 }

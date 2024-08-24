@@ -44,9 +44,15 @@ func (c CPI) writeAgentFileToVM(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) erro
 		if err != nil {
 			return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Remove", vmCID.AsString())
 		}
-		err = c.client.DeleteStoragePoolVolume(c.config.Server.StoragePool, "custom", configDiskName)
+
+		stopped, err := c.isVMAtRequestedState(vmCID, "stop")
 		if err != nil {
-			return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Delete", vmCID.AsString())
+			return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Check State", vmCID.AsString())
+		} else if stopped {
+			err = c.client.DeleteStoragePoolVolume(c.config.Server.StoragePool, "custom", configDiskName)
+			if err != nil {
+				return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Delete", vmCID.AsString())
+			}
 		}
 	}
 
