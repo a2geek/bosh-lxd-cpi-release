@@ -20,8 +20,10 @@ mkdir -p $BOSH_INSTALL_TARGET/bin
 
 export GOARCH=arm64
 export GOOS=darwin
-go build -mod=vendor -o $BOSH_INSTALL_TARGET/bin/cpi-darwin .
+go build -mod=vendor -o $BOSH_INSTALL_TARGET/bin/cpi-${GOOS} cmd/cpi/main.go
+go build -mod=vendor -o $BOSH_INSTALL_TARGET/bin/cleanup-${GOOS} cmd/cleanup/main.go
 
 export GOARCH=amd64
 export GOOS=linux
-go build -mod=vendor -o $BOSH_INSTALL_TARGET/bin/cpi-linux .
+go build -mod=vendor -o $BOSH_INSTALL_TARGET/bin/cpi-${GOOS} cmd/cpi/main.go
+go build -mod=vendor -o $BOSH_INSTALL_TARGET/bin/cleanup-${GOOS} cmd/cleanup/main.go
