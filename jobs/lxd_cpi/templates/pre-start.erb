@@ -1,0 +1,5 @@
+#!/bin/bash
+
+jobs_dir=${BOSH_JOBS_DIR:-/var/vcap/jobs}
+
+cp ${jobs_dir}/lxd_cpi/bin/cleanup /etc/cron.daily/lxd-cleanup
