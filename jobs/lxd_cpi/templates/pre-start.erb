@@ -1,5 +1,5 @@
 #!/bin/bash
 
-pkgs_dir=${BOSH_PACKAGES_DIR:-/var/vcap/packages}
+jobs_dir=${BOSH_JOBS_DIR:-/var/vcap/jobs}
 
-cp ${pkgs_dir}/lxd_cpi/bin/cleanup /etc/cron.daily/lxd-cleanup
+cp ${jobs_dir}/lxd_cpi/bin/cleanup /etc/cron.daily/lxd-cleanup
