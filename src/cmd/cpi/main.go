@@ -17,6 +17,8 @@ var (
 )
 
 func main() {
+	flag.Parse()
+
 	loglevel, err := boshlog.Levelify(*logLevelOpt)
 	if err != nil {
 		loglevel = boshlog.LevelError
@@ -24,8 +26,6 @@ func main() {
 
 	logger := boshlog.NewLogger(loglevel)
 	fs := boshsys.NewOsFileSystem(logger)
-
-	flag.Parse()
 
 	config, err := config.NewConfigFromPath(*configPathOpt, fs)
 	if err != nil {
