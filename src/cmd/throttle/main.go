@@ -1,32 +1,84 @@
 package main
 
 import (
+	"bosh-lxd-cpi/config"
 	"encoding/json"
+	"flag"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"time"
 
+	boshlog "github.com/cloudfoundry/bosh-utils/logger"
+	boshsys "github.com/cloudfoundry/bosh-utils/system"
 	boshuuid "github.com/cloudfoundry/bosh-utils/uuid"
 )
 
-const SOCKET_FILE = "/tmp/throttle.sock"
+var (
+	configPathOpt = flag.String("configPath", "", "Path to configuration file")
+	logLevelOpt   = flag.String("logLevel", "WARN", "Set log level (NONE, ERROR, WARN, INFO, DEBUG)")
+)
 
 func main() {
-	socket, err := net.Listen("unix", SOCKET_FILE)
+	flag.Parse()
+
+	loglevel, err := boshlog.Levelify(*logLevelOpt)
+	if err != nil {
+		loglevel = boshlog.LevelError
+	}
+	fmt.Printf("Log level = %v\n", loglevel)
+
+	logger := boshlog.NewLogger(loglevel)
+	fs := boshsys.NewOsFileSystem(logger)
+
+	config, err := config.NewConfigFromPath(*configPathOpt, fs)
+	if err != nil {
+		logger.Error("main", "Loading config %s", err.Error())
+		os.Exit(1)
+	}
+
+	holdDuration, err := time.ParseDuration(config.Throttle.Hold)
+	if err != nil {
+		logger.Error("main", "Unable to parse hold duration: %s", err.Error())
+		os.Exit(2)
+	}
+
+	if _, err := os.Stat(config.Throttle.Path); err == nil {
+		os.Remove(config.Throttle.Path)
+	}
+
+	socket, err := net.Listen("unix", config.Throttle.Path)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// TODO: fix delete
-	defer os.Remove(SOCKET_FILE)
+	defer socket.Close()
 
-	// TODO: Time
 	transactions := map[string]time.Time{}
+
+	ticker := time.NewTicker(10 * time.Second)
+	quit := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				for k, v := range transactions {
+					if time.Now().After(v) {
+						logger.Warn("main", "Transaction %s expired", k)
+						delete(transactions, k)
+					}
+				}
+			case <-quit:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+	defer close(quit)
+
 	uuidGen := boshuuid.NewGenerator()
-
 	mux := http.NewServeMux()
-
 	mux.HandleFunc("/transactions/{transactionId}", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodDelete:
@@ -36,6 +88,7 @@ func main() {
 			} else if _, ok := transactions[transactionId]; !ok {
 				w.WriteHeader(http.StatusNotFound)
 			} else {
+				logger.Info("main", "Transaction %s completed", transactionId)
 				delete(transactions, transactionId)
 				w.WriteHeader(http.StatusNoContent)
 			}
@@ -43,7 +96,6 @@ func main() {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
-
 	mux.HandleFunc("/transactions", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -57,20 +109,19 @@ func main() {
 			if len(transactions) > 4 {
 				http.Error(w, "Too many requests", http.StatusTooManyRequests)
 			} else {
-				uuid, err := uuidGen.Generate()
+				transactionId, err := uuidGen.Generate()
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 				} else {
-					transactions[uuid] = time.Now() // TODO handle the duration
-					w.Write([]byte(uuid))
+					logger.Info("main", "Transaction %s created", transactionId)
+					transactions[transactionId] = time.Now().Add(holdDuration)
 					w.WriteHeader(http.StatusCreated)
+					w.Write([]byte(transactionId))
 				}
 			}
 		}
 	})
 
-	err = http.Serve(socket, mux)
-	if err != nil {
-		log.Fatal(err)
-	}
+	logger.Info("main", "Now serving traffic on socket %s", config.Throttle.Path)
+	log.Fatal(http.Serve(socket, mux))
 }
