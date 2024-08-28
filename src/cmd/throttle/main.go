@@ -106,7 +106,7 @@ func main() {
 				w.Write(data)
 			}
 		case http.MethodPost:
-			if len(transactions) > 4 {
+			if len(transactions) > config.Throttle.Limit {
 				http.Error(w, "Too many requests", http.StatusTooManyRequests)
 			} else {
 				transactionId, err := uuidGen.Generate()
