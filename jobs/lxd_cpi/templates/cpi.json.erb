@@ -21,6 +21,12 @@ config = {
     "MetadataPath" => p("lxd_cpi.agent_config.metadata_path"),
     "UserdataPath" => p("lxd_cpi.agent_config.userdata_path"),
     "FileStorePath" => p("lxd_cpi.agent_config.filestore_path")
+  },
+  "Throttle" => {
+    "Enabled" => p("lxd_cpi.throttle_config.enabled"),
+    "Path" => p("lxd_cpi.throttle_config.path"),
+    "Limit" => p("lxd_cpi.throttle_config.limit").to_i,
+    "Hold" => p("lxd_cpi.throttle_config.hold"),
   }
 }
 

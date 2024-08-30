@@ -133,6 +133,7 @@ function do_deploy_bosh() {
 
   bosh interpolate creds/bosh.yml --path /jumpbox_ssh/private_key > creds/jumpbox.pk
   chmod 600 creds/jumpbox.pk
+  ssh-keygen -f ~/.ssh/known_hosts -R 10.245.0.11
 }
 
 function do_capture_requests() {

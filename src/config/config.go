@@ -13,6 +13,7 @@ type Config struct {
 	Server      LXD
 	Agent       apiv1.AgentOptions
 	AgentConfig agentmgr.Config
+	Throttle    ThrottleConfig
 }
 type LXD struct {
 	URL                string
@@ -23,6 +24,12 @@ type LXD struct {
 	Profile            string
 	Network            string
 	StoragePool        string
+}
+type ThrottleConfig struct {
+	Enabled bool
+	Path    string
+	Limit   int
+	Hold    string
 }
 
 func NewConfigFromPath(path string, fs boshsys.FileSystem) (Config, error) {
@@ -35,6 +42,9 @@ func NewConfigFromPath(path string, fs boshsys.FileSystem) (Config, error) {
 			Profile:            "default",
 			Network:            "lxdbr0", // Default network bridge?
 			StoragePool:        "default",
+		},
+		Throttle: ThrottleConfig{
+			Enabled: false,
 		},
 	}
 
