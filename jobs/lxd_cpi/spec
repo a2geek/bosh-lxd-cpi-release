@@ -63,3 +63,16 @@ properties:
   lxd_cpi.agent_config.filestore_path:
     description: "Path to where agent data should be stored on the Bosh VM"
     default: "/var/vcap/store/agent-data"
+
+  lxd_cpi.throttle_config.enabled:
+    description: "Throttle master switch"
+    default: "false"
+  lxd_cpi.throttle_config.path:
+    description: "Unix socket location"
+    default: "/var/vcap/sys/run/lxd_cpi/throttle.sock"
+  lxd_cpi.throttle_config.limit:
+    description: "Maximum number of processes to allow concurrently"
+    default: "25"
+  lxd_cpi.throttle_config.hold:
+    description: "Maximum length of lock hold"
+    default: "2m"

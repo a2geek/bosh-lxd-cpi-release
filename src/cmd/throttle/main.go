@@ -4,7 +4,6 @@ import (
 	"bosh-lxd-cpi/config"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -28,7 +27,6 @@ func main() {
 	if err != nil {
 		loglevel = boshlog.LevelError
 	}
-	fmt.Printf("Log level = %v\n", loglevel)
 
 	logger := boshlog.NewLogger(loglevel)
 	fs := boshsys.NewOsFileSystem(logger)
@@ -64,7 +62,7 @@ func main() {
 			select {
 			case <-ticker.C:
 				for k, v := range transactions {
-					if time.Now().After(v) {
+					if time.Now().After(v.Add(holdDuration)) {
 						logger.Warn("main", "Transaction %s expired", k)
 						delete(transactions, k)
 					}
@@ -84,15 +82,19 @@ func main() {
 		case http.MethodDelete:
 			transactionId := r.PathValue("transactionId")
 			if transactionId == "" {
+				logger.Debug("main", "%s %s - Bad request; transactionId=%s", r.Method, r.URL.Path, transactionId)
 				w.WriteHeader(http.StatusBadRequest)
-			} else if _, ok := transactions[transactionId]; !ok {
+			} else if startTime, ok := transactions[transactionId]; !ok {
+				logger.Debug("main", "%s %s - Not found; transactionId=%s", r.Method, r.URL.Path, transactionId)
 				w.WriteHeader(http.StatusNotFound)
 			} else {
-				logger.Info("main", "Transaction %s completed", transactionId)
+				duration := time.Since(startTime)
+				logger.Info("main", "%s %s - Transaction %s completed; duration=%s", r.Method, r.URL.Path, transactionId, duration.String())
 				delete(transactions, transactionId)
 				w.WriteHeader(http.StatusNoContent)
 			}
 		default:
+			logger.Debug("main", "%s %s - Method not allowed", r.Method, r.URL.Path)
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
@@ -101,20 +103,24 @@ func main() {
 		case http.MethodGet:
 			data, err := json.Marshal(transactions)
 			if err != nil {
+				logger.Error("main", "%s %s - %v", r.Method, r.URL.Path, err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			} else {
+				logger.Debug("main", "%s %s - List of active transactions", r.Method, r.URL.Path)
 				w.Write(data)
 			}
 		case http.MethodPost:
 			if len(transactions) > config.Throttle.Limit {
+				logger.Debug("main", "%s %s - Too many requests", r.Method, r.URL.Path)
 				http.Error(w, "Too many requests", http.StatusTooManyRequests)
 			} else {
 				transactionId, err := uuidGen.Generate()
 				if err != nil {
+					logger.Error("main", "%s %s - %v", r.Method, r.URL.Path, err)
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 				} else {
-					logger.Info("main", "Transaction %s created", transactionId)
-					transactions[transactionId] = time.Now().Add(holdDuration)
+					logger.Info("main", "%s %s - Transaction %s created", r.Method, r.URL.Path, transactionId)
+					transactions[transactionId] = time.Now()
 					w.WriteHeader(http.StatusCreated)
 					w.Write([]byte(transactionId))
 				}

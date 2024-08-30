@@ -54,6 +54,9 @@
       metadata_path: "ec2/latest/meta-data.json"
       userdata_path: "ec2/latest/user-data"
       filestore_path: "/var/vcap/store/agent-data"
+    throttle_config:
+      enabled: true
+      limit: 4
 
 # This is for initial standup of VM (bootstrap?)
 - type: replace
@@ -65,3 +68,5 @@
     agent_config: 
       <<: *agent_config_settings
       filestore_path: "/tmp"
+    throttle_config:
+      enabled: false

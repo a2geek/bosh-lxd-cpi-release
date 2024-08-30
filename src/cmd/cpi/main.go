@@ -3,6 +3,7 @@ package main
 import (
 	"bosh-lxd-cpi/config"
 	"bosh-lxd-cpi/cpi"
+	"bosh-lxd-cpi/throttle"
 	"flag"
 	"os"
 
@@ -37,9 +38,33 @@ func main() {
 
 	cli := rpc.NewFactory(logger).NewCLI(cpiFactory)
 
+	var transactionId string
+	var client throttle.ThrottleClient
+	if config.Throttle.Enabled {
+		client, err = throttle.NewThrottleClient(config.Throttle)
+		if err != nil {
+			logger.Error("main", "Enabling throttle %s", err.Error())
+			os.Exit(1)
+		}
+
+		transactionId, err = client.LockAndWait()
+		if err != nil {
+			logger.Error("main", "Reserving lock: %s", err.Error())
+			os.Exit(1)
+		}
+	}
+
 	err = cli.ServeOnce()
 	if err != nil {
 		logger.Error("main", "Serving once: %s", err)
 		os.Exit(1)
+	}
+
+	if config.Throttle.Enabled {
+		err = client.Unlock(transactionId)
+		if err != nil {
+			logger.Error("main", "Releasing lock: %s", err.Error())
+			os.Exit(1)
+		}
 	}
 }

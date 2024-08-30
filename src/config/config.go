@@ -26,9 +26,10 @@ type LXD struct {
 	StoragePool        string
 }
 type ThrottleConfig struct {
-	Path  string
-	Limit int
-	Hold  string
+	Enabled bool
+	Path    string
+	Limit   int
+	Hold    string
 }
 
 func NewConfigFromPath(path string, fs boshsys.FileSystem) (Config, error) {
@@ -43,9 +44,7 @@ func NewConfigFromPath(path string, fs boshsys.FileSystem) (Config, error) {
 			StoragePool:        "default",
 		},
 		Throttle: ThrottleConfig{
-			Path:  "/usr/vcap/sys/run/lxd_cpi/throttle.sock",
-			Limit: 25,
-			Hold:  "1m",
+			Enabled: false,
 		},
 	}
 
