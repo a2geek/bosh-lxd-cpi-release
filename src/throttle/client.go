@@ -1,7 +1,6 @@
 package throttle
 
 import (
-	"bosh-lxd-cpi/config"
 	"context"
 	"io"
 	"net"
@@ -15,7 +14,7 @@ const (
 	transactionsRoot = "http://localhost/transactions"
 )
 
-func NewThrottleClient(config config.ThrottleConfig) (ThrottleClient, error) {
+func NewThrottleClient(config Config) (ThrottleClient, error) {
 	conn, err := net.Dial("unix", config.Path)
 	if err != nil {
 		return ThrottleClient{}, err

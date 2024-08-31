@@ -33,12 +33,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	server, err := throttle.NewThrottleServer(config.Throttle, logger)
+	server, err := throttle.NewThrottleServer(config.ThrottleConfig, logger)
 	if err != nil {
 		logger.Error("main", "Unable to create server: %s", err.Error())
 		os.Exit(2)
 	}
 
-	logger.Info("main", "Now serving traffic on socket %s", config.Throttle.Path)
+	logger.Info("main", "Now serving traffic on socket %s", config.ThrottleConfig.Path)
 	log.Fatal(server.Serve())
 }

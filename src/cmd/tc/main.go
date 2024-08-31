@@ -35,7 +35,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	client, err := throttle.NewThrottleClient(config.Throttle)
+	client, err := throttle.NewThrottleClient(config.ThrottleConfig)
 	if err != nil {
 		logger.Error("main", "Creating client %s", err.Error())
 		os.Exit(1)

@@ -2,6 +2,7 @@ package config
 
 import (
 	"bosh-lxd-cpi/agentmgr"
+	"bosh-lxd-cpi/throttle"
 	"encoding/json"
 
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
@@ -10,10 +11,10 @@ import (
 )
 
 type Config struct {
-	Server      LXD
-	Agent       apiv1.AgentOptions
-	AgentConfig agentmgr.Config
-	Throttle    ThrottleConfig
+	Server         LXD
+	Agent          apiv1.AgentOptions
+	AgentConfig    agentmgr.Config
+	ThrottleConfig throttle.Config
 }
 type LXD struct {
 	URL                string
@@ -24,12 +25,6 @@ type LXD struct {
 	Profile            string
 	Network            string
 	StoragePool        string
-}
-type ThrottleConfig struct {
-	Enabled bool
-	Path    string
-	Limit   int
-	Hold    string
 }
 
 func NewConfigFromPath(path string, fs boshsys.FileSystem) (Config, error) {
@@ -43,7 +38,7 @@ func NewConfigFromPath(path string, fs boshsys.FileSystem) (Config, error) {
 			Network:            "lxdbr0", // Default network bridge?
 			StoragePool:        "default",
 		},
-		Throttle: ThrottleConfig{
+		ThrottleConfig: throttle.Config{
 			Enabled: false,
 		},
 	}

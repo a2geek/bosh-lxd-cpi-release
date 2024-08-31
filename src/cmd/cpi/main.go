@@ -40,8 +40,8 @@ func main() {
 
 	var transactionId string
 	var client throttle.ThrottleClient
-	if config.Throttle.Enabled {
-		client, err = throttle.NewThrottleClient(config.Throttle)
+	if config.ThrottleConfig.Enabled {
+		client, err = throttle.NewThrottleClient(config.ThrottleConfig)
 		if err != nil {
 			logger.Error("main", "Enabling throttle %s", err.Error())
 			os.Exit(1)
@@ -60,7 +60,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if config.Throttle.Enabled {
+	if config.ThrottleConfig.Enabled {
 		err = client.Unlock(transactionId)
 		if err != nil {
 			logger.Error("main", "Releasing lock: %s", err.Error())

@@ -1,7 +1,6 @@
 package throttle
 
 import (
-	"bosh-lxd-cpi/config"
 	"encoding/json"
 	"net"
 	"net/http"
@@ -12,7 +11,7 @@ import (
 	boshuuid "github.com/cloudfoundry/bosh-utils/uuid"
 )
 
-func NewThrottleServer(config config.ThrottleConfig, logger boshlog.Logger) (ThrottleServer, error) {
+func NewThrottleServer(config Config, logger boshlog.Logger) (ThrottleServer, error) {
 	holdDuration, err := time.ParseDuration(config.Hold)
 	if err != nil {
 		logger.Error("main", "Unable to parse hold duration: %s", err.Error())
