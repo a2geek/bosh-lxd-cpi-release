@@ -1,6 +1,6 @@
 # BOSH LXD CPI
 
-> Incomplete. Would love PRs if people are still playing with BOSH in 2024!
+> Would love PRs if people are still playing with BOSH in 2024!
 
 This is a [BOSH CPI](https://bosh.io/) implementation to support [LXD](https://canonical.com/lxd) ... and likely [Incus](https://linuxcontainers.org/incus/introduction/).  It appears that both LXD and Incus are trying to keep comparable/compatible, so LXD comments hopefully apploy to Incus as well.
 
@@ -10,27 +10,54 @@ LXD 5.21, LXD supports BIOS boots for VMs, which all the BOSH Stemcells use. Wit
 
 > A note on BIOS. This option is specified in the VM create call, or from the command-line with `--config raw.qemu="-bios bios-256k.bin"`. There is an environment variable the snap install of LXD sets up that points to the directory holding the various BIOS files. At this time, this is not configurable.
 
-As this depends on LXD, which is Linux only, this is also Linux only.
+As this depends on LXD, which is Linux only, this is also Linux only. Note that the BOSH deployment can be run from a Mac, and presumably from the Linux on WSL.
 
 The current development environment is Ubuntu 22.04. LXD has been installed via a Snap and [this guide](https://documentation.ubuntu.com/lxd/en/latest/tutorial/first_steps/) was generally followed.
 
 ## Current State
 
-What _is_ functional:
+### Completed
+
+> Note that Postgres, Concourse (4 VMs), and Cloud Foundry (10+ VMs) are all functional.
 
 * A BOSH Director can be stood up.
 * Network is configured and available.
 * Disk is provisioned and attached.
+* Generally, the common CPI calls are all implemented at this time.
 
-Problem areas:
+### Incomplete
 
-* The agent sometimes fails. (It doesn't communicate back to BOSH, and I can't get into the VM to understand why.) For example, Concourse deploys but Postgres (DB only) does not.
-* There are sometimes issues with BOSH DNS. When a lookup against 169.254.0.2:53 is tried, to appears to work.
-* CF doesn't get far.
+> Note that none of these are required for general operations!
+
+* The following CPI methods are not implemented yet:
+  * snapshots ([`snapshot_disk`](https://bosh.io/docs/cpi-api-v2-method/snapshot-disk/), [`delete_snapshot`](https://bosh.io/docs/cpi-api-v2-method/delete-snapshot/))
+  * IaaS-native disk resizing ([`resize_disk`](https://bosh.io/docs/cpi-api-v2-method/resize-disk/))
+
+### LXD adjustments
+
+* There is a nightly scheduled process to look for unused configuration disks (`vol-c-<uuid>` format) since LXD doesn't give up a disk attachment unless a reboot of the VM occurs. (Or the LXD Agent is installed... which isn't at this time). It simply scan the list of detached configuration disks, tries to delete them, and reports success or error in the log.
+* Throttling. Not so much LXD, but more the single host conundrum. There is a server that runs and maintains a hash map of "transaction" reservations. Once the CPI level transaction completes, the transaction is also released. Additionally, these reservations will time out after a certain amount time. (See Tuning for more details.)
+
+### Tuning
+
+Beyond the general tuning of a VM size (# of CPUs, amount of memory, or sizing of disks), the following is available for tuning the CPI. Note that the host development environment is a single server with a Xeon CPU, 128GB+ RAM, and SSDs (no spinning disks). SSDs are likely very important for I/O activities.
+
+* Throttling CPI activity. This is a timed gateway type throttle. See the [spec](jobs/lxd_cpi/spec) for actual definition. But here is a sample of overrides. (Note `path` is the default and can likely just be left off.)
+
+  ```yaml
+  # This is for rendering within the VM once stood up
+  - type: replace
+    path: /instance_groups/name=bosh/properties/lxd_cpi/throttle_config?
+    value:
+      enabled: true
+      path: "/var/vcap/sys/run/lxd_cpi/throttle.sock"
+      limit: 4
+      hold: "2m"
+  ```
 
 ## LXD Setup
 
-Note that the LXD configuration should be somewhat flexible. Review `manifests/bosh-vars.yml` for current set of configuration options.
+Note that the LXD configuration should be somewhat flexible. Review `[bosh-vars.yml](manifests/bosh-vars.yml)` for current set of configuration options.
 
 ```yaml
 director_name: lxd
@@ -43,7 +70,7 @@ internal_gw: 10.245.0.1
 internal_ip: 10.245.0.11
 ```
 
-This CPI is designed to operate against a LXD Project. This should be able to keep the BOSH stemcells, vms, and disks (sort of) separate from any other activity on the LXD host.
+This CPI is designed to operate against a LXD Project. This should be able to keep the BOSH stemcells, VMs, and disks separate from any other activity on the LXD host.
 
 Current setup of my machine (note these commands are for the project `boshdev`):
 
@@ -59,11 +86,16 @@ config:
   features.storage.buckets: "true"
   features.storage.volumes: "true"
 
+# Root disk is not specifically needed, but if you're using the LXC CLI, it helps creating experimental VMs. Note no network, since that is assigned in code.
 $ lxc profile show default
 name: default
 description: Default LXD profile for project boshdev
 config: {}
-devices: {}
+devices:
+  root:
+    path: /
+    pool: default
+    type: disk
 
 # Project doesn't apply to network when its a managed bridge
 $ lxc --project default network show boshdevbr0
@@ -83,6 +115,7 @@ locations:
 
 # Note that the directory driver is apparently very slow and caused timeouts.
 # LXD/Incus documentation suggest ZFS or BTRFS are the best drivers. I found a doc on creating a ZFS pool and set that up.
+# Note that the pool is not mounted (`-m none`).
 $ zpool create -m none lxd-storage mirror /dev/sdb1 /dev/sdc1
 $ lxc storage create boshpool zfs source=lxd-storage
 $ lxc storage show boshpool
@@ -174,6 +207,8 @@ sdc                         8:32   0 931.5G  0 disk
 ```
 
 ## Tinkering
+
+> I have been using both Linux and Mac OS X to deploy. WSL should be ok as well. Just not native Windows due to the Unix assumptions in path names.
 
 If you wish to tinker with this, here is how I'm working with the tools.
 
@@ -290,4 +325,56 @@ Process 'lxd_cpi'                   running
 Process 'uaa'                       running
 Process 'credhub'                   running
 System 'system_0db11f4b-1cfc-47a8-5dd5-6f13a053d7b7' running
+```
+
+... and finally, to operate the BOSH director, there is a handy script that sets up the BOSH environment variables for access:
+
+```bash
+$ source scripts/bosh-env.sh 
+$ bosh deployments
+Using environment '10.245.0.11' as client 'admin'
+
+Name       Release(s)                       Stemcell(s)                                     Team(s)  
+cf         binary-buildpack/1.1.11          bosh-openstack-kvm-ubuntu-jammy-go_agent/1.506  -  
+           bosh-dns/1.38.2                                                                    
+           bosh-dns-aliases/0.0.4                                                             
+           bpm/1.2.19                                                                         
+           capi/1.181.0                                                                       
+           cf-cli/1.63.0                                                                      
+           cf-networking/3.46.0                                                               
+           cf-smoke-tests/42.0.146                                                            
+           cflinuxfs4/1.95.0                                                                  
+           credhub/2.12.74                                                                    
+           diego/2.99.0                                                                       
+           dotnet-core-buildpack/2.4.27                                                       
+           garden-runc/1.53.0                                                                 
+           go-buildpack/1.10.18                                                               
+           java-buildpack/4.69.0                                                              
+           log-cache/3.0.11                                                                   
+           loggregator/107.0.14                                                               
+           loggregator-agent/8.1.1                                                            
+           nats/56.19.0                                                                       
+           nginx-buildpack/1.2.13                                                             
+           nodejs-buildpack/1.8.24                                                            
+           php-buildpack/4.6.18                                                               
+           pxc/1.0.28                                                                         
+           python-buildpack/1.8.23                                                            
+           r-buildpack/1.2.11                                                                 
+           routing/0.297.0                                                                    
+           ruby-buildpack/1.10.13                                                             
+           silk/3.46.0                                                                        
+           staticfile-buildpack/1.6.12                                                        
+           statsd-injector/1.11.40                                                            
+           uaa/77.9.0                                                                         
+concourse  backup-and-restore-sdk/1.18.119  bosh-openstack-kvm-ubuntu-jammy-go_agent/1.506  -  
+           bosh-dns/1.38.2                                                                    
+           bpm/1.2.16                                                                         
+           concourse/7.11.2                                                                   
+           postgres/48                                                                        
+postgres   bosh-dns/1.38.2                  bosh-openstack-kvm-ubuntu-jammy-go_agent/1.506  -  
+           postgres/52                                                                        
+
+3 deployments
+
+Succeeded
 ```
