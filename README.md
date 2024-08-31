@@ -57,6 +57,8 @@ Beyond the general tuning of a VM size (# of CPUs, amount of memory, or sizing o
       hold: "2m"
   ```
 
+  > Note that the reason this is required is that for _every VM_ that LXD launches, the QCOW2 format source image gets converted to a RAW format image. I have not found a way to get around this. What this means is that there is ~5GiB of disk being copied _per VM_. So, launch 10 VMs and copy 50GiB of disk. If there is a resolution to this, please submit a ticket with details or create a PR with the fixes!
+
 ## LXD Setup
 
 Note that the LXD configuration should be somewhat flexible. Review [`bosh-vars.yml`](manifests/bosh-vars.yml) for current set of configuration options.
