@@ -19,11 +19,12 @@ function do_help() {
   echo "- LXD_CLIENT_CERT (set to path of LXD TLS client certificate)"
   echo "- LXD_CLIENT_KEY (set to path of LXD TLS client key)"
   echo "- BOSH_DEPLOYMENT_DIR (default: \${HOME}/Documents/Source/bosh-deployment)"
+  echo "- BOSH_PACKAGE_GOLANG_DIR (default ../bosh-package-golang-release)"
   echo "- CONCOURSE_DIR when deploying Concourse"
   echo "- POSTGRES_DIR when deploying Postgres"
   echo
   echo "Currently set environment variables..."
-  set | egrep "^(BOSH_LOG_LEVEL|LXD_URL|LXD_INSECURE|LXD_CLIENT_CERT|LXD_CLIENT_KEY|BOSH_DEPLOYMENT_DIR|CONCOURSE_DIR|ZOOKEEPER_DIR|POSTGRES_DIR)="
+  set | egrep "^(BOSH_LOG_LEVEL|LXD_URL|LXD_INSECURE|LXD_CLIENT_CERT|LXD_CLIENT_KEY|BOSH_DEPLOYMENT_DIR|BOSH_PACKAGE_GOLANG_DIR|CONCOURSE_DIR|ZOOKEEPER_DIR|POSTGRES_DIR)="
 }
 
 function do_init_lxd() {
@@ -46,6 +47,20 @@ function do_init_lxd() {
 
   lxc storage create --project boshdev boshdir dir source=/storage/boshdev-disks
   lxc storage list default
+}
+
+function do_fix_blobs() {
+  golang_releases=${BOSH_PACKAGE_GOLANG_DIR:-"../bosh-package-golang-release"}
+  if [ -d ./blobs ]
+  then
+    rm -rf ./blobs
+  fi
+  mkdir ./blobs
+  for path in $(find ./packages/ -name "golang*")
+  do
+    package_name=$(basename $path)
+    bosh vendor-package ${package_name} ${golang_releases}
+  done
 }
 
 function do_deploy_cf() {
