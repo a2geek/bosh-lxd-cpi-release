@@ -2,5 +2,5 @@
 blobstore:
   provider: local
   options:
-    blobstore_path: /tmp/blobs
+    blobstore_path: ./blobs
 final_name: lxd-bosh-cpi
