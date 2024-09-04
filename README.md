@@ -68,7 +68,7 @@ director_name: lxd
 lxd_project_name: boshdev
 lxd_profile_name: default
 lxd_network_name: boshdevbr0
-lxd_storage_pool_name: boshpool
+lxd_storage_pool_name: default
 internal_cidr: 10.245.0.0/24
 internal_gw: 10.245.0.1
 internal_ip: 10.245.0.11
@@ -79,7 +79,49 @@ This CPI is designed to operate against a LXD Project. This should be able to ke
 Current setup of my machine (note these commands are for the project `boshdev`):
 
 ```bash
-$ lxc project switch boshdev
+# Note that the directory driver is apparently very slow and caused timeouts.
+# LXD/Incus documentation suggest ZFS or BTRFS are the best drivers. I found a doc on creating a ZFS pool and set that up.
+# Note that the pool is not mounted (`-m none`).
+$ zpool create -m none lxd-storage mirror /dev/sdb1 /dev/sdc1
+
+# Now to the LXD Init
+$ sudo lxd init
+Would you like to use LXD clustering? (yes/no) [default=no]: 
+Do you want to configure a new storage pool? (yes/no) [default=yes]: 
+Name of the new storage pool [default=default]: 
+Name of the storage backend to use (lvm, powerflex, zfs, btrfs, ceph, dir) [default=zfs]: zfs
+Create a new ZFS pool? (yes/no) [default=yes]: no
+Name of the existing ZFS pool or dataset: lxd-storage
+Would you like to connect to a MAAS server? (yes/no) [default=no]: 
+Would you like to create a new local network bridge? (yes/no) [default=yes]: 
+What should the new bridge be called? [default=lxdbr0]: 
+What IPv4 address should be used? (CIDR subnet notation, “auto” or “none”) [default=auto]: 
+What IPv6 address should be used? (CIDR subnet notation, “auto” or “none”) [default=auto]: 
+Would you like the LXD server to be available over the network? (yes/no) [default=no]: ### MAKE THIS YES!
+Would you like stale cached images to be updated automatically? (yes/no) [default=yes]: 
+Would you like a YAML "lxd init" preseed to be printed? (yes/no) [default=no]: 
+$ lxc storage list
++---------+--------+-------------+-------------+---------+---------+
+|  NAME   | DRIVER |   SOURCE    | DESCRIPTION | USED BY |  STATE  |
++---------+--------+-------------+-------------+---------+---------+
+| default | zfs    | lxd-storage |             | 1       | CREATED |
++---------+--------+-------------+-------------+---------+---------+
+rob@athena:~$ lxc storage show default
+name: default
+description: ""
+driver: zfs
+status: Created
+config:
+  source: lxd-storage
+  volatile.initial_source: lxd-storage
+  zfs.pool_name: lxd-storage
+used_by:
+- /1.0/profiles/default
+locations:
+- none
+
+$ lxc project create boshdev -c features.images=true -c features.networks=true -c features.profiles=true -c features.storage.volumes=true
+Project boshdev created
 $ lxc project show boshdev
 name: boshdev
 description: ""
@@ -89,8 +131,24 @@ config:
   features.profiles: "true"
   features.storage.buckets: "true"
   features.storage.volumes: "true"
+used_by:
+- /1.0/profiles/default?project=boshdev
+$ lxc project switch boshdev
 
 # Root disk is not specifically needed, but if you're using the LXC CLI, it helps creating experimental VMs. Note no network, since that is assigned in code.
+$ lxc  profile list
++---------+-----------------------------------------+---------+
+|  NAME   |               DESCRIPTION               | USED BY |
++---------+-----------------------------------------+---------+
+| default | Default LXD profile for project boshdev | 0       |
++---------+-----------------------------------------+---------+
+$ lxc profile show default
+name: default
+description: Default LXD profile for project boshdev
+config: {}
+devices: {}
+used_by: []
+$ lxc profile edit default
 $ lxc profile show default
 name: default
 description: Default LXD profile for project boshdev
@@ -100,8 +158,11 @@ devices:
     path: /
     pool: default
     type: disk
+used_by: []
 
 # Project doesn't apply to network when its a managed bridge
+$ lxc --project default network create boshdevbr0 --type=bridge ipv4.address=10.245.0.1/24 ipv4.nat=true ipv6.address=none dns.mode=none
+Network boshdevbr0 created
 $ lxc --project default network show boshdevbr0
 name: boshdevbr0
 description: ""
@@ -116,26 +177,28 @@ config:
 used_by: []
 locations:
 - none
-
-# Note that the directory driver is apparently very slow and caused timeouts.
-# LXD/Incus documentation suggest ZFS or BTRFS are the best drivers. I found a doc on creating a ZFS pool and set that up.
-# Note that the pool is not mounted (`-m none`).
-$ zpool create -m none lxd-storage mirror /dev/sdb1 /dev/sdc1
-$ lxc storage create boshpool zfs source=lxd-storage
-$ lxc storage show boshpool
-name: boshpool
-description: ""
-driver: zfs
-status: Created
-config:
-  source: lxd-storage
-  volatile.initial_source: lxd-storage
-  zfs.pool_name: lxd-storage
 ```
 
 ## Authentication
 
 This CPI uses the LXD certificate authentication using [BOSH generated certificates](https://bosh.io/docs/director-certs/#generate).
+
+Adding the (future) BOSH connection certificate is pretty simple:
+
+```bash
+$ lxc config trust add --name "bosh@<hostname>" ./bosh-client.crt
+$ lxc config trust list
++--------+-----------------+-------------+--------------+------------------------------+------------------------------+
+|  TYPE  |       NAME      | COMMON NAME | FINGERPRINT  |          ISSUE DATE          |         EXPIRY DATE          |
++--------+-----------------+-------------+--------------+------------------------------+------------------------------+
+| client | bosh@<hostname> | bosh        | 4e39a923c420 | Jul 20, 2024 at 4:58pm (UTC) | Jul 18, 2034 at 4:58pm (UTC) |
++--------+-----------+-------------+--------------+------------------------------+--------+-----------+-------------+--------------+------------------------------+------------------------------+
+```
+
+If you develop on a remote machine, you can setup the LXC CLI to point to the remote server.
+
+1. Use the `lxc remote add...` commands as described [here](https://documentation.ubuntu.com/lxd/en/latest/howto/server_expose/#authenticate-with-the-lxd-server).
+2. Switch the default remote with `lxc remote switch <name>`.
 
 ## Partitioning
 
