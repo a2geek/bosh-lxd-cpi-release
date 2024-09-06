@@ -1,5 +1,17 @@
 #!/bin/bash
 
+function print_varlist() {
+  varlist=$(echo "$@" | tr ' ' '\n' | sort)
+  for varname in $varlist
+  do
+    if [ ! -z "${!varname}" ]
+    then
+      printf -- "- %-25s %s\n" "${varname}:" "${!varname}"
+    fi
+    shift
+  done
+}
+
 function do_help() {
   echo "Subcommands:"
   for subcommand in $(set | grep "^do_.* \(\)" | sed 's/^do_\(.*\) ()/\1/g')
@@ -9,6 +21,7 @@ function do_help() {
   echo
   echo "Notes:"
   echo "* This script will detect if it is sourced in and setup an alias."
+  echo "  (^^ does not work from IDE such as VS Code)"
   echo "* Creds are placed into the 'creds/' folder."
   echo
   echo "Useful environment variables to export..."
@@ -23,31 +36,37 @@ function do_help() {
   echo "- CONCOURSE_DIR when deploying Concourse"
   echo "- POSTGRES_DIR when deploying Postgres"
   echo
+  echo "Configuration values..."
+  print_varlist lxd_project_name lxd_profile_name lxd_network_name lxd_storage_pool_name internal_ip
+  echo
   echo "Currently set environment variables..."
-  set | egrep "^(BOSH_LOG_LEVEL|LXD_URL|LXD_INSECURE|LXD_CLIENT_CERT|LXD_CLIENT_KEY|BOSH_DEPLOYMENT_DIR|BOSH_PACKAGE_GOLANG_DIR|CONCOURSE_DIR|ZOOKEEPER_DIR|POSTGRES_DIR)="
+  print_varlist BOSH_LOG_LEVEL LXD_URL LXD_INSECURE LXD_CLIENT_CERT LXD_CLIENT_KEY \
+                BOSH_DEPLOYMENT_DIR BOSH_PACKAGE_GOLANG_DIR \
+                CONCOURSE_DIR ZOOKEEPER_DIR POSTGRES_DIR
 }
 
-function do_init_lxd() {
-  set -eu
-
-  project=$(lxc project list --format csv | grep "boshdev" | cut -d, -f1)
-  if [ -z "${project}" ]
-  then
-    lxc project create boshdev -c features.images=true -c features.storage.volumes=true
-  fi
-  lxc project list boshdev
-
-  # note that a bridge is apparently "managed" and can not be set in the project itself
-  network=$(lxc network list --format csv | grep "boshdevbr0" | cut -d, -f1)
-  if [ -z "${network}" ]
-  then
-    lxc network create boshdevbr0 --type bridge ipv4.address=10.245.0.1/24 ipv4.nat=true ipv6.address=none dns.mode=none
-  fi
-  lxc network list
-
-  lxc storage create --project boshdev boshdir dir source=/storage/boshdev-disks
-  lxc storage list default
-}
+### TODO: These aren't really correct at this point. Need to drop and/or fix.
+# function do_init_lxd() {
+#   set -eu
+#
+#   project=$(lxc project list --format csv | grep " ${lxd_project_name}" | cut -d, -f1)
+#   if [ -z "${project}" ]
+#   then
+#     lxc project create  ${lxd_project_name} -c features.images=true -c features.storage.volumes=true
+#   fi
+#   lxc project list  ${lxd_project_name}
+#
+#   # note that a bridge is apparently "managed" and can not be set in the project itself
+#   network=$(lxc network list --format csv | grep " ${lxd_network_name}" | cut -d, -f1)
+#   if [ -z "${network}" ]
+#   then
+#     lxc network create  ${lxd_network_name} --type bridge ipv4.address=10.245.0.1/24 ipv4.nat=true ipv6.address=none dns.mode=none
+#   fi
+#   lxc network list
+#
+#   lxc storage create --project  ${lxd_project_name} boshdir dir source=/storage/boshdev-disks
+#   lxc storage list  ${lxd_storage_pool_name}
+# }
 
 function do_fix_blobs() {
   golang_releases=${BOSH_PACKAGE_GOLANG_DIR:-"../bosh-package-golang-release"}
@@ -88,21 +107,21 @@ function do_destroy() {
   rm -f cpi
   rm -f state.json
 
-  lxc --project boshdev list --format json |
+  lxc --project  ${lxd_project_name} list --format json |
     jq -r '.[] | .name | select(test("vm-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"))' |
     xargs --verbose --no-run-if-empty --max-args=1 lxc delete -f
-  lxc --project boshdev image list --format json |
+  lxc --project  ${lxd_project_name} image list --format json |
     jq -r '.[] | select(.aliases[0].name // "not present" | test("img-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) | .fingerprint' |
     xargs --verbose --no-run-if-empty --max-args=1 lxc image delete
-  lxc storage volume list --format json |
-    jq -r '.[] | select(.pool == "boshpool") | .name' |
-    xargs --verbose --no-run-if-empty --max-args=1  lxc storage volume delete boshpool
+  lxc --project  ${lxd_project_name} storage volume list --format json |
+    jq -r --arg poolname "${lxd_storage_pool_name}" '.[] | select(.pool == $poolname) | .name' |
+    xargs --verbose --no-run-if-empty --max-args=1  lxc storage volume delete  ${lxd_storage_pool_name}
 
   echo "Visual confirmation:"
-  lxc --project boshdev list
-  lxc --project boshdev image list
-  lxc --project boshdev storage list
-  lxc --project boshdev storage volume list default
+  lxc --project  ${lxd_project_name} list
+  lxc --project  ${lxd_project_name} image list
+  lxc --project  ${lxd_project_name} storage list
+  lxc --project  ${lxd_project_name} storage volume list  ${lxd_storage_pool_name}
 }
 
 function do_deploy_bosh() {
@@ -222,21 +241,6 @@ function do_upload_stemcells() {
 function do_upload_releases() {
   source scripts/bosh-env.sh
 
-  # # See https://github.com/concourse/concourse-bosh-deployment/issues/77
-  # BBR=$(bosh --json releases | jq -r '[ .Tables[] | .Rows[] | select(.name == "backup-and-restore-sdk") ] | length')
-  # if [ 0 -ne $BBR ]
-  # then
-  #   echo "bbr release exists"
-  # else
-  #   if [ ! -f release/backup-and-restore-sdk ]
-  #   then
-  #     echo "Downloading backup-and-restore-sdk"
-  #     curl --location --output release/backup-and-restore-sdk \
-  #       https://bosh.io/d/github.com/cloudfoundry-incubator/backup-and-restore-sdk-release?v=1.11.2
-  #   fi
-  #   bosh upload-release release/backup-and-restore-sdk
-  # fi
-
   POSTGRES=$(bosh --json releases | jq -r '[ .Tables[] | .Rows[] | select(.name == "postgres-release") ] | length')
   if [ 0 -ne $POSTGRES ]
   then
@@ -286,6 +290,14 @@ function do_deploy_postgres() {
        -l manifests/postgres-vars.yml
 }
 
+function read_config_file() {
+  lxd_project_name=$(bosh interpolate manifests/bosh-vars.yml --path /lxd_project_name)
+  lxd_profile_name=$(bosh interpolate manifests/bosh-vars.yml --path /lxd_profile_name)
+  lxd_network_name=$(bosh interpolate manifests/bosh-vars.yml --path /lxd_network_name)
+  lxd_storage_pool_name=$(bosh interpolate manifests/bosh-vars.yml --path /lxd_storage_pool_name)
+  internal_ip=$(bosh interpolate manifests/bosh-vars.yml --path /internal_ip)
+}
+
 if [[ "$0" == "bash" ]]
 then
   alias util="${BASH_SOURCE}"
@@ -295,5 +307,6 @@ else
   mkdir -p stemcell
   mkdir -p release
   export BOSH_NON_INTERACTIVE=true
-  do_${1:-help} ${2:-}
+  read_config_file
+  do_${1:-help}
 fi
