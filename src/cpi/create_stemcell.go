@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"strconv"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -95,7 +94,7 @@ func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) 
 			"description":      description,
 			"os":               cases.Title(language.English).String(props.OsDistro),
 			"root_device_name": rootDeviceName,
-			"root_disk_size":   strconv.Itoa(props.Disk),
+			"root_disk_size":   fmt.Sprintf("%dMiB", props.Disk),
 		},
 	}
 	metadataYaml, err := yaml.Marshal(metadata)
