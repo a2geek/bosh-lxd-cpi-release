@@ -82,6 +82,11 @@ func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) 
 		return apiv1.StemcellCID{}, bosherr.WrapError(err, "unable to locate stemcell in archive")
 	}
 
+	rootDeviceName := props.RootDeviceName
+	if rootDeviceName == "" {
+		rootDeviceName = "/"
+	}
+
 	metadata := api.ImageMetadata{
 		Architecture: props.Architecture,
 		CreationDate: createDate,
@@ -89,7 +94,7 @@ func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) 
 			"architecture":     props.Architecture,
 			"description":      description,
 			"os":               cases.Title(language.English).String(props.OsDistro),
-			"root_device_name": props.RootDeviceName,
+			"root_device_name": rootDeviceName,
 			"root_disk_size":   strconv.Itoa(props.Disk),
 		},
 	}
@@ -133,10 +138,13 @@ func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) 
 	opAPI := op.Get()
 	fingerprint := opAPI.Metadata["fingerprint"].(string)
 
-	imageAliasPost := api.ImageAliasesPost{}
-	imageAliasPost.Name = alias
-	imageAliasPost.Description = "bosh image"
-	imageAliasPost.Target = fingerprint
+	imageAliasPost := api.ImageAliasesPost{
+		ImageAliasesEntry: api.ImageAliasesEntry{
+			Name:        alias,
+			Description: "bosh image",
+			Target:      fingerprint,
+		},
+	}
 	err = c.client.CreateImageAlias(imageAliasPost)
 	if err != nil {
 		return apiv1.StemcellCID{}, bosherr.WrapError(err, "setting alias")
