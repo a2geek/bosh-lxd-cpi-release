@@ -3,11 +3,11 @@ module bosh-lxd-cpi
 go 1.22.5
 
 require (
-	github.com/canonical/lxd v0.0.0-20240815175103-b385a5734602
-	github.com/cloudfoundry/bosh-cpi-go v0.0.0-20240810100034-eeb6a9befc6d
-	github.com/cloudfoundry/bosh-utils v0.0.483
+	github.com/canonical/lxd v0.0.0-20240906171505-21d75620590b
+	github.com/cloudfoundry/bosh-cpi-go v0.0.0-20240831100118-916f7cfbb313
+	github.com/cloudfoundry/bosh-utils v0.0.494
 	github.com/diskfs/go-diskfs v1.4.1
-	golang.org/x/text v0.17.0
+	golang.org/x/text v0.18.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -33,13 +33,13 @@ require (
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
 	github.com/zitadel/logging v0.6.0 // indirect
-	github.com/zitadel/oidc/v3 v3.27.0 // indirect
+	github.com/zitadel/oidc/v3 v3.29.0 // indirect
 	github.com/zitadel/schema v1.3.0 // indirect
-	go.opentelemetry.io/otel v1.28.0 // indirect
-	go.opentelemetry.io/otel/metric v1.28.0 // indirect
-	go.opentelemetry.io/otel/trace v1.28.0 // indirect
-	golang.org/x/crypto v0.26.0 // indirect
-	golang.org/x/oauth2 v0.22.0 // indirect
-	golang.org/x/sys v0.24.0 // indirect
-	golang.org/x/term v0.23.0 // indirect
+	go.opentelemetry.io/otel v1.29.0 // indirect
+	go.opentelemetry.io/otel/metric v1.29.0 // indirect
+	go.opentelemetry.io/otel/trace v1.29.0 // indirect
+	golang.org/x/crypto v0.27.0 // indirect
+	golang.org/x/oauth2 v0.23.0 // indirect
+	golang.org/x/sys v0.25.0 // indirect
+	golang.org/x/term v0.24.0 // indirect
 )
