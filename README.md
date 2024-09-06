@@ -135,7 +135,8 @@ used_by:
 - /1.0/profiles/default?project=boshdev
 $ lxc project switch boshdev
 
-# Root disk is not specifically needed, but if you're using the LXC CLI, it helps creating experimental VMs. Note no network, since that is assigned in code.
+# 1. Note that the root disk is needed. Prior code incantations (with and without size) caused problems or actual issues.
+# 2. Note no network, since that is assigned in code.
 $ lxc  profile list
 +---------+-----------------------------------------+---------+
 |  NAME   |               DESCRIPTION               | USED BY |
