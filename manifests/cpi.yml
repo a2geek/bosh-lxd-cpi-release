@@ -55,8 +55,7 @@
       userdata_path: "ec2/latest/user-data"
       filestore_path: "/var/vcap/store/agent-data"
     throttle_config:
-      enabled: true
-      limit: 4
+      enabled: false
 
 # This is for initial standup of VM (bootstrap?)
 - type: replace

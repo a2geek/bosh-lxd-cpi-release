@@ -72,7 +72,7 @@ properties:
     default: "/var/vcap/sys/run/lxd_cpi/throttle.sock"
   lxd_cpi.throttle_config.limit:
     description: "Maximum number of processes to allow concurrently"
-    default: "25"
+    default: "4"
   lxd_cpi.throttle_config.hold:
     description: "Maximum length of lock hold"
     default: "2m"
