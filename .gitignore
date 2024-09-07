@@ -43,3 +43,4 @@ bosh-client.*
 /NOTES.md
 /log
 /secrets
+bosh-lxd-cpi-release.tgz
