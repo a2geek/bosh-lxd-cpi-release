@@ -45,7 +45,7 @@ function do_help() {
                 CONCOURSE_DIR ZOOKEEPER_DIR POSTGRES_DIR
 }
 
-function do_stresstest() {
+function do_stress_test() {
   set -eu
   do_destroy
   do_deploy_bosh
