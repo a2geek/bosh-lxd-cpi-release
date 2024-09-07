@@ -2,7 +2,6 @@ package cpi
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/canonical/lxd/shared/api"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
@@ -55,24 +54,10 @@ func (c CPI) CreateVMV2(
 		eth++
 	}
 
-	// Add root device
-	imageAlias, _, err := c.client.GetImageAlias(instanceSource.Alias)
-	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Image Alias locate")
-	}
-	image, _, err := c.client.GetImage(imageAlias.Target)
-	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Image retrieval")
-	}
-	rootDeviceSize, err := strconv.Atoi(image.Properties["root_disk_size"])
-	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Root device size not determined")
-	}
 	devices["root"] = map[string]string{
 		"type": "disk",
 		"pool": c.config.Server.StoragePool,
 		"path": "/",
-		"size": fmt.Sprintf("%dMiB", rootDeviceSize),
 	}
 
 	instancesPost := api.InstancesPost{
