@@ -2,17 +2,17 @@
 
 > Would love PRs if people are still playing with BOSH in 2024!
 
-This is a [BOSH CPI](https://bosh.io/) implementation to support [LXD](https://canonical.com/lxd) ... and likely [Incus](https://linuxcontainers.org/incus/introduction/).  It appears that both LXD and Incus are trying to keep comparable/compatible, so LXD comments hopefully apply to Incus as well.
+This is a [BOSH CPI](https://bosh.io/) implementation to support [LXD](https://canonical.com/lxd) ... and likely [Incus](https://linuxcontainers.org/incus/introduction/).  It appears that both LXD and Incus are trying to keep comparable/compatible, so LXD comments (and API calls) hopefully apply to Incus as well.
 
 ## Requirements
 
 LXD 5.21, LXD supports BIOS boots for VMs, which all the BOSH Stemcells use. Without this feature, they must be UEFI boot devices and VMs are not an option.
 
-> A note on BIOS. This option is specified in the VM create call, or from the command-line with `--config raw.qemu="-bios bios-256k.bin"`. There is an environment variable the snap install of LXD sets up that points to the directory holding the various BIOS files. At this time, this is not configurable within the CPI itself.
+> A note on BIOS. This option is specified in the VM create call, or from the command-line with `--config raw.qemu="-bios bios-256k.bin"`. There is an environment variable (`LXD_QEMU_FW_PATH`) the snap install of LXD sets up that points to the directory holding the various BIOS files. At this time, this is not configurable within the CPI itself.
 
 As this depends on LXD, which is Linux only, this is also Linux only. Note that the BOSH deployment can be run from a Mac, and presumably from the Linux on WSL.
 
-The current development environment is Ubuntu 22.04. LXD has been installed via a Snap and [this guide](https://documentation.ubuntu.com/lxd/en/latest/tutorial/first_steps/) was generally followed.
+The current development environment is Ubuntu 22.04. LXD (currently `5.21/stable`) has been installed via a Snap and [this guide](https://documentation.ubuntu.com/lxd/en/latest/tutorial/first_steps/) was generally followed.
 
 ## Current State
 
@@ -38,7 +38,7 @@ Generally, the concept is to utilize LXD _projects_ as much as possible. They on
 ### LXD adjustments
 
 * There is a nightly scheduled process to look for unused configuration disks (`vol-c-<uuid>` format) since LXD doesn't give up a disk attachment unless a reboot of the VM occurs. (Or the LXD Agent is installed... which isn't at this time). It simply scan the list of detached configuration disks, tries to delete them, and reports success or error in the log. See [cleanup](src/cmd/cleanup/main.go).
-* Throttling. Not so much LXD, but more the single host conundrum. There is a server that runs and maintains a hash map of "transaction" reservations. Once the CPI level transaction completes, the transaction is also released. Additionally, these reservations will time out after a certain amount time. (See Tuning for more details. Code is at [throttle](src/cmd/cleanup/main.go).)
+* Throttling. Not so much LXD, but more the single host conundrum. There is a server that runs and maintains a hash map of "transaction" reservations. Once the CPI level transaction completes, the transaction is also released. Additionally, these reservations will time out after a certain amount time. _By default, this is disabled._ (See Tuning for more details. Code is at [throttle](src/cmd/cleanup/main.go).)
 
 ### Tuning
 
@@ -57,7 +57,7 @@ Beyond the general tuning of a VM size (# of CPUs, amount of memory, or sizing o
       hold: "2m"
   ```
 
-  > Note that the reason this is required is that for _every VM_ that LXD launches, the QCOW2 format source image gets converted to a RAW format image. I have not found a way to get around this. What this means is that there is ~5GiB of disk being copied _per VM_. So, launch 10 VMs and copy 50GiB of disk. If there is a resolution to this, please submit a ticket with details or create a PR with the fixes!
+  > Note that the original reason this was required was that for _every VM_ that LXD launched, the QCOW2 format source image gets converted to a RAW format image. This seems to have been resolved. The solution was simply that the `root` disk was specifying the disk size -- which, apprently, triggers LXD to copy the contents of the source image instead of doing overlay type magic.
 
 ## LXD Setup
 
@@ -309,7 +309,7 @@ $ source ./util.sh
 Run alone to get a list of commands (not fancy but functional):
 
 ```bash
-$  util
+$ util
 Subcommands:
 - capture_requests
 - cloud_config
@@ -318,14 +318,16 @@ Subcommands:
 - deploy_concourse
 - deploy_postgres
 - destroy
+- fix_blobs
 - help
-- init_lxd
 - runtime_config
+- stress_test
 - upload_releases
 - upload_stemcells
 
 Notes:
 * This script will detect if it is sourced in and setup an alias.
+  (^^ does not work from IDE such as VS Code)
 * Creds are placed into the 'creds/' folder.
 
 Useful environment variables to export...
@@ -336,17 +338,26 @@ Useful environment variables to export...
 - LXD_CLIENT_CERT (set to path of LXD TLS client certificate)
 - LXD_CLIENT_KEY (set to path of LXD TLS client key)
 - BOSH_DEPLOYMENT_DIR (default: ${HOME}/Documents/Source/bosh-deployment)
+- BOSH_PACKAGE_GOLANG_DIR (default ../bosh-package-golang-release)
 - CONCOURSE_DIR when deploying Concourse
 - POSTGRES_DIR when deploying Postgres
 
+Configuration values...
+- internal_ip:              10.245.0.11
+- lxd_network_name:         boshdevbr0
+- lxd_profile_name:         default
+- lxd_project_name:         boshdev
+- lxd_storage_pool_name:    default
+
 Currently set environment variables...
-BOSH_DEPLOYMENT_DIR=<...>/bosh-deployment
-CONCOURSE_DIR=<...>/concourse-bosh-deployment
-LXD_CLIENT_CERT=<...>/bosh-lxd-cpi-release/bosh-client.crt
-LXD_CLIENT_KEY=<...>/bosh-lxd-cpi-release/bosh-client.key
-LXD_INSECURE=true
-LXD_URL=https://<server>:8443
-POSTGRES_DIR=<...>/postgres-release
+- BOSH_DEPLOYMENT_DIR:      <...>/bosh-deployment
+- CONCOURSE_DIR:            <...>/concourse-bosh-deployment
+- LXD_CLIENT_CERT:          <...>/bosh-lxd-cpi-release/bosh-client.crt
+- LXD_CLIENT_KEY:           <...>/bosh-lxd-cpi-release/bosh-client.key
+- LXD_INSECURE:             true
+- LXD_URL:                  https://<server>:8443
+- POSTGRES_DIR:             <...>/postgres-release
+
 ```
 
 Most likely you want to deploy the bosh director:
