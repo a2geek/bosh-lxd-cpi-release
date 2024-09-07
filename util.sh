@@ -16,7 +16,7 @@ function do_help() {
   echo "Subcommands:"
   for subcommand in $(set | grep "^do_.* \(\)" | sed 's/^do_\(.*\) ()/\1/g')
   do
-    echo "- $subcommand"
+    echo "- ${subcommand/_/-}"
   done
   echo
   echo "Notes:"
@@ -56,6 +56,19 @@ function do_stress_test() {
   do_deploy_postgres
   do_deploy_concourse
   do_deploy_cf
+}
+
+function do_final_release() {
+  set -eu
+
+  if [ $# -ne 1 ]
+  then
+    echo "Please include version number in command line."
+    exit 1
+  fi
+
+  version="$1"
+  bosh create-release --final --version=${version} --tarball=bosh-lxd-cpi-release.tgz
 }
 
 ### TODO: These aren't really correct at this point. Need to drop and/or fix.
@@ -322,5 +335,7 @@ else
   mkdir -p release
   export BOSH_NON_INTERACTIVE=true
   read_config_file
-  do_${1:-help}
+  cmd=${1:-help}
+  shift
+  do_${cmd/-/_} "$@"
 fi
