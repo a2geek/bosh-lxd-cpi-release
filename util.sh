@@ -45,6 +45,19 @@ function do_help() {
                 CONCOURSE_DIR ZOOKEEPER_DIR POSTGRES_DIR
 }
 
+function do_stresstest() {
+  set -eu
+  do_destroy
+  do_deploy_bosh
+  do_cloud_config
+  do_runtime_config
+  do_upload_releases
+  do_upload_stemcells
+  do_deploy_postgres
+  do_deploy_concourse
+  do_deploy_cf
+}
+
 ### TODO: These aren't really correct at this point. Need to drop and/or fix.
 # function do_init_lxd() {
 #   set -eu
@@ -214,6 +227,7 @@ function do_runtime_config() {
 function do_upload_stemcells() {
   source scripts/bosh-env.sh
 
+  NEW_STEMCELLS=""
   if [ "new" == "${1-}" ]
   then
     NEW_STEMCELLS=yes
