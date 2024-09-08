@@ -14,6 +14,10 @@ As this depends on LXD, which is Linux only, this is also Linux only. Note that 
 
 The current development environment is Ubuntu 22.04. LXD (currently `5.21/stable`) has been installed via a Snap and [this guide](https://documentation.ubuntu.com/lxd/en/latest/tutorial/first_steps/) was generally followed.
 
+## Documentation
+
+* [Deploying a BOSH director](docs/DEPLOYING.md) walks through a sample deployment for a fresh install (of nearly everything).
+
 ## Current State
 
 Generally, the concept is to utilize LXD _projects_ as much as possible. They only piece I haven't tried to resolve is the networks -- if LXD manages and creates the bridge network, it must be in the default project. If you create the network and just tell LXD about it, I believe that the network can be localized to the BOSH project. The general thought is that other projects (VMs or containers) can be put to a different project and the projects would prevent accidental interactions.

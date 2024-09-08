@@ -1,0 +1,72 @@
+---
+- type: replace
+  path: /releases/-
+  value:
+    name: lxd-bosh-cpi
+    url: https://github.com/a2geek/bosh-lxd-cpi-release/releases/download/v1/bosh-lxd-cpi-release.tgz
+    sha1: 46711b22192b645ec1078c81976da1391b9e88f3
+
+- type: replace
+  path: /resource_pools/name=vms/stemcell?
+  value:
+    url: https://bosh.io/d/stemcells/bosh-openstack-kvm-ubuntu-jammy-go_agent?v=1.531
+    sha1: f578e67e4ad731117091b712b81e5d715c6a5919
+
+# Configure LXD sizes
+- type: replace
+  path: /resource_pools/name=vms/cloud_properties?
+  value:
+    instance_type: c4-m8
+    ephemeral_disk: 32_768
+
+# Add CPI job
+- type: replace
+  path: /instance_groups/name=bosh/jobs/-
+  value: &cpi_job
+    name: lxd_cpi
+    release: lxd-bosh-cpi
+
+- type: replace
+  path: /instance_groups/name=bosh/properties/director/cpi_job?
+  value: lxd_cpi
+
+- type: replace
+  path: /cloud_provider/template?
+  value: *cpi_job
+
+# This is for rendering within the VM once stood up
+- type: replace
+  path: /instance_groups/name=bosh/properties/lxd_cpi?
+  value:
+    lxd: &lxd_settings
+      project_name: ((lxd_project_name))
+      profile_name: ((lxd_profile_name))
+      network_name: ((lxd_network_name))
+      storage_pool_name: ((lxd_storage_pool_name))
+      url: ((lxd_url))
+      insecure_skip_verify: ((lxd_insecure))
+      tls_client_cert: ((lxd_client_cert))
+      tls_client_key: ((lxd_client_key))
+    agent:
+      mbus: nats://((internal_ip)):4222
+    agent_config: &agent_config_settings
+      type: CDROM
+      label: "config-2"
+      metadata_path: "ec2/latest/meta-data.json"
+      userdata_path: "ec2/latest/user-data"
+      filestore_path: "/var/vcap/store/agent-data"
+    throttle_config:
+      enabled: false
+
+# This is for initial standup of VM (bootstrap?)
+- type: replace
+  path: /cloud_provider/properties/lxd_cpi?
+  value:
+    lxd: *lxd_settings
+    agent:
+      mbus: "https://mbus:((mbus_bootstrap_password))@0.0.0.0:6868"
+    agent_config: 
+      <<: *agent_config_settings
+      filestore_path: "/tmp"
+    throttle_config:
+      enabled: false
