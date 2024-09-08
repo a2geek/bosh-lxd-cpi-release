@@ -110,7 +110,7 @@ $ lxc storage list
 +---------+--------+-------------+-------------+---------+---------+
 | default | zfs    | lxd-storage |             | 1       | CREATED |
 +---------+--------+-------------+-------------+---------+---------+
-rob@athena:~$ lxc storage show default
+$ lxc storage show default
 name: default
 description: ""
 driver: zfs
@@ -141,7 +141,7 @@ $ lxc project switch boshdev
 
 # 1. Note that the root disk is needed. Prior code incantations (with and without size) caused problems or actual issues.
 # 2. Note no network, since that is assigned in code.
-$ lxc  profile list
+$ lxc profile list
 +---------+-----------------------------------------+---------+
 |  NAME   |               DESCRIPTION               | USED BY |
 +---------+-----------------------------------------+---------+
@@ -315,19 +315,20 @@ Run alone to get a list of commands (not fancy but functional):
 ```bash
 $ util
 Subcommands:
-- capture_requests
-- cloud_config
-- deploy_bosh
-- deploy_cf
-- deploy_concourse
-- deploy_postgres
+- capture-requests
+- cloud-config
+- deploy-bosh
+- deploy-cf
+- deploy-concourse
+- deploy-postgres
 - destroy
-- fix_blobs
+- final-release
+- fix-blobs
 - help
-- runtime_config
-- stress_test
-- upload_releases
-- upload_stemcells
+- runtime-config
+- stress-test
+- upload-releases
+- upload-stemcells
 
 Notes:
 * This script will detect if it is sourced in and setup an alias.

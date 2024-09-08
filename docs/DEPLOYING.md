@@ -32,6 +32,7 @@
     ```
 
     Note 1: `/dev/sda` is a spare SATA HDD that was laying around. (Primary disk is NVME and it is low on space!) `sgdisk --zap-all /dev/sda` was used to wipe all partitions.
+
     Note 2: IPv6 was disabled since I'm not using IPv6. This appears to be optional as BOSH has some support for IPv6.
 
 4. Install BOSH. See [Installing the CLI](https://bosh.io/docs/cli-v2-install/).
