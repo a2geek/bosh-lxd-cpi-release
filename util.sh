@@ -182,6 +182,7 @@ function do_deploy_bosh() {
     --ops-file=${bosh_deployment}/uaa.yml \
     --ops-file=${bosh_deployment}/credhub.yml \
     --ops-file=${bosh_deployment}/misc/dns.yml \
+    --ops-file=${bosh_deployment}/misc/cpi-resize-disk.yml \
     --state=state.json \
     --vars-store=creds/bosh.yml \
     --vars-file=manifests/bosh-vars.yml \
