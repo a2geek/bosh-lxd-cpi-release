@@ -338,6 +338,7 @@ Notes:
 Useful environment variables to export...
 - BOSH_LOG_LEVEL (set to 'debug' to capture all bosh activity including request/response)
 - BOSH_JUMPBOX_ENABLE (set to any value enable jumpbox user)
+- BOSH_SNAPSHOTS_ENABLE (set to any value to enable snapshots)
 - LXD_URL (set to HTTPS url of LXD server - not localhost)
 - LXD_INSECURE (default: false)
 - LXD_CLIENT_CERT (set to path of LXD TLS client certificate)

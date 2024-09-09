@@ -12,6 +12,7 @@ const (
 	DISK_EPHEMERAL_PREFIX     = "vol-e-"
 	DISK_PERSISTENT_PREFIX    = "vol-p-"
 	DISK_CONFIGURATION_PREFIX = "vol-c-"
+	SNAPSHOT_PREFIX           = "snap-"
 )
 
 func (c CPI) createDisk(size int, name string) error {

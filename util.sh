@@ -27,6 +27,7 @@ function do_help() {
   echo "Useful environment variables to export..."
   echo "- BOSH_LOG_LEVEL (set to 'debug' to capture all bosh activity including request/response)"
   echo "- BOSH_JUMPBOX_ENABLE (set to any value enable jumpbox user)"
+  echo "- BOSH_SNAPSHOTS_ENABLE (set to any value to enable snapshots)"
   echo "- LXD_URL (set to HTTPS url of LXD server - not localhost)"
   echo "- LXD_INSECURE (default: false)"
   echo "- LXD_CLIENT_CERT (set to path of LXD TLS client certificate)"
@@ -165,11 +166,16 @@ function do_deploy_bosh() {
   lxd_client_cert="${LXD_CLIENT_CERT:-}"
   lxd_client_key="${LXD_CLIENT_KEY:-}"
   jumpbox_enable="${BOSH_JUMPBOX_ENABLE:-}"
+  snapshots_enable="${BOSH_SNAPSHOTS_ENABLE:-}"
 
   bosh_args=()
   if [ ! -z "${jumpbox_enable}" ]
   then
     bosh_args+=(--ops-file=${bosh_deployment}/jumpbox-user.yml)
+  fi
+  if [ ! -z "${snapshots_enable}" ]
+  then
+    bosh_args+=(--ops-file=ops/enable-snapshots.yml)
   fi
 
   echo "-----> `date`: Create dev release"
