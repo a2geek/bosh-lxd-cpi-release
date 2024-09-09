@@ -79,6 +79,12 @@ func (c CPI) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating VM")
 	}
 
+	defer func() {
+		if err != nil {
+			c.DeleteVM(vmCID)
+		}
+	}()
+
 	agentEnv := apiv1.AgentEnvFactory{}.ForVM(agentID, vmCID, networks, env, c.config.Agent)
 	agentEnv.AttachSystemDisk(apiv1.NewDiskHintFromString("/dev/sda"))
 
