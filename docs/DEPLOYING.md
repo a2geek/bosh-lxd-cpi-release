@@ -110,13 +110,15 @@
     lxd_profile_name: default
     lxd_network_name: lxdbr0
     lxd_storage_pool_name: default
-    lxd_url: https://<server-name>:8443
+    lxd_url: https://<server-ip-or-name>:8443
     lxd_insecure: true
     internal_cidr: 10.245.169.1/24
     internal_gw: 10.245.169.1
     internal_ip: 10.245.169.5
     EOF
     ```
+
+    > If you use the server _name_ (instead of IP), be certain to also configure your internal DNS. Otherwise BOSH won't be able to find LXD.
 
 9. Deploy the BOSH director!
 
@@ -178,4 +180,29 @@
     Process 'uaa'                       running
     Process 'credhub'                   running
     System 'system_f5c2f518-92d9-4b0b-4b3e-1d5090606b04' running
+    ```
+
+11. To operate the BOSH director, the following will configure the CLI. And then just configure and deploy like normal!
+
+    > Note that the LXD CPI uses the OpenStack "full" stemcell.
+
+    ```shell
+    $ export BOSH_CLIENT=admin
+    $ export BOSH_CLIENT_SECRET=$(bosh int creds.yml --path /admin_password)
+    $ export BOSH_CA_CERT=$(bosh int creds.yml --path /director_ssl/ca)
+    $ export BOSH_ENVIRONMENT=$(bosh int config.yml --path /internal_ip)
+    $ bosh env
+    Using environment '10.245.169.5' as client 'admin'
+
+    Name               lxd  
+    UUID               516f8ee1-df88-49ac-ac33-a1145cf9253f  
+    Version            280.1.5 (00000000)  
+    Director Stemcell  -/1.531  
+    CPI                lxd_cpi  
+    Features           config_server: enabled  
+                       local_dns: enabled  
+                       snapshots: disabled  
+    User               admin  
+
+    Succeeded
     ```
