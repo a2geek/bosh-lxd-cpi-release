@@ -25,6 +25,7 @@ type LXD struct {
 	Profile            string
 	Network            string
 	StoragePool        string
+	BIOSPath           string
 }
 
 func NewConfigFromPath(path string, fs boshsys.FileSystem) (Config, error) {
@@ -37,6 +38,7 @@ func NewConfigFromPath(path string, fs boshsys.FileSystem) (Config, error) {
 			Profile:            "default",
 			Network:            "lxdbr0", // Default network bridge?
 			StoragePool:        "default",
+			BIOSPath:           "bios-256k.bin",
 		},
 		ThrottleConfig: throttle.Config{
 			Enabled: false,

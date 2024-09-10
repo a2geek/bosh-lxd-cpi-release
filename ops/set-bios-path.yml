@@ -1,0 +1,4 @@
+---
+- type: replace
+  path: /instance_groups/name=bosh/properties/lxd_cpi/lxd/bios_path
+  value: ((lxd_bios_path))

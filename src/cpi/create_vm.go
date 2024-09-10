@@ -65,8 +65,7 @@ func (c CPI) CreateVMV2(
 			Devices:  devices,
 			Profiles: []string{c.config.Server.Profile},
 			Config: map[string]string{
-				// TODO allow configuration
-				"raw.qemu": "-bios bios-256k.bin",
+				"raw.qemu": "-bios " + c.config.Server.BIOSPath,
 			},
 		},
 		Name:         theCid,
