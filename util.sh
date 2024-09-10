@@ -48,15 +48,18 @@ function do_help() {
 
 function do_stress_test() {
   set -eu
-  do_destroy
-  do_deploy_bosh
-  do_cloud_config
-  do_runtime_config
-  do_upload_releases
-  do_upload_stemcells
-  do_deploy_postgres
-  do_deploy_concourse
-  do_deploy_cf
+
+  delay="${1:-}"
+
+  for cmd in destroy deploy_bosh cloud_config runtime_config upload_releases upload_stemcells deploy_postgres deploy_concourse deploy_cf
+  do
+    if [ ! -z "${delay}" ]
+    then
+      echo "... pausing for ${delay} seconds ..."
+      sleep ${delay}
+    fi
+    do_${cmd}
+  done
 }
 
 function do_final_release() {
