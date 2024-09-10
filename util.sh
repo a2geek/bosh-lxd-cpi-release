@@ -154,45 +154,46 @@ function do_destroy() {
 function do_deploy_bosh() {
   set -eu
   bosh_deployment="${BOSH_DEPLOYMENT_DIR:-${HOME}/Documents/Source/bosh-deployment}"
-  cpi_path=$PWD/cpi
 
   if [ -z "${LXD_URL:-}" ]
   then
     echo "LXD_URL must be set."
     exit 1
   fi
+
+  local_release="${LXD_LOCAL_RELEASE:-}"
   lxd_url="${LXD_URL}"
   lxd_insecure="${LXD_INSECURE:-false}"
   lxd_client_cert="${LXD_CLIENT_CERT:-}"
   lxd_client_key="${LXD_CLIENT_KEY:-}"
   jumpbox_enable="${BOSH_JUMPBOX_ENABLE:-}"
   snapshots_enable="${BOSH_SNAPSHOTS_ENABLE:-}"
+  resize_disk_enable="${BOSH_RESIZE_DISK_ENABLE:-}"
+  internal_dns_enable="$(bosh int manifests/bosh-vars.yml --path /internal_dns 2>/dev/null || true)"
 
   bosh_args=()
-  if [ ! -z "${jumpbox_enable}" ]
-  then
-    bosh_args+=(--ops-file=${bosh_deployment}/jumpbox-user.yml)
-  fi
-  if [ ! -z "${snapshots_enable}" ]
-  then
-    bosh_args+=(--ops-file=ops/enable-snapshots.yml)
-  fi
+  [ ! -z "${jumpbox_enable}"      ] && bosh_args+=(--ops-file=${bosh_deployment}/jumpbox-user.yml)
+  [ ! -z "${snapshots_enable}"    ] && bosh_args+=(--ops-file=ops/enable-snapshots.yml)
+  [ ! -z "${resize_disk_enable}"  ] && bosh_args+=(--ops-file=${bosh_deployment}/misc/cpi-resize-disk.yml)
+  [ ! -z "${internal_dns_enable}" ] && bosh_args+=(--ops-file=${bosh_deployment}/misc/dns.yml)
 
-  echo "-----> `date`: Create dev release"
-  bosh create-release --force --tarball $cpi_path
+  if [ ! -z "${local_release}" ]
+  then
+    cpi_path=$PWD/cpi
+    echo "-----> `date`: Create dev release"
+    bosh create-release --force --tarball $cpi_path
+    bosh_args+=(--ops-file=ops/local-release.yml --var=cpi_path=${cpi_path})
+  fi
 
   echo "-----> `date`: Create env"
   bosh create-env ${bosh_deployment}/bosh.yml \
-    --ops-file=manifests/cpi.yml \
+    --ops-file=cpi.yml \
     --ops-file=${bosh_deployment}/bbr.yml \
     --ops-file=${bosh_deployment}/uaa.yml \
     --ops-file=${bosh_deployment}/credhub.yml \
-    --ops-file=${bosh_deployment}/misc/dns.yml \
-    --ops-file=${bosh_deployment}/misc/cpi-resize-disk.yml \
     --state=state.json \
     --vars-store=creds/bosh.yml \
     --vars-file=manifests/bosh-vars.yml \
-    --var=cpi_path=$cpi_path \
     --var=lxd_url=$lxd_url \
     --var=lxd_insecure=$lxd_insecure \
     --var-file=lxd_client_cert=$lxd_client_cert \

@@ -1,0 +1,6 @@
+---
+- type: replace
+  path: /releases/name=lxd-bosh-cpi
+  value:
+    name: lxd-bosh-cpi
+    url: file://((cpi_path))
