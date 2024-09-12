@@ -32,6 +32,7 @@ function do_help() {
   echo "- LXD_INSECURE (default: false)"
   echo "- LXD_CLIENT_CERT (set to path of LXD TLS client certificate)"
   echo "- LXD_CLIENT_KEY (set to path of LXD TLS client key)"
+  echo "- LXD_ENABLE_AGENT (set to any value to install and enable the LXD agent in all VMs)"
   echo "- BOSH_DEPLOYMENT_DIR (default: \${HOME}/Documents/Source/bosh-deployment)"
   echo "- BOSH_PACKAGE_GOLANG_DIR (default ../bosh-package-golang-release)"
   echo "- CONCOURSE_DIR when deploying Concourse"
@@ -169,6 +170,7 @@ function do_deploy_bosh() {
   lxd_insecure="${LXD_INSECURE:-false}"
   lxd_client_cert="${LXD_CLIENT_CERT:-}"
   lxd_client_key="${LXD_CLIENT_KEY:-}"
+  lxd_enable_agent="${LXD_ENABLE_AGENT:-}"
   jumpbox_enable="${BOSH_JUMPBOX_ENABLE:-}"
   snapshots_enable="${BOSH_SNAPSHOTS_ENABLE:-}"
   resize_disk_enable="${BOSH_RESIZE_DISK_ENABLE:-}"
@@ -179,6 +181,7 @@ function do_deploy_bosh() {
   [ ! -z "${snapshots_enable}"    ] && bosh_args+=(--ops-file=ops/enable-snapshots.yml)
   [ ! -z "${resize_disk_enable}"  ] && bosh_args+=(--ops-file=${bosh_deployment}/misc/cpi-resize-disk.yml)
   [ ! -z "${internal_dns_enable}" ] && bosh_args+=(--ops-file=${bosh_deployment}/misc/dns.yml)
+  [ ! -z "${lxd_enable_agent}"    ] && bosh_args+=(--ops-file=ops/enable-lxd-agent.yml)
 
   if [ ! -z "${local_release}" ]
   then
@@ -245,6 +248,11 @@ function do_runtime_config() {
     echo "Warning: BOSH_DEPLOYMENT_DIR is not set, not loading the bosh-dns runtime config! (Needed for CF)"
   else
     bosh update-runtime-config --name bosh-dns ${BOSH_DEPLOYMENT_DIR}/runtime-configs/dns.yml
+  fi
+
+  if [ ! -z "${LXD_ENABLE_AGENT:-}" ]
+  then
+    bosh update-runtime-config --name lxd-agent manifests/enable-lxd-agent-config.yml
   fi
 }
 
