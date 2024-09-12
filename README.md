@@ -16,7 +16,7 @@ The current development environment is Ubuntu 22.04. LXD (currently `5.21/stable
 
 * [LXD Setup](docs/LXD-SETUP.md) contains some notes from setting up the development environment.
 * [Authentication](docs/AUTHENTICATION.md) shows an example for how to setup the certificate authentication for LXD.
-* [Develiping](docs/DEVELOPING.md) covers how the tools in this repository are used.
+* [Developing](docs/DEVELOPING.md) covers how the tools in this repository are used.
 * [Deploying a BOSH director](docs/DEPLOYING.md) walks through a sample deployment for a fresh install (of nearly everything).
 * Supplied [configuration options](ops/README.md).
 * [Working with Genesis](docs/GENESIS.md) shows how to deploy to Genesis with a non-standard CPI.
