@@ -45,11 +45,13 @@ func (c CPI) CreateVMV2(
 	for _, net := range networks {
 		name := fmt.Sprintf("eth%d", eth)
 		devices[name] = map[string]string{
-			"name":         name,
-			"nictype":      "bridged",
-			"parent":       c.config.Server.Network,
-			"type":         "nic",
-			"ipv4.address": net.IP(),
+			"name":    name,
+			"nictype": "bridged",
+			"parent":  c.config.Server.Network,
+			"type":    "nic",
+		}
+		if net.Type() == "manual" || net.Type() == "vip" {
+			devices[name]["ipv4.address"] = net.IP()
 		}
 		eth++
 	}

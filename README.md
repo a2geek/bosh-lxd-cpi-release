@@ -18,7 +18,7 @@ The current development environment is Ubuntu 22.04. LXD (currently `5.21/stable
 * [Authentication](docs/AUTHENTICATION.md) shows an example for how to setup the certificate authentication for LXD.
 * [Develiping](docs/DEVELOPING.md) covers how the tools in this repository are used.
 * [Deploying a BOSH director](docs/DEPLOYING.md) walks through a sample deployment for a fresh install (of nearly everything).
-* Supplied [configuration options](ops/README.md).
+* Supplied [configuration option](ops/README.md) files.
 * [Working with Genesis](docs/GENESIS.md) shows how to deploy to Genesis with a non-standard CPI.
 
 ## Current State
@@ -29,6 +29,10 @@ The current development environment is Ubuntu 22.04. LXD (currently `5.21/stable
 * Generally, the common CPI calls are all implemented at this time, including the optional CPI methods:
   * snapshots ([`snapshot_disk`](https://bosh.io/docs/cpi-api-v2-method/snapshot-disk/), [`delete_snapshot`](https://bosh.io/docs/cpi-api-v2-method/delete-snapshot/))
   * IaaS-native disk resizing ([`resize_disk`](https://bosh.io/docs/cpi-api-v2-method/resize-disk/))
+
+### Networking
+
+There is some experimental code to support `manual`, `dynamic`, and `vip` networks. `manual` networks are the only ones tested at this time. See [the bosh documentation](https://bosh.io/docs/networks/).
 
 ### LXD adjustments
 
