@@ -1,2 +1,7 @@
 system_domain: sys.cf.lan
-router_static_ips: [10.245.0.252]
+#router_static_ips: [10.245.0.252]
+app_domains:
+- name: app.cf.lan
+- name: cf.lan
+smoke_test_app_domain: app.cf.lan
+haproxy_private_ip: 10.245.0.252
