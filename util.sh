@@ -123,11 +123,13 @@ function do_deploy_cf() {
   source scripts/bosh-env.sh
   export BOSH_DEPLOYMENT=cf
   bosh deploy $CF_DEPLOYMENT_DIR/cf-deployment.yml \
-    -o $CF_DEPLOYMENT_DIR/operations/scale-to-one-az.yml \
-    -o $CF_DEPLOYMENT_DIR/operations/set-router-static-ips.yml \
     -o $CF_DEPLOYMENT_DIR/operations/use-compiled-releases.yml \
     -o $CF_DEPLOYMENT_DIR/operations/use-latest-stemcell.yml \
+    -o $CF_DEPLOYMENT_DIR/operations/override-app-domains.yml \
+    -o $CF_DEPLOYMENT_DIR/operations/scale-to-one-az.yml \
+    -o $CF_DEPLOYMENT_DIR/operations/use-haproxy.yml \
     -l manifests/cloudfoundry-vars.yml
+#    -o $CF_DEPLOYMENT_DIR/operations/set-router-static-ips.yml \
 }
 
 function do_destroy() {
