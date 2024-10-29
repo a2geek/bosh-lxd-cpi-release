@@ -12,7 +12,7 @@ func (c CPI) SnapshotDisk(diskCID apiv1.DiskCID, meta apiv1.DiskMeta) (apiv1.Sna
 
 	snapshotID := SNAPSHOT_PREFIX + id
 
-	err = c.adapter.CreateStoragePoolVolumeSnapshot(c.config.Server.StoragePool, "custom", diskCID.AsString(), snapshotID, diskCID.AsString())
+	err = c.adapter.CreateStoragePoolVolumeSnapshot(c.config.Server.StoragePool, diskCID.AsString(), snapshotID, diskCID.AsString())
 
 	// We need both the volumeName as well as the snapshotName for deletion
 	// and the only way to encode that seems to be in the snapshotCID.

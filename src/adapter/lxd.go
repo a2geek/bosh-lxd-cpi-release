@@ -141,12 +141,12 @@ func (a *lxdApiAdapter) CreateInstance(meta InstanceMetadata) error {
 	return wait(a.client.CreateInstance(instancesPost))
 }
 
-func (a *lxdApiAdapter) DeleteStoragePoolVolume(pool, volType, name string) error {
-	return a.client.DeleteStoragePoolVolume(pool, volType, name)
+func (a *lxdApiAdapter) DeleteStoragePoolVolume(pool, name string) error {
+	return a.client.DeleteStoragePoolVolume(pool, "custom", name)
 }
 
-func (a *lxdApiAdapter) DeleteStoragePoolVolumeSnapshot(pool, volType, volumeName, snapshotName string) error {
-	return wait(a.client.DeleteStoragePoolVolumeSnapshot(pool, volType, volumeName, snapshotName))
+func (a *lxdApiAdapter) DeleteStoragePoolVolumeSnapshot(pool, volumeName, snapshotName string) error {
+	return wait(a.client.DeleteStoragePoolVolumeSnapshot(pool, "custom", volumeName, snapshotName))
 }
 
 func (a *lxdApiAdapter) DeleteImage(alias string) error {
@@ -195,8 +195,8 @@ func (a *lxdApiAdapter) DetachDevice(instanceName, deviceName string) error {
 	return wait(a.client.UpdateInstance(instanceName, instance.Writable(), ""))
 }
 
-func (a *lxdApiAdapter) GetStoragePoolVolume(pool, volType, name string) (string, error) {
-	_, etag, err := a.client.GetStoragePoolVolume(pool, volType, name)
+func (a *lxdApiAdapter) GetStoragePoolVolume(pool, name string) (string, error) {
+	_, etag, err := a.client.GetStoragePoolVolume(pool, "custom", name)
 	return etag, err
 }
 
@@ -205,8 +205,8 @@ func (a *lxdApiAdapter) GetInstance(name string) (string, error) {
 	return etag, err
 }
 
-func (a *lxdApiAdapter) ResizeStoragePoolVolume(pool, volType, name string, newSize int) error {
-	volume, etag, err := a.client.GetStoragePoolVolume(pool, volType, name)
+func (a *lxdApiAdapter) ResizeStoragePoolVolume(pool, name string, newSize int) error {
+	volume, etag, err := a.client.GetStoragePoolVolume(pool, "custom", name)
 	if err != nil {
 		return err
 	}
@@ -214,7 +214,7 @@ func (a *lxdApiAdapter) ResizeStoragePoolVolume(pool, volType, name string, newS
 	writable := volume.Writable()
 	writable.Config["size"] = fmt.Sprintf("%dMiB", newSize)
 
-	return a.client.UpdateStoragePoolVolume(pool, volType, name, writable, etag)
+	return a.client.UpdateStoragePoolVolume(pool, "custom", name, writable, etag)
 }
 
 func (a *lxdApiAdapter) UpdateInstanceDescription(name, newDescription string) error {
@@ -228,12 +228,12 @@ func (a *lxdApiAdapter) UpdateInstanceDescription(name, newDescription string) e
 	return wait(a.client.UpdateInstance(name, instance.Writable(), etag))
 }
 
-func (a *lxdApiAdapter) CreateStoragePoolVolumeSnapshot(pool, volType, volumeName, snapshotName, description string) error {
+func (a *lxdApiAdapter) CreateStoragePoolVolumeSnapshot(pool, volumeName, snapshotName, description string) error {
 	post := api.StorageVolumeSnapshotsPost{
 		Name:        snapshotName,
 		Description: description,
 	}
-	return wait(a.client.CreateStoragePoolVolumeSnapshot(pool, volType, volumeName, post))
+	return wait(a.client.CreateStoragePoolVolumeSnapshot(pool, "custom", volumeName, post))
 }
 
 func (a *lxdApiAdapter) CreateStoragePoolVolumeFromISO(pool, diskName string, backupFile io.Reader) error {

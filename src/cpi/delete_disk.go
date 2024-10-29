@@ -6,7 +6,7 @@ import (
 )
 
 func (c CPI) DeleteDisk(cid apiv1.DiskCID) error {
-	err := c.adapter.DeleteStoragePoolVolume(c.config.Server.StoragePool, "custom", cid.AsString())
+	err := c.adapter.DeleteStoragePoolVolume(c.config.Server.StoragePool, cid.AsString())
 	if err != nil {
 		return bosherr.WrapError(err, "Deleting volume")
 	}

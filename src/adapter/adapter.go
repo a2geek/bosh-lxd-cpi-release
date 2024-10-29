@@ -15,17 +15,16 @@ type ApiAdapter interface {
 	IsInstanceStopped(name string) (bool, error)
 
 	// TODO StoragePoolVolumeMeta?
-	// TODO Remote volType - we only use custom
-	DeleteStoragePoolVolume(pool, volType, name string) error
-	GetStoragePoolVolume(pool, volType, name string) (string, error)
-	ResizeStoragePoolVolume(pool, volType, name string, newSize int) error
+	DeleteStoragePoolVolume(pool, name string) error
+	GetStoragePoolVolume(pool, name string) (string, error)
+	ResizeStoragePoolVolume(pool, name string, newSize int) error
 	CreateStoragePoolVolumeFromISO(pool, diskName string, backupFile io.Reader) error
 	CreateStoragePoolVolume(pool, name string, size int) error
 	UpdateStoragePoolVolumeDescription(poolName, diskName, description string) error
 
 	// TODO StoragePoolVolumeSnapshotMeta?
-	DeleteStoragePoolVolumeSnapshot(pool, volType, volumeName, snapshotName string) error
-	CreateStoragePoolVolumeSnapshot(pool, volType, volumeName, snapshotName, description string) error
+	DeleteStoragePoolVolumeSnapshot(pool, volumeName, snapshotName string) error
+	CreateStoragePoolVolumeSnapshot(pool, volumeName, snapshotName, description string) error
 
 	AttachDevice(instanceName, deviceName string, device map[string]string) error
 	DetachDevice(instanceName, deviceName string) error

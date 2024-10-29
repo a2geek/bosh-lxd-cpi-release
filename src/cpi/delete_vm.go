@@ -30,7 +30,7 @@ func (c CPI) DeleteVM(vmCID apiv1.VMCID) error {
 
 	disks := append(ephemeralDisks, configurationDisks...)
 	for _, disk := range disks {
-		err = c.adapter.DeleteStoragePoolVolume(c.config.Server.StoragePool, "custom", disk)
+		err = c.adapter.DeleteStoragePoolVolume(c.config.Server.StoragePool, disk)
 		if err != nil {
 			return bosherr.WrapError(err, "Delete VM - attached disk - "+disk)
 		}
