@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"fmt"
 
-	lxdclient "github.com/canonical/lxd/client"
-
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 )
@@ -27,10 +25,7 @@ func (c CPI) writeAgentFileToVM(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) erro
 	diskName := DISK_CONFIGURATION_PREFIX + uuid
 
 	buf := bytes.NewBuffer(diskImage)
-	err = wait(c.client.CreateStoragePoolVolumeFromISO(c.config.Server.StoragePool, lxdclient.StoragePoolVolumeBackupArgs{
-		Name:       diskName,
-		BackupFile: buf,
-	}))
+	err = c.adapter.CreateStoragePoolVolumeFromISO(c.config.Server.StoragePool, diskName, buf)
 	if err != nil {
 		return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Create", vmCID.AsString())
 	}
@@ -40,16 +35,16 @@ func (c CPI) writeAgentFileToVM(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) erro
 		return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Find", vmCID.AsString())
 	}
 	for _, configDiskName := range configuration {
-		err = c.removeDevice(vmCID, configDiskName)
+		err = c.adapter.DetachDevice(vmCID.AsString(), configDiskName)
 		if err != nil {
 			return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Remove", vmCID.AsString())
 		}
 
-		stopped, err := c.isVMAtRequestedState(vmCID, "stop")
+		stopped, err := c.adapter.IsInstanceStopped(vmCID.AsString())
 		if err != nil {
 			return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Check State", vmCID.AsString())
 		} else if stopped {
-			err = c.client.DeleteStoragePoolVolume(c.config.Server.StoragePool, "custom", configDiskName)
+			err = c.adapter.DeleteStoragePoolVolume(c.config.Server.StoragePool, "custom", configDiskName)
 			if err != nil {
 				return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Delete", vmCID.AsString())
 			}

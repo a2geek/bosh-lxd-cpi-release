@@ -6,27 +6,14 @@ import (
 )
 
 func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
-	err := c.stopVM(vmCID)
+	err := c.adapter.SetInstanceAction(vmCID.AsString(), "stop")
 	if err != nil {
 		return bosherr.WrapError(err, "Stopping instance")
 	}
 
-	instance, _, err := c.client.GetInstance(vmCID.AsString())
+	err = c.adapter.DetachDevice(vmCID.AsString(), diskCID.AsString())
 	if err != nil {
-		return bosherr.WrapError(err, "Get instance state")
-	}
-
-	// Check if the device already exists
-	_, ok := instance.Devices[diskCID.AsString()]
-	if !ok {
-		return bosherr.WrapError(err, "Device already exists: "+diskCID.AsString())
-	}
-
-	delete(instance.Devices, diskCID.AsString())
-
-	err = wait(c.client.UpdateInstance(vmCID.AsString(), instance.Writable(), ""))
-	if err != nil {
-		return bosherr.WrapError(err, "Update instance state")
+		return bosherr.WrapError(err, "Detach Device")
 	}
 
 	agentEnv, err := c.agentMgr.Read(vmCID)
@@ -41,7 +28,7 @@ func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
 		return bosherr.WrapError(err, "Write AgentEnv")
 	}
 
-	err = c.startVM(vmCID)
+	err = c.adapter.SetInstanceAction(vmCID.AsString(), "start")
 	if err != nil {
 		return bosherr.WrapError(err, "Starting instance")
 	}

@@ -5,5 +5,5 @@ import (
 )
 
 func (c CPI) RebootVM(cid apiv1.VMCID) error {
-	return c.setVMAction(cid, "restart")
+	return c.adapter.SetInstanceAction(cid.AsString(), "reboot")
 }

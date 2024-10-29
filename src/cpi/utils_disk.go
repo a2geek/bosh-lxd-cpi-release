@@ -1,10 +1,8 @@
 package cpi
 
 import (
-	"fmt"
 	"strings"
 
-	"github.com/canonical/lxd/shared/api"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 )
 
@@ -15,21 +13,7 @@ const (
 	SNAPSHOT_PREFIX           = "snap-"
 )
 
-func (c CPI) createDisk(size int, name string) error {
-	storageVolumeRequest := api.StorageVolumesPost{
-		Name:        name,
-		Type:        "custom",
-		ContentType: "block",
-		StorageVolumePut: api.StorageVolumePut{
-			Config: map[string]string{
-				"size": fmt.Sprintf("%dMiB", size),
-			},
-		},
-	}
-
-	return c.client.CreateStoragePoolVolume(c.config.Server.StoragePool, storageVolumeRequest)
-}
-
+// TODO remove
 func (c CPI) attachDiskToVM(vmCID apiv1.VMCID, diskId string) error {
 	return c.attachDiskDeviceToVM(vmCID, diskId)
 }
@@ -40,22 +24,22 @@ func (c CPI) attachDiskDeviceToVM(vmCID apiv1.VMCID, diskId string) error {
 		"pool":   c.config.Server.StoragePool,
 		"source": diskId,
 	}
-	return c.addDevice(vmCID, diskId, device)
+	return c.adapter.AttachDevice(vmCID.AsString(), diskId, device)
 }
 
 func (c CPI) findDisksAttachedToVm(vmCID apiv1.VMCID) (map[string]map[string]string, error) {
-	instance, _, err := c.client.GetInstance(vmCID.AsString())
+	devices, err := c.adapter.GetDevices(vmCID.AsString())
 	if err != nil {
 		return nil, err
 	}
 
-	devices := make(map[string]map[string]string)
-	for name, device := range instance.Devices {
+	disks := make(map[string]map[string]string)
+	for name, device := range devices {
 		if device["type"] == "disk" {
-			devices[name] = device
+			disks[name] = device
 		}
 	}
-	return devices, nil
+	return disks, nil
 }
 
 func (c CPI) findEphemeralDisksAttachedToVM(cid apiv1.VMCID) ([]string, error) {
@@ -87,15 +71,4 @@ func (c CPI) findConfigurationDisksAttachedToVM(cid apiv1.VMCID) ([]string, erro
 		}
 	}
 	return configuration, nil
-}
-
-func (c CPI) setDiskMetadata(cid apiv1.DiskCID, description string) error {
-	volume, _, err := c.client.GetStoragePoolVolume(c.config.Server.StoragePool, "custom", cid.AsString())
-	if err != nil {
-		return err
-	}
-
-	volume.Description = description
-
-	return c.client.UpdateStoragePoolVolume(c.config.Server.StoragePool, "custom", cid.AsString(), volume.Writable(), "")
 }

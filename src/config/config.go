@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bosh-lxd-cpi/adapter"
 	"bosh-lxd-cpi/agentmgr"
 	"bosh-lxd-cpi/throttle"
 	"encoding/json"
@@ -11,27 +12,17 @@ import (
 )
 
 type Config struct {
-	Server         LXD
+	Server         adapter.Config
 	Agent          apiv1.AgentOptions
 	AgentConfig    agentmgr.Config
 	ThrottleConfig throttle.Config
-}
-type LXD struct {
-	URL                string
-	TLSClientCert      string
-	TLSClientKey       string
-	InsecureSkipVerify bool
-	Project            string
-	Profile            string
-	Network            string
-	StoragePool        string
-	BIOSPath           string
 }
 
 func NewConfigFromPath(path string, fs boshsys.FileSystem) (Config, error) {
 	// This includes any default values
 	config := Config{
-		Server: LXD{
+		Server: adapter.Config{
+			Type:               "lxd",
 			URL:                "https://localhost:8443",
 			InsecureSkipVerify: false,
 			Project:            "default",
@@ -72,7 +63,3 @@ func (c Config) Validate() error {
 	return nil
 }
 
-func (lxd LXD) Validate() error {
-	// DO NOTHING AT THIS TIME!
-	return nil
-}

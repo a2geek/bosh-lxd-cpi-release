@@ -1,9 +1,9 @@
 package cpi
 
 import (
+	"bosh-lxd-cpi/adapter"
 	"fmt"
 
-	"github.com/canonical/lxd/shared/api"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 )
@@ -29,11 +29,6 @@ func (c CPI) CreateVMV2(
 	theCid := "vm-" + id
 	vmCID := apiv1.NewVMCID(theCid)
 
-	instanceSource := api.InstanceSource{
-		Type:    "image",
-		Alias:   stemcellCID.AsString(),
-		Project: c.config.Server.Project,
-	}
 	props := LXDVMCloudProperties{}
 	err = cloudProps.As(&props)
 	if err != nil {
@@ -60,20 +55,17 @@ func (c CPI) CreateVMV2(
 		"path": "/",
 	}
 
-	instancesPost := api.InstancesPost{
-		InstancePut: api.InstancePut{
-			Devices:  devices,
-			Profiles: []string{c.config.Server.Profile},
-			Config: map[string]string{
-				"raw.qemu": "-bios " + c.config.Server.BIOSPath,
-			},
+	err = c.adapter.CreateVM(adapter.InstanceMetadata{
+		Name:          theCid,
+		StemcellAlias: stemcellCID.AsString(),
+		InstanceType:  props.InstanceType,
+		Project:       c.config.Server.Project,
+		Devices:       devices,
+		Profiles:      []string{c.config.Server.Profile},
+		Config: map[string]string{
+			"raw.qemu": "-bios " + c.config.Server.BIOSPath,
 		},
-		Name:         theCid,
-		InstanceType: props.InstanceType,
-		Source:       instanceSource,
-		Type:         api.InstanceTypeVM,
-	}
-	err = wait(c.client.CreateInstance(instancesPost))
+	})
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating VM")
 	}
@@ -94,7 +86,7 @@ func (c CPI) CreateVMV2(
 		}
 		diskCid := DISK_EPHEMERAL_PREFIX + diskId
 
-		err = c.createDisk(props.EphemeralDisk, diskCid)
+		err = c.adapter.CreateStoragePoolVolume(c.config.Server.StoragePool, diskCid, props.EphemeralDisk)
 		if err != nil {
 			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Create ephemeral disk")
 		}
@@ -112,6 +104,6 @@ func (c CPI) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Write AgentEnv")
 	}
 
-	err = c.startVM(vmCID)
+	err = c.adapter.SetInstanceAction(vmCID.AsString(), "start")
 	return vmCID, networks, err
 }

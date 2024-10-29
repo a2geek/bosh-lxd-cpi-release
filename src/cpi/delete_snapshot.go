@@ -18,5 +18,5 @@ func (c CPI) DeleteSnapshot(snapshotCID apiv1.SnapshotCID) error {
 		return bosherr.Error("expecting snapshot CID to include both volume and snapshot names")
 	}
 
-	return wait(c.client.DeleteStoragePoolVolumeSnapshot(c.config.Server.StoragePool, "custom", volumeName, snapshotName))
+	return c.adapter.DeleteStoragePoolVolumeSnapshot(c.config.Server.StoragePool, "custom", volumeName, snapshotName)
 }
