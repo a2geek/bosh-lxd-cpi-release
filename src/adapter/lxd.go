@@ -39,7 +39,7 @@ type lxdApiAdapter struct {
 	client client.InstanceServer
 }
 
-func (a *lxdApiAdapter) FindExistingStemcell(description string) (string, error) {
+func (a *lxdApiAdapter) FindExistingImage(description string) (string, error) {
 	images, err := a.client.GetImages()
 	if err != nil {
 		return "", err
@@ -52,7 +52,7 @@ func (a *lxdApiAdapter) FindExistingStemcell(description string) (string, error)
 	return "", nil
 }
 
-func (a *lxdApiAdapter) CreateAndUploadStemcell(meta ImageMetadata) error {
+func (a *lxdApiAdapter) CreateAndUploadImage(meta ImageMetadata) error {
 	image := api.ImagesPost{
 		ImagePut: api.ImagePut{
 			Public:     false,
@@ -122,7 +122,7 @@ func (a *lxdApiAdapter) CreateAndUploadStemcell(meta ImageMetadata) error {
 	return a.client.CreateImageAlias(imageAliasPost)
 }
 
-func (a *lxdApiAdapter) CreateVM(meta InstanceMetadata) error {
+func (a *lxdApiAdapter) CreateInstance(meta InstanceMetadata) error {
 	instancesPost := api.InstancesPost{
 		InstancePut: api.InstancePut{
 			Devices:  meta.Devices,
@@ -149,7 +149,7 @@ func (a *lxdApiAdapter) DeleteStoragePoolVolumeSnapshot(pool, volType, volumeNam
 	return wait(a.client.DeleteStoragePoolVolumeSnapshot(pool, volType, volumeName, snapshotName))
 }
 
-func (a *lxdApiAdapter) DeleteStemcell(alias string) error {
+func (a *lxdApiAdapter) DeleteImage(alias string) error {
 	imageAlias, _, err := a.client.GetImageAlias(alias)
 	if err != nil {
 		return err

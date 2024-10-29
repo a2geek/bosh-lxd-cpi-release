@@ -6,5 +6,5 @@ import (
 
 func (c CPI) DeleteStemcell(cid apiv1.StemcellCID) error {
 	alias := cid.AsString()
-	return c.adapter.DeleteStemcell(alias)
+	return c.adapter.DeleteImage(alias)
 }

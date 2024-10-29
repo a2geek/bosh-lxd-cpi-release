@@ -24,7 +24,7 @@ func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) 
 
 	description := props.Name + "-" + props.Version
 
-	existing, err := c.adapter.FindExistingStemcell(description)
+	existing, err := c.adapter.FindExistingImage(description)
 	if err != nil {
 		return apiv1.StemcellCID{}, bosherr.WrapError(err, "error while locating image")
 	}
@@ -67,7 +67,7 @@ func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) 
 		rootDeviceName = "/"
 	}
 
-	err = c.adapter.CreateAndUploadStemcell(adapter.ImageMetadata{
+	err = c.adapter.CreateAndUploadImage(adapter.ImageMetadata{
 		Alias:          alias,
 		Description:    description,
 		OsDistro:       props.OsDistro,

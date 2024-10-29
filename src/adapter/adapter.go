@@ -3,16 +3,15 @@ package adapter
 import "io"
 
 type ApiAdapter interface {
-	// TODO FIX NAMES - USE LXD/Incus TERMINOLOGY
-	FindExistingStemcell(description string) (string, error)
-	CreateAndUploadStemcell(meta ImageMetadata) error
-	DeleteStemcell(alias string) error
+	FindExistingImage(description string) (string, error)
+	CreateAndUploadImage(meta ImageMetadata) error
+	DeleteImage(alias string) error
 
-	// TODO FIX NAMES - USE LXD/Incus TERMINOLOGY
-	CreateVM(meta InstanceMetadata) error
+	CreateInstance(meta InstanceMetadata) error
 	DeleteInstance(name string) error
 	GetInstance(name string) (string, error)
 	UpdateInstanceDescription(name, newDescription string) error
+	// Create action constants
 	SetInstanceAction(instanceName, action string) error
 	IsInstanceStopped(name string) (bool, error)
 

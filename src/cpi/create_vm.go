@@ -55,7 +55,7 @@ func (c CPI) CreateVMV2(
 		"path": "/",
 	}
 
-	err = c.adapter.CreateVM(adapter.InstanceMetadata{
+	err = c.adapter.CreateInstance(adapter.InstanceMetadata{
 		Name:          theCid,
 		StemcellAlias: stemcellCID.AsString(),
 		InstanceType:  props.InstanceType,
