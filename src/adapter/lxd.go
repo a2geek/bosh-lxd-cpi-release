@@ -266,15 +266,15 @@ func (a *lxdApiAdapter) GetDevices(instanceName string) (map[string]map[string]s
 	return instance.Devices, nil
 }
 
-func (a *lxdApiAdapter) UpdateStoragePoolVolumeDescription(poolName, diskName, description string) error {
-	volume, etag, err := a.client.GetStoragePoolVolume(poolName, "custom", diskName)
+func (a *lxdApiAdapter) UpdateStoragePoolVolumeDescription(pool, diskName, description string) error {
+	volume, etag, err := a.client.GetStoragePoolVolume(pool, "custom", diskName)
 	if err != nil {
 		return err
 	}
 
 	volume.Description = description
 
-	return a.client.UpdateStoragePoolVolume(poolName, "custom", diskName, volume.Writable(), etag)
+	return a.client.UpdateStoragePoolVolume(pool, "custom", diskName, volume.Writable(), etag)
 }
 
 func (a *lxdApiAdapter) SetInstanceAction(instanceName string, action Action) error {

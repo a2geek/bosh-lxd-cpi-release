@@ -14,15 +14,13 @@ type ApiAdapter interface {
 	SetInstanceAction(instanceName string, action Action) error
 	IsInstanceStopped(name string) (bool, error)
 
-	// TODO StoragePoolVolumeMeta?
 	DeleteStoragePoolVolume(pool, name string) error
 	GetStoragePoolVolume(pool, name string) (string, error)
 	ResizeStoragePoolVolume(pool, name string, newSize int) error
 	CreateStoragePoolVolumeFromISO(pool, diskName string, backupFile io.Reader) error
 	CreateStoragePoolVolume(pool, name string, size int) error
-	UpdateStoragePoolVolumeDescription(poolName, diskName, description string) error
+	UpdateStoragePoolVolumeDescription(pool, diskName, description string) error
 
-	// TODO StoragePoolVolumeSnapshotMeta?
 	DeleteStoragePoolVolumeSnapshot(pool, volumeName, snapshotName string) error
 	CreateStoragePoolVolumeSnapshot(pool, volumeName, snapshotName, description string) error
 
