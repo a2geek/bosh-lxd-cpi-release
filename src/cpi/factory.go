@@ -2,6 +2,7 @@ package cpi
 
 import (
 	"bosh-lxd-cpi/adapter"
+	"bosh-lxd-cpi/adapter/lxd"
 	"bosh-lxd-cpi/config"
 	"fmt"
 
@@ -25,7 +26,7 @@ func (f CPIFactory) New(_ apiv1.CallContext) (apiv1.CPI, error) {
 	var err error
 	switch f.config.Server.Type {
 	case "lxd":
-		apiAdapter, err = adapter.NewLXDAdapter(f.config.Server)
+		apiAdapter, err = lxd.NewLXDAdapter(f.config.Server)
 	default:
 		err = fmt.Errorf("unknown api adapter: %s", f.config.Server.Type)
 	}
