@@ -277,14 +277,14 @@ func (a *lxdApiAdapter) UpdateStoragePoolVolumeDescription(poolName, diskName, d
 	return a.client.UpdateStoragePoolVolume(poolName, "custom", diskName, volume.Writable(), etag)
 }
 
-func (a *lxdApiAdapter) SetInstanceAction(instanceName, action string) error {
-	atCurrentState, err := a.isVMAtRequestedState(instanceName, action)
+func (a *lxdApiAdapter) SetInstanceAction(instanceName string, action Action) error {
+	atCurrentState, err := a.isVMAtRequestedState(instanceName, string(action))
 	if err != nil {
 		return err
 	}
 	if !atCurrentState {
 		req := api.InstanceStatePut{
-			Action:   action,
+			Action:   string(action),
 			Timeout:  30,
 			Force:    true,
 			Stateful: false,
@@ -304,7 +304,7 @@ func (a *lxdApiAdapter) IsInstanceStopped(instanceName string) (bool, error) {
 }
 
 // isVMAtRequestedState tests if this action has already been done or completed.
-func (a *lxdApiAdapter) isVMAtRequestedState(instanceName, action string) (bool, error) {
+func (a *lxdApiAdapter) isVMAtRequestedState(instanceName, state string) (bool, error) {
 	currentState, _, err := a.client.GetInstanceState(instanceName)
 	if err != nil {
 		return false, err
@@ -312,7 +312,7 @@ func (a *lxdApiAdapter) isVMAtRequestedState(instanceName, action string) (bool,
 
 	atRequestedState := false
 
-	switch action {
+	switch state {
 	case "stop":
 		atRequestedState = a.hasMatch(currentState.StatusCode, api.Stopped, api.Stopping)
 	case "start":

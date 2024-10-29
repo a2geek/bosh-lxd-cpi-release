@@ -11,8 +11,7 @@ type ApiAdapter interface {
 	DeleteInstance(name string) error
 	GetInstance(name string) (string, error)
 	UpdateInstanceDescription(name, newDescription string) error
-	// Create action constants
-	SetInstanceAction(instanceName, action string) error
+	SetInstanceAction(instanceName string, action Action) error
 	IsInstanceStopped(name string) (bool, error)
 
 	// TODO StoragePoolVolumeMeta?
@@ -54,3 +53,11 @@ type InstanceMetadata struct {
 	Profiles      []string
 	Config        map[string]string
 }
+
+type Action string
+
+const (
+	StartAction   Action = "start"
+	StopAction    Action = "stop"
+	RestartAction Action = "restart"
+)

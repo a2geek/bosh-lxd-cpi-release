@@ -1,12 +1,14 @@
 package cpi
 
 import (
+	"bosh-lxd-cpi/adapter"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 )
 
 func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
-	err := c.adapter.SetInstanceAction(vmCID.AsString(), "stop")
+	err := c.adapter.SetInstanceAction(vmCID.AsString(), adapter.StopAction)
 	if err != nil {
 		return bosherr.WrapError(err, "Stopping instance")
 	}
@@ -28,7 +30,7 @@ func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
 		return bosherr.WrapError(err, "Write AgentEnv")
 	}
 
-	err = c.adapter.SetInstanceAction(vmCID.AsString(), "start")
+	err = c.adapter.SetInstanceAction(vmCID.AsString(), adapter.StartAction)
 	if err != nil {
 		return bosherr.WrapError(err, "Starting instance")
 	}

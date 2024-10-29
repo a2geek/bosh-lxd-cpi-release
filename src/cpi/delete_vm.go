@@ -1,12 +1,14 @@
 package cpi
 
 import (
+	"bosh-lxd-cpi/adapter"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 )
 
 func (c CPI) DeleteVM(vmCID apiv1.VMCID) error {
-	err := c.adapter.SetInstanceAction(vmCID.AsString(), "stop")
+	err := c.adapter.SetInstanceAction(vmCID.AsString(), adapter.StopAction)
 	if err != nil {
 		return bosherr.WrapError(err, "Delete VM - stop")
 	}

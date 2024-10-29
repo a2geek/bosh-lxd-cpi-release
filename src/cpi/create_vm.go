@@ -104,6 +104,6 @@ func (c CPI) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Write AgentEnv")
 	}
 
-	err = c.adapter.SetInstanceAction(vmCID.AsString(), "start")
+	err = c.adapter.SetInstanceAction(vmCID.AsString(), adapter.StartAction)
 	return vmCID, networks, err
 }
