@@ -16,6 +16,7 @@ type ApiAdapter interface {
 
 	DeleteStoragePoolVolume(pool, name string) error
 	GetStoragePoolVolume(pool, name string) (string, error)
+	GetStoragePoolVolumeUsage(pool string) (map[string]int, error)
 	ResizeStoragePoolVolume(pool, name string, newSize int) error
 	CreateStoragePoolVolumeFromISO(pool, diskName string, backupFile io.Reader) error
 	CreateStoragePoolVolume(pool, name string, size int) error
@@ -27,6 +28,8 @@ type ApiAdapter interface {
 	AttachDevice(instanceName, deviceName string, device map[string]string) error
 	DetachDevice(instanceName, deviceName string) error
 	GetDevices(instanceName string) (map[string]map[string]string, error)
+
+	Disconnect()
 }
 
 type ImageMetadata struct {

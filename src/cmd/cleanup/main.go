@@ -1,13 +1,13 @@
 package main
 
 import (
+	"bosh-lxd-cpi/adapter/factory"
 	"bosh-lxd-cpi/config"
 	"bosh-lxd-cpi/cpi"
 	"flag"
 	"os"
 	"strings"
 
-	lxdclient "github.com/canonical/lxd/client"
 	boshlog "github.com/cloudfoundry/bosh-utils/logger"
 	boshsys "github.com/cloudfoundry/bosh-utils/system"
 )
@@ -35,44 +35,34 @@ func main() {
 		os.Exit(1)
 	}
 
-	connectionArgs := &lxdclient.ConnectionArgs{
-		TLSClientCert:      config.Server.TLSClientCert,
-		TLSClientKey:       config.Server.TLSClientKey,
-		InsecureSkipVerify: config.Server.InsecureSkipVerify,
-	}
-	c, err := lxdclient.ConnectLXD(config.Server.URL, connectionArgs)
+	adapter, err := factory.NewAdapter(config.Server)
 	if err != nil {
-		logger.Error("main", "ConnectingLXD: %s", err.Error())
+		logger.Error("main", "API Adapter: %s", err.Error())
 		os.Exit(2)
 	}
 
-	// If a project has been specified, we use it _always_
-	if len(config.Server.Project) != 0 {
-		c = c.UseProject(config.Server.Project)
-	}
-
-	volumes, err := c.GetStoragePoolVolumes(config.Server.StoragePool)
+	volumes, err := adapter.GetStoragePoolVolumeUsage(config.Server.StoragePool)
 	if err != nil {
-		logger.Error("main", "GetStoragePoolVolumes: %s", err.Error())
+		logger.Error("main", "GetStoragePoolVolumeUsage: %s", err.Error())
 		os.Exit(3)
 	}
 
 	processed := 0
 	removed := 0
 	failed := 0
-	for _, volume := range volumes {
-		if strings.HasPrefix(volume.Name, cpi.DISK_CONFIGURATION_PREFIX) && len(volume.UsedBy) == 0 {
+	for name, count := range volumes {
+		if strings.HasPrefix(name, cpi.DISK_CONFIGURATION_PREFIX) && count == 0 {
 			processed++
 			if *dryRunOpt {
-				logger.Info("main", "%s (skipping, dry run)", volume.Name)
+				logger.Info("main", "%s (skipping, dry run)", name)
 			} else {
-				err = c.DeleteStoragePoolVolume(config.Server.StoragePool, volume.Type, volume.Name)
+				err = adapter.DeleteStoragePoolVolume(config.Server.StoragePool, name)
 				if err != nil {
 					failed++
-					logger.Warn("main", "Unable to delete %s: %s", volume.Name, err.Error())
+					logger.Warn("main", "Unable to delete %s: %s", name, err.Error())
 				} else {
 					removed++
-					logger.Info("main", "Removed %s", volume.Name)
+					logger.Info("main", "Removed %s", name)
 				}
 			}
 		}
@@ -80,5 +70,5 @@ func main() {
 
 	logger.Info("main", "Complete. %d processed, %d removed, %d failed.", processed, removed, failed)
 
-	c.Disconnect()
+	adapter.Disconnect()
 }

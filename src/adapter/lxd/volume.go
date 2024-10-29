@@ -61,3 +61,15 @@ func (a *lxdApiAdapter) UpdateStoragePoolVolumeDescription(pool, diskName, descr
 
 	return a.client.UpdateStoragePoolVolume(pool, "custom", diskName, volume.Writable(), etag)
 }
+func (a *lxdApiAdapter) GetStoragePoolVolumeUsage(pool string) (map[string]int, error) {
+	volumes, err := a.client.GetStoragePoolVolumes(pool)
+	if err != nil {
+		return nil, err
+	}
+
+	data := map[string]int{}
+	for _, volume := range volumes {
+		data[volume.Name] = len(volume.UsedBy)
+	}
+	return data, nil
+}

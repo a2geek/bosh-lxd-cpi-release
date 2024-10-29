@@ -1,10 +1,8 @@
 package cpi
 
 import (
-	"bosh-lxd-cpi/adapter"
-	"bosh-lxd-cpi/adapter/lxd"
+	"bosh-lxd-cpi/adapter/factory"
 	"bosh-lxd-cpi/config"
-	"fmt"
 
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 
@@ -22,14 +20,7 @@ func NewFactory(config config.Config, logger boshlog.Logger) CPIFactory {
 }
 
 func (f CPIFactory) New(_ apiv1.CallContext) (apiv1.CPI, error) {
-	var apiAdapter adapter.ApiAdapter
-	var err error
-	switch f.config.Server.Type {
-	case "lxd":
-		apiAdapter, err = lxd.NewLXDAdapter(f.config.Server)
-	default:
-		err = fmt.Errorf("unknown api adapter: %s", f.config.Server.Type)
-	}
+	apiAdapter, err := factory.NewAdapter(f.config.Server)
 	if err != nil {
 		return nil, err
 	}
