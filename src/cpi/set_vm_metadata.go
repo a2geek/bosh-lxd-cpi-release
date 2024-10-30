@@ -19,13 +19,13 @@ func (c CPI) SetVMMetadata(cid apiv1.VMCID, metadata apiv1.VMMeta) error {
 		return bosherr.WrapError(err, "SetVMMetadata - update instance description")
 	}
 
-	disks, err := c.findEphemeralDisksAttachedToVM(cid)
+	disks, err := c.findDisksAttachedToVm(cid)
 	if err != nil {
-		return bosherr.WrapError(err, "SetVMMetadata - enumerate ephemeral disks")
+		return bosherr.WrapError(err, "SetVMMetadata - enumerate disks")
 	}
 
-	for _, disk := range disks {
-		err = c.adapter.UpdateStoragePoolVolumeDescription(c.config.Server.StoragePool, disk, description)
+	if device, ok := disks[DISK_DEVICE_EPHEMERAL]; ok {
+		err = c.adapter.UpdateStoragePoolVolumeDescription(c.config.Server.StoragePool, device["source"], description)
 		if err != nil {
 			return bosherr.WrapError(err, "SetVMMetadata - Update storage volume description")
 		}

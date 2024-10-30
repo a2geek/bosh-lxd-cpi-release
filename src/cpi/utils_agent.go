@@ -30,12 +30,13 @@ func (c CPI) writeAgentFileToVM(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) erro
 		return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Create", vmCID.AsString())
 	}
 
-	configuration, err := c.findConfigurationDisksAttachedToVM(vmCID)
+	disks, err := c.findDisksAttachedToVm(vmCID)
 	if err != nil {
 		return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Find", vmCID.AsString())
 	}
-	for _, configDiskName := range configuration {
-		err = c.adapter.DetachDevice(vmCID.AsString(), configDiskName)
+
+	if disk, ok := disks[DISK_DEVICE_CONFIG]; ok {
+		err = c.adapter.DetachDevice(vmCID.AsString(), DISK_DEVICE_CONFIG)
 		if err != nil {
 			return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Remove", vmCID.AsString())
 		}
@@ -44,14 +45,14 @@ func (c CPI) writeAgentFileToVM(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) erro
 		if err != nil {
 			return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Check State", vmCID.AsString())
 		} else if stopped {
-			err = c.adapter.DeleteStoragePoolVolume(c.config.Server.StoragePool, configDiskName)
+			err = c.adapter.DeleteStoragePoolVolume(c.config.Server.StoragePool, disk["source"])
 			if err != nil {
 				return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Delete", vmCID.AsString())
 			}
 		}
 	}
 
-	err = c.attachDiskDeviceToVM(vmCID, diskName)
+	err = c.attachDiskDeviceToVM(vmCID, DISK_DEVICE_CONFIG, diskName)
 	if err != nil {
 		return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Attach", vmCID.AsString())
 	}
