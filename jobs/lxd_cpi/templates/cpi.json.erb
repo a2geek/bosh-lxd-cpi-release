@@ -2,15 +2,16 @@
 
 config = {
   "Server" => {
-    "URL" => p("lxd_cpi.lxd.url"),
-    "InsecureSkipVerify" => p("lxd_cpi.lxd.insecure_skip_verify"),
-    "TLSClientCert" => p("lxd_cpi.lxd.tls_client_cert"),
-    "TLSClientKey" => p("lxd_cpi.lxd.tls_client_key"),
-    "Project" => p("lxd_cpi.lxd.project_name"),
-    "Profile" => p("lxd_cpi.lxd.profile_name"),
-    "Network" => p("lxd_cpi.lxd.network_name"),
-    "StoragePool" => p("lxd_cpi.lxd.storage_pool_name"),
-    "BIOSPath" => p("lxd_cpi.lxd.bios_path")
+    "Type" => p("lxd_cpi.server.type"),
+    "URL" => p("lxd_cpi.server.url"),
+    "InsecureSkipVerify" => p("lxd_cpi.server.insecure_skip_verify"),
+    "TLSClientCert" => p("lxd_cpi.server.tls_client_cert"),
+    "TLSClientKey" => p("lxd_cpi.server.tls_client_key"),
+    "Project" => p("lxd_cpi.server.project_name"),
+    "Profile" => p("lxd_cpi.server.profile_name"),
+    "Network" => p("lxd_cpi.server.network_name"),
+    "StoragePool" => p("lxd_cpi.server.storage_pool_name"),
+    "BIOSPath" => p("lxd_cpi.server.bios_path")
   },
   "Agent" => {
     "Mbus" => p("lxd_cpi.agent.mbus"),

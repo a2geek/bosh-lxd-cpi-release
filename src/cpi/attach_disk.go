@@ -13,11 +13,6 @@ func (c CPI) AttachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
 }
 
 func (c CPI) AttachDiskV2(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) (apiv1.DiskHint, error) {
-	// err := c.stopVM(vmCID)
-	// if err != nil {
-	// 	return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Stopping instance")
-	// }
-
 	agentEnv, err := c.agentMgr.Read(vmCID)
 	if err != nil {
 		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Read AgentEnv")
@@ -30,15 +25,18 @@ func (c CPI) AttachDiskV2(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) (apiv1.DiskH
 	}
 	json := string(rawBytes)
 	var path string
+	var name string
 	if !strings.Contains(json, "/dev/sdc") {
 		path = "/dev/sdc"
+		name = DISK_DEVICE_PERSISTENT1
 	} else if !strings.Contains(json, "/dev/sdd") {
 		path = "/dev/sdd"
+		name = DISK_DEVICE_PERSISTENT2
 	} else {
 		return apiv1.NewDiskHintFromString(""), bosherr.Error("Unable to find device for persistent disk")
 	}
 
-	err = c.attachDiskToVM(vmCID, diskCID.AsString())
+	err = c.attachDiskDeviceToVM(vmCID, name, diskCID.AsString())
 	if err != nil {
 		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Attach disk")
 	}
@@ -50,11 +48,6 @@ func (c CPI) AttachDiskV2(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) (apiv1.DiskH
 	if err != nil {
 		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Write AgentEnv")
 	}
-
-	// err = c.startVM(vmCID)
-	// if err != nil {
-	// 	return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Starting instance")
-	// }
 
 	return diskHint, nil
 }

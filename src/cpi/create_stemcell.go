@@ -2,20 +2,12 @@ package cpi
 
 import (
 	"archive/tar"
-	"bytes"
+	"bosh-lxd-cpi/adapter"
 	"compress/gzip"
-	"fmt"
 	"os"
-	"path"
 
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
-
-	lxdclient "github.com/canonical/lxd/client"
-	"github.com/canonical/lxd/shared/api"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
-	yaml "gopkg.in/yaml.v2"
 )
 
 func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) (apiv1.StemcellCID, error) {
@@ -32,26 +24,15 @@ func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) 
 
 	description := props.Name + "-" + props.Version
 
-	images, err := c.client.GetImages()
+	existing, err := c.adapter.FindExistingImage(description)
 	if err != nil {
-		return apiv1.StemcellCID{}, bosherr.WrapError(err, "error while inspecting images")
+		return apiv1.StemcellCID{}, bosherr.WrapError(err, "error while locating image")
 	}
-	for _, image := range images {
-		if description == image.Properties["description"] {
-			alias := image.Aliases[0].Name
-			return apiv1.NewStemcellCID(alias), nil
-		}
+	if existing != "" {
+		return apiv1.NewStemcellCID(existing), nil
 	}
 
 	alias := "img-" + id
-	image := api.ImagesPost{
-		ImagePut: api.ImagePut{
-			Public:     false,
-			AutoUpdate: false,
-		},
-		Filename: path.Base(imagePath),
-	}
-	fmt.Fprintf(os.Stderr, "%v\n", image)
 
 	tarGzip, err := os.Open(imagePath)
 	if err != nil {
@@ -86,68 +67,16 @@ func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) 
 		rootDeviceName = "/"
 	}
 
-	metadata := api.ImageMetadata{
-		Architecture: props.Architecture,
-		CreationDate: createDate,
-		Properties: map[string]string{
-			"architecture":     props.Architecture,
-			"description":      description,
-			"os":               cases.Title(language.English).String(props.OsDistro),
-			"root_device_name": rootDeviceName,
-			"root_disk_size":   fmt.Sprintf("%dMiB", props.Disk),
-		},
-	}
-	metadataYaml, err := yaml.Marshal(metadata)
-	if err != nil {
-		return apiv1.StemcellCID{}, bosherr.WrapError(err, "creating metadata yaml file")
-	}
-
-	var buf bytes.Buffer
-	theader := &tar.Header{
-		Name: "metadata.yaml",
-		Mode: 0600,
-		Size: int64(len(metadataYaml)),
-	}
-	tw := tar.NewWriter(&buf)
-	if err := tw.WriteHeader(theader); err != nil {
-		return apiv1.StemcellCID{}, bosherr.WrapError(err, "tar write header")
-	}
-	if _, err := tw.Write(metadataYaml); err != nil {
-		return apiv1.StemcellCID{}, bosherr.WrapError(err, "tar write metadata file")
-	}
-	if err := tw.Close(); err != nil {
-		return apiv1.StemcellCID{}, bosherr.WrapError(err, "tar close")
-	}
-
-	args := lxdclient.ImageCreateArgs{
-		MetaFile:   bytes.NewReader(buf.Bytes()),
-		RootfsFile: tarFile,
-		Type:       string(api.InstanceTypeVM),
-	}
-	op, err := c.client.CreateImage(image, &args)
-	if err != nil {
-		return apiv1.StemcellCID{}, bosherr.WrapError(err, "Importing image - start")
-	}
-
-	err = op.Wait()
-	if err != nil {
-		return apiv1.StemcellCID{}, bosherr.WrapError(err, "Importing image - processing")
-	}
-
-	opAPI := op.Get()
-	fingerprint := opAPI.Metadata["fingerprint"].(string)
-
-	imageAliasPost := api.ImageAliasesPost{
-		ImageAliasesEntry: api.ImageAliasesEntry{
-			Name:        alias,
-			Description: "bosh image",
-			Target:      fingerprint,
-		},
-	}
-	err = c.client.CreateImageAlias(imageAliasPost)
-	if err != nil {
-		return apiv1.StemcellCID{}, bosherr.WrapError(err, "setting alias")
-	}
-
-	return apiv1.NewStemcellCID(alias), nil
+	err = c.adapter.CreateAndUploadImage(adapter.ImageMetadata{
+		Alias:          alias,
+		Description:    description,
+		OsDistro:       props.OsDistro,
+		ImagePath:      imagePath,
+		Architecture:   props.Architecture,
+		CreateDate:     createDate,
+		RootDeviceName: rootDeviceName,
+		DiskInMB:       props.Disk,
+		TarFile:        tarFile,
+	})
+	return apiv1.NewStemcellCID(alias), err
 }

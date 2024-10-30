@@ -10,31 +10,24 @@ import (
 func (c CPI) SetVMMetadata(cid apiv1.VMCID, metadata apiv1.VMMeta) error {
 	actual, err := NewActualVMMeta(metadata)
 	if err != nil {
-		return bosherr.WrapError(err, "Unmarshal VMMeta to ActualVMMeta")
-	}
-
-	instance, _, err := c.client.GetInstance(cid.AsString())
-	if err != nil {
-		return bosherr.WrapError(err, "Get instance state")
+		return bosherr.WrapError(err, "SetVMMetadata - Unmarshal VMMeta to ActualVMMeta")
 	}
 
 	description := fmt.Sprintf("%s/%s", actual.Job, actual.Index)
-	instance.Description = description
-
-	err = wait(c.client.UpdateInstance(cid.AsString(), instance.Writable(), ""))
+	err = c.adapter.UpdateInstanceDescription(cid.AsString(), description)
 	if err != nil {
-		return bosherr.WrapErrorf(err, "Update instance state; status=%s", instance.Status)
+		return bosherr.WrapError(err, "SetVMMetadata - update instance description")
 	}
 
-	disks, err := c.findEphemeralDisksAttachedToVM(cid)
+	disks, err := c.findDisksAttachedToVm(cid)
 	if err != nil {
-		return bosherr.WrapError(err, "Delete VM - enumerate ephemeral disks")
+		return bosherr.WrapError(err, "SetVMMetadata - enumerate disks")
 	}
 
-	for _, disk := range disks {
-		err = c.setDiskMetadata(apiv1.NewDiskCID(disk), description)
+	if device, ok := disks[DISK_DEVICE_EPHEMERAL]; ok {
+		err = c.adapter.UpdateStoragePoolVolumeDescription(c.config.Server.StoragePool, device["source"], description)
 		if err != nil {
-			return bosherr.WrapError(err, "Update storage volume description")
+			return bosherr.WrapError(err, "SetVMMetadata - Update storage volume description")
 		}
 	}
 

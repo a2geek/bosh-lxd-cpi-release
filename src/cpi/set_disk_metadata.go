@@ -13,7 +13,8 @@ func (c CPI) SetDiskMetadata(cid apiv1.DiskCID, metadata apiv1.DiskMeta) error {
 		return bosherr.WrapError(err, "Unmarshalling DiskMeta")
 	}
 
-	err = c.setDiskMetadata(cid, fmt.Sprintf("%s/%s", actual.InstanceGroup, actual.InstanceIndex))
+	description := fmt.Sprintf("%s/%s", actual.InstanceGroup, actual.InstanceIndex)
+	err = c.adapter.UpdateStoragePoolVolumeDescription(c.config.Server.StoragePool, cid.AsString(), description)
 	if err != nil {
 		return bosherr.WrapError(err, "Update storage volume description")
 	}

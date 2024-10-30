@@ -1,10 +1,10 @@
-package cpi
+package incus
 
 import (
 	"strings"
 
-	lxd "github.com/canonical/lxd/client"
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
+	client "github.com/lxc/incus/client"
 )
 
 // General utilities; not dependent on the CPI structure
@@ -16,7 +16,7 @@ func checkError(err error) error {
 	return err
 }
 
-func wait(op lxd.Operation, err error) error {
+func wait(op client.Operation, err error) error {
 	if checkError(err) != nil {
 		return err
 	}

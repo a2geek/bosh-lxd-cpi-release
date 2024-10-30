@@ -6,9 +6,5 @@ import (
 
 func (c CPI) DeleteStemcell(cid apiv1.StemcellCID) error {
 	alias := cid.AsString()
-	imageAlias, _, err := c.client.GetImageAlias(alias)
-	if err != nil {
-		return err
-	}
-	return wait(c.client.DeleteImage(imageAlias.Target))
+	return c.adapter.DeleteImage(alias)
 }

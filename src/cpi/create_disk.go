@@ -15,7 +15,7 @@ func (c CPI) CreateDisk(size int,
 	theCid := DISK_PERSISTENT_PREFIX + id
 	diskCid := apiv1.NewDiskCID(theCid)
 
-	err = c.createDisk(size, theCid)
+	err = c.adapter.CreateStoragePoolVolume(c.config.Server.StoragePool, theCid, size)
 	if err != nil {
 		return apiv1.DiskCID{}, bosherr.WrapError(err, "Creating volume")
 	}

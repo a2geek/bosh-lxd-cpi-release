@@ -1,0 +1,21 @@
+---
+releases:
+- name: "os-conf"
+  version: "22.3.0"
+  url: "https://bosh.io/d/github.com/cloudfoundry/os-conf-release?v=22.3.0"
+  sha1: "0f88a29315d8d9f900bb30a81c0eaf6d34a61639"
+
+addons:
+- name: incus-agent
+  jobs:
+  - name: pre-start-script
+    release: "os-conf"
+    properties:
+      script: |
+        #!/bin/bash
+        mount -t 9p config /mnt
+        cd /mnt
+        ./install.sh 
+        cd /
+        umount /mnt
+        systemctl start incus-agent
