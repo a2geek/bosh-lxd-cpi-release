@@ -2,19 +2,23 @@
 
 > Would love PRs if people are still playing with BOSH in 2024!
 
-This is a [BOSH CPI](https://bosh.io/) implementation to support [LXD](https://canonical.com/lxd) ... and likely [Incus](https://linuxcontainers.org/incus/introduction/).  It appears that both LXD and Incus are trying to keep comparable/compatible, so LXD comments (and API calls) hopefully apply to Incus as well.
+This is a [BOSH CPI](https://bosh.io/) implementation to support [LXD](https://canonical.com/lxd) and [Incus](https://linuxcontainers.org/incus/introduction/). Both require BIOS boot capability, so this generally is more recent releases of LXD and Incus.
 
 ## Requirements
 
-LXD 5.21, LXD supports BIOS boots for VMs, which all the BOSH Stemcells use. Without this feature, they must be UEFI boot devices and VMs are not an option.
+LXD 5.21, LXD supports BIOS boots for VMs, which all the BOSH Stemcells use. Without this feature, they must be UEFI boot devices and VMs are not an option. Incus support is in place for the 6.0 LTS release, and likely some of the pre-releases.
 
-As this depends on LXD, which is Linux only, this is also Linux only. Note that the BOSH deployment can be run from a Mac, and presumably from the Linux on WSL.
+Note that the (initial) BOSH deployment can be run from Linux, a Mac, and presumably from the Linux on WSL. Once a BOSH director is running, the BOSH CLI can be used from [pretty much anywhere](https://bosh.io/docs/cli-v2-install/).
 
-The current development environment is Ubuntu 22.04. LXD (currently `5.21/stable`) has been installed via a Snap and [this guide](https://documentation.ubuntu.com/lxd/en/latest/tutorial/first_steps/) was generally followed.
+The current development environments are Ubuntu 22.04:
+
+* LXD (currently `5.21/stable`) has been installed via a Snap and [this guide](https://documentation.ubuntu.com/lxd/en/latest/tutorial/first_steps/) was generally followed
+* Incus (currently `6.0.0-1ubuntu0.1`) has been installed via `apt` and [the documentation](https://linuxcontainers.org/incus/docs/main/installing/#installing) was followed for Ubuntu.
 
 ## Documentation
 
-* [LXD Setup](docs/LXD-SETUP.md) contains some notes from setting up the development environment.
+* [LXD Setup](docs/LXD-SETUP.md) contains some notes from setting up the LXD development environment.
+* [Incus Setup](docs/INCUS-SETUP.md) contains some notes regarding Incus.
 * [Authentication](docs/AUTHENTICATION.md) shows an example for how to setup the certificate authentication for LXD.
 * [Developing](docs/DEVELOPING.md) covers how the tools in this repository are used.
 * [Deploying a BOSH director](docs/DEPLOYING.md) walks through a sample deployment for a fresh install (of nearly everything).
@@ -23,16 +27,11 @@ The current development environment is Ubuntu 22.04. LXD (currently `5.21/stable
 
 ## Current State
 
-* A BOSH Director can be stood up.
-* Network is configured and available.
-* Disk is provisioned and attached.
-* Generally, the common CPI calls are all implemented at this time, including the optional CPI methods:
-  * snapshots ([`snapshot_disk`](https://bosh.io/docs/cpi-api-v2-method/snapshot-disk/), [`delete_snapshot`](https://bosh.io/docs/cpi-api-v2-method/delete-snapshot/))
-  * IaaS-native disk resizing ([`resize_disk`](https://bosh.io/docs/cpi-api-v2-method/resize-disk/))
+All CPI calls have been implemented, including snapshots and IaaS-native disk resizing.
 
 ### LXD adjustments
 
-* There is a nightly scheduled process to look for unused configuration disks (`vol-c-<uuid>` format) since LXD doesn't give up a disk attachment unless a reboot of the VM occurs. (Or the LXD Agent is installed... which isn't at this time). It simply scan the list of detached configuration disks, tries to delete them, and reports success or error in the log. See [cleanup](src/cmd/cleanup/main.go).
+* There is a nightly scheduled process to look for unused configuration disks (`vol-c-<uuid>` format). There are events (at least with ZFS) where the configuration disk sometimes doesn't get detached from the VM. The nigltly process simply scans the list of detached configuration disks, tries to delete them, and reports success or error in the log. See [cleanup](src/cmd/cleanup/main.go).
 * Throttling. Not so much LXD, but more the single host conundrum. There is a server that runs and maintains a hash map of "transaction" reservations. Once the CPI level transaction completes, the transaction is also released. Additionally, these reservations will time out after a certain amount time. _By default, this is disabled._ (See Tuning for more details. Code is at [throttle](src/cmd/cleanup/main.go).)
 
 ### Tuning
@@ -52,4 +51,4 @@ Beyond the general tuning of a VM size (# of CPUs, amount of memory, or sizing o
       hold: "2m"
   ```
 
-  > Note that the original reason this was required was that for _every VM_ that LXD launched, the QCOW2 format source image gets converted to a RAW format image. This seems to have been resolved. The solution was simply that the `root` disk was specifying the disk size -- which, apprently, triggers LXD to copy the contents of the source image instead of doing overlay type magic.
+  > Note that the original reason this was required was that for _every VM_ that LXD launched, the QCOW2 format source image gets converted to a RAW format image. This seems to have been resolved. The solution was simply that the `root` disk was specifying the disk size -- which, apparently, triggers LXD to copy the contents of the source image instead of doing overlay type magic.
