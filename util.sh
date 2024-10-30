@@ -32,7 +32,8 @@ function do_help() {
   echo "- SERVER_INSECURE (default: false)"
   echo "- SERVER_CLIENT_CERT (set to path of TLS client certificate)"
   echo "- SERVER_CLIENT_KEY (set to path of TLS client key)"
-  echo "- SERVER_ENABLE_AGENT (set to 'lxd' or 'incus' to enable that agent)"
+  echo "- SERVER_TYPE ('lxd' or 'incus', default is 'lxd')"
+  echo "- SERVER_ENABLE_AGENT (set to any value to enable the appropriate agent)"
   echo "- BOSH_DEPLOYMENT_DIR (default: \${HOME}/Documents/Source/bosh-deployment)"
   echo "- BOSH_PACKAGE_GOLANG_DIR (default ../bosh-package-golang-release)"
   echo "- CONCOURSE_DIR when deploying Concourse"
@@ -41,12 +42,14 @@ function do_help() {
   echo "- CPI_CONFIG_DIR (location of vars files, default to 'CPI_DIR/manifests')"
   echo
   echo "Configuration values..."
-  print_varlist server_project_name server_profile_name server_network_name server_storage_pool_name internal_ip
+  print_varlist server_project_name server_profile_name server_network_name server_storage_pool_name internal_ip \
+                cpi_dir cpi_config_dir
   echo
   echo "Currently set environment variables..."
-  print_varlist BOSH_LOG_LEVEL SERVER_URL SERVER_INSECURE SERVER_CLIENT_CERT SERVER_CLIENT_KEY \
-                BOSH_DEPLOYMENT_DIR BOSH_PACKAGE_GOLANG_DIR \
-                CONCOURSE_DIR ZOOKEEPER_DIR POSTGRES_DIR
+  print_varlist BOSH_LOG_LEVEL BOSH_JUMPBOX_ENABLE BOSH_SNAPSHOTS_ENABLE \
+                SERVER_URL SERVER_INSECURE SERVER_CLIENT_CERT SERVER_CLIENT_KEY \
+                SERVER_TYPE SERVER_ENABLE_AGENT BOSH_DEPLOYMENT_DIR BOSH_PACKAGE_GOLANG_DIR \
+                CONCOURSE_DIR POSTGRES_DIR CPI_DIR CPI_CONFIG_DIR
 }
 
 function do_stress_test() {
@@ -172,24 +175,32 @@ function do_deploy_bosh() {
   server_insecure="${SERVER_INSECURE:-false}"
   server_client_cert="${SERVER_CLIENT_CERT:-}"
   server_client_key="${SERVER_CLIENT_KEY:-}"
+  server_type="${SERVER_TYPE:-lxd}"
   server_enable_agent="${SERVER_ENABLE_AGENT:-}"
   jumpbox_enable="${BOSH_JUMPBOX_ENABLE:-}"
   snapshots_enable="${BOSH_SNAPSHOTS_ENABLE:-}"
   resize_disk_enable="${BOSH_RESIZE_DISK_ENABLE:-}"
   internal_dns_enable="$(bosh int ${cpi_config_dir}/bosh-vars.yml --path /internal_dns 2>/dev/null || true)"
 
-  bosh_args=()
+  bosh_args=(--ops-file=${cpi_dir}/ops/enable-${server_type}.yml)
   [ ! -z "${jumpbox_enable}"      ] && bosh_args+=(--ops-file=${bosh_deployment}/jumpbox-user.yml)
   [ ! -z "${snapshots_enable}"    ] && bosh_args+=(--ops-file=${cpi_dir}/ops/enable-snapshots.yml)
   [ ! -z "${resize_disk_enable}"  ] && bosh_args+=(--ops-file=${bosh_deployment}/misc/cpi-resize-disk.yml)
   [ ! -z "${internal_dns_enable}" ] && bosh_args+=(--ops-file=${bosh_deployment}/misc/dns.yml)
-  [ ! -z "${server_enable_agent}" ] && bosh_args+=(--ops-file=${cpi_dir}/ops/enable-${server_enable_agent}-agent.yml)
+  [ ! -z "${server_enable_agent}" ] && bosh_args+=(--ops-file=${cpi_dir}/ops/enable-${server_type}-agent.yml)
 
   if [ ! -z "${local_release}" ]
   then
     cpi_path=$PWD/cpi
-    echo "-----> `date`: Create dev release"
-    bosh create-release --force --tarball $cpi_path
+    if [ -d src ]
+    then
+      echo "-----> `date`: Create dev release"
+      bosh create-release --force --tarball $cpi_path
+    elif [ ! -f ${cpi_path} ]
+    then
+      echo "cpi must be at ${cpi_path}"
+      exit 1
+    fi
     bosh_args+=(--ops-file=${cpi_dir}/ops/local-release.yml --var=cpi_path=${cpi_path})
   fi
 
@@ -254,7 +265,8 @@ function do_runtime_config() {
 
   if [ ! -z "${SERVER_ENABLE_AGENT:-}" ]
   then
-    bosh update-runtime-config --name ${SERVER_ENABLE_AGENT}-agent ${cpi_dir}/manifests/enable-${SERVER_ENABLE_AGENT}-agent-config.yml
+    server_type="${SERVER_ENABLE_AGENT:-lxd}"
+    bosh update-runtime-config --name ${server_type}-agent ${cpi_dir}/manifests/enable-${server_type}-agent-config.yml
   fi
 }
 
