@@ -37,6 +37,8 @@ function do_help() {
   echo "- BOSH_PACKAGE_GOLANG_DIR (default ../bosh-package-golang-release)"
   echo "- CONCOURSE_DIR when deploying Concourse"
   echo "- POSTGRES_DIR when deploying Postgres"
+  echo "- CPI_DIR (location of bosh-lxd-cpi-release, default '.')"
+  echo "- CPI_CONFIG_DIR (location of vars files, default to 'CPI_DIR/manifests')"
   echo
   echo "Configuration values..."
   print_varlist server_project_name server_profile_name server_network_name server_storage_pool_name internal_ip
@@ -105,7 +107,7 @@ function do_deploy_cf() {
     -o $CF_DEPLOYMENT_DIR/operations/override-app-domains.yml \
     -o $CF_DEPLOYMENT_DIR/operations/scale-to-one-az.yml \
     -o $CF_DEPLOYMENT_DIR/operations/use-haproxy.yml \
-    -l manifests/cloudfoundry-vars.yml
+    -l $cpi_config_dir/cloudfoundry-vars.yml
 #    -o $CF_DEPLOYMENT_DIR/operations/set-router-static-ips.yml \
 }
 
@@ -174,32 +176,32 @@ function do_deploy_bosh() {
   jumpbox_enable="${BOSH_JUMPBOX_ENABLE:-}"
   snapshots_enable="${BOSH_SNAPSHOTS_ENABLE:-}"
   resize_disk_enable="${BOSH_RESIZE_DISK_ENABLE:-}"
-  internal_dns_enable="$(bosh int manifests/bosh-vars.yml --path /internal_dns 2>/dev/null || true)"
+  internal_dns_enable="$(bosh int ${cpi_config_dir}/bosh-vars.yml --path /internal_dns 2>/dev/null || true)"
 
   bosh_args=()
   [ ! -z "${jumpbox_enable}"      ] && bosh_args+=(--ops-file=${bosh_deployment}/jumpbox-user.yml)
-  [ ! -z "${snapshots_enable}"    ] && bosh_args+=(--ops-file=ops/enable-snapshots.yml)
+  [ ! -z "${snapshots_enable}"    ] && bosh_args+=(--ops-file=${cpi_dir}/ops/enable-snapshots.yml)
   [ ! -z "${resize_disk_enable}"  ] && bosh_args+=(--ops-file=${bosh_deployment}/misc/cpi-resize-disk.yml)
   [ ! -z "${internal_dns_enable}" ] && bosh_args+=(--ops-file=${bosh_deployment}/misc/dns.yml)
-  [ ! -z "${server_enable_agent}" ] && bosh_args+=(--ops-file=ops/enable-${server_enable_agent}-agent.yml)
+  [ ! -z "${server_enable_agent}" ] && bosh_args+=(--ops-file=${cpi_dir}/ops/enable-${server_enable_agent}-agent.yml)
 
   if [ ! -z "${local_release}" ]
   then
     cpi_path=$PWD/cpi
     echo "-----> `date`: Create dev release"
     bosh create-release --force --tarball $cpi_path
-    bosh_args+=(--ops-file=ops/local-release.yml --var=cpi_path=${cpi_path})
+    bosh_args+=(--ops-file=${cpi_dir}/ops/local-release.yml --var=cpi_path=${cpi_path})
   fi
 
   echo "-----> `date`: Create env"
   bosh create-env ${bosh_deployment}/bosh.yml \
-    --ops-file=cpi.yml \
+    --ops-file=${cpi_dir}/cpi.yml \
     --ops-file=${bosh_deployment}/bbr.yml \
     --ops-file=${bosh_deployment}/uaa.yml \
     --ops-file=${bosh_deployment}/credhub.yml \
     --state=state.json \
     --vars-store=creds/bosh.yml \
-    --vars-file=manifests/bosh-vars.yml \
+    --vars-file=${cpi_config_dir}/bosh-vars.yml \
     --var=server_url=$server_url \
     --var=server_insecure=$server_insecure \
     --var-file=server_client_cert=$server_client_cert \
@@ -237,7 +239,7 @@ function do_capture_requests() {
 
 function do_cloud_config() {
   source scripts/bosh-env.sh
-  bosh update-cloud-config manifests/cloud-config.yml
+  bosh update-cloud-config ${cpi_config_dir}/cloud-config.yml
 }
 
 function do_runtime_config() {
@@ -252,7 +254,7 @@ function do_runtime_config() {
 
   if [ ! -z "${SERVER_ENABLE_AGENT:-}" ]
   then
-    bosh update-runtime-config --name ${SERVER_ENABLE_AGENT}-agent manifests/enable-${SERVER_ENABLE_AGENT}-agent-config.yml
+    bosh update-runtime-config --name ${SERVER_ENABLE_AGENT}-agent ${cpi_dir}/manifests/enable-${SERVER_ENABLE_AGENT}-agent-config.yml
   fi
 }
 
@@ -318,7 +320,7 @@ function do_deploy_concourse() {
        -o $CONCOURSE_DIR/cluster/operations/privileged-http.yml \
        -l $CONCOURSE_DIR/versions.yml \
        --vars-store=creds/concourse.yml \
-       -l manifests/concourse-vars.yml
+       -l ${cpi_config_dir}/concourse-vars.yml
 }
 
 function do_deploy_postgres() {
@@ -337,11 +339,11 @@ function do_deploy_postgres() {
 }
 
 function read_config_file() {
-  server_project_name=$(bosh interpolate manifests/bosh-vars.yml --path /server_project_name)
-  server_profile_name=$(bosh interpolate manifests/bosh-vars.yml --path /server_profile_name)
-  server_network_name=$(bosh interpolate manifests/bosh-vars.yml --path /server_network_name)
-  server_storage_pool_name=$(bosh interpolate manifests/bosh-vars.yml --path /server_storage_pool_name)
-  internal_ip=$(bosh interpolate manifests/bosh-vars.yml --path /internal_ip)
+  server_project_name=$(bosh interpolate ${cpi_config_dir}/bosh-vars.yml --path /server_project_name)
+  server_profile_name=$(bosh interpolate ${cpi_config_dir}/bosh-vars.yml --path /server_profile_name)
+  server_network_name=$(bosh interpolate ${cpi_config_dir}/bosh-vars.yml --path /server_network_name)
+  server_storage_pool_name=$(bosh interpolate ${cpi_config_dir}/bosh-vars.yml --path /server_storage_pool_name)
+  internal_ip=$(bosh interpolate ${cpi_config_dir}/bosh-vars.yml --path /internal_ip)
 }
 
 if [[ "$0" == "bash" ]]
@@ -353,6 +355,8 @@ else
   mkdir -p stemcell
   mkdir -p release
   export BOSH_NON_INTERACTIVE=true
+  cpi_dir=${CPI_DIR:-.}
+  cpi_config_dir=${CPI_CONFIG_DIR:-$cpi_dir/manifests}
   read_config_file
   cmd=${1:-help}
   shift
