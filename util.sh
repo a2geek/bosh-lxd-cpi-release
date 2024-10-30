@@ -157,6 +157,27 @@ function do_destroy() {
   lxc --project  ${lxd_project_name} storage volume list  ${lxd_storage_pool_name}
 }
 
+function do_generate_certs() {
+  cat > creds/bosh-cert-manifest.yml <<EOF
+variables:
+- name: bosh_ca
+  type: certificate
+  options:
+    is_ca: true
+    common_name: bosh_ca
+    duration: 1095
+- name: director_ssl
+  type: certificate
+  options:
+    ca: bosh_ca
+    common_name: ${internal_ip}
+    alternative_names: [${internal_ip}]
+EOF
+  bosh interpolate creds/bosh-cert-manifest.yml --vars-store creds/bosh-cert.yml
+  bosh interpolate creds/bosh-cert.yml --path /director_ssl/certificate > bosh-client.crt
+  bosh interpolate creds/bosh-cert.yml --path /director_ssl/private_key > bosh-client.key
+}
+
 function do_deploy_bosh() {
   set -eu
   bosh_deployment="${BOSH_DEPLOYMENT_DIR:-${HOME}/Documents/Source/bosh-deployment}"
