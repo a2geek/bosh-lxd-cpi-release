@@ -12,40 +12,43 @@ packages:
 - lxd_cpi
 
 properties:
-  lxd_cpi.lxd.url:
-    description: URL of LXD server (cannot be localhost as this URL is used to both create bosh and by bosh)
-    example: "https://lxdserver:8443"
-  lxd_cpi.lxd.insecure_skip_verify:
+  lxd_cpi.server.type:
+    description: Type of server to connect with. "lxd" or "incus".
+    default: "lxd"
+  lxd_cpi.server.url:
+    description: URL of LXD or Incus server (cannot be localhost as this URL is used to both create bosh and by bosh)
+    example: "https://server:8443"
+  lxd_cpi.server.insecure_skip_verify:
     description: Indicates if the SSL connection should be validated (set to false for self-signed certificates)
     default: "false"
-  lxd_cpi.lxd.tls_client_cert:
+  lxd_cpi.server.tls_client_cert:
     description: Client public certificate to use for TLS connection
     example: |
       -----BEGIN CERTIFICATE-----
       <snip>
       -----END CERTIFICATE-----
-  lxd_cpi.lxd.tls_client_key:
+  lxd_cpi.server.tls_client_key:
     description: Client private key to use for TLS connection
     example: |
       -----BEGIN RSA PRIVATE KEY-----
       <snip>
       -----END RSA PRIVATE KEY-----
 
-  lxd_cpi.lxd.bios_path:
+  lxd_cpi.server.bios_path:
     description: Location and name of BIOS to use.
     default: "bios-256k.bin"
 
-  lxd_cpi.lxd.project_name:
-    description: "Name of LXD Project with which to place VMs and Stemcells [default]"
+  lxd_cpi.server.project_name:
+    description: "Name of Project with which to place VMs and Stemcells"
     default: "default"
-  lxd_cpi.lxd.profile_name:
-    description: "Name of LXD Profile with which to build VMs [default]"
+  lxd_cpi.server.profile_name:
+    description: "Name of Profile with which to build VMs"
     default: "default"
-  lxd_cpi.lxd.network_name:
-    description: "Name of LXD Network with which to place VMs [lxdbr0]"
-    default: "lxdbr0"
-  lxd_cpi.lxd.storage_pool_name:
-    description: "Name of LXD StoragePool with which to place disks [default]"
+  lxd_cpi.server.network_name:
+    description: "Name of Network with which to place VMs"
+    example: "lxdbr0"
+  lxd_cpi.server.storage_pool_name:
+    description: "Name of StoragePool with which to place disks"
     default: "default"
 
   lxd_cpi.agent.mbus:
@@ -57,13 +60,16 @@ properties:
 
   lxd_cpi.agent_config.type:
     description: "Agent configuration type for stemcell: FAT32 or CDROM"
-    default: "FAT32"
+    default: "CDROM"
   lxd_cpi.agent_config.label:
     description: "Disk label for configuration device"
+    default: "config-2"
   lxd_cpi.agent_config.metadata_path:
     description: "Path to the metadata file for Agent configuration"
+    default: "ec2/latest/meta-data.json"
   lxd_cpi.agent_config.userdata_path:
     description: "Path to the userdata file for Agent configuration"
+    default: "ec2/latest/user-data"
   lxd_cpi.agent_config.filestore_path:
     description: "Path to where agent data should be stored on the Bosh VM"
     default: "/var/vcap/store/agent-data"

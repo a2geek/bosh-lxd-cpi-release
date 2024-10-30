@@ -28,21 +28,21 @@ function do_help() {
   echo "- BOSH_LOG_LEVEL (set to 'debug' to capture all bosh activity including request/response)"
   echo "- BOSH_JUMPBOX_ENABLE (set to any value enable jumpbox user)"
   echo "- BOSH_SNAPSHOTS_ENABLE (set to any value to enable snapshots)"
-  echo "- LXD_URL (set to HTTPS url of LXD server - not localhost)"
-  echo "- LXD_INSECURE (default: false)"
-  echo "- LXD_CLIENT_CERT (set to path of LXD TLS client certificate)"
-  echo "- LXD_CLIENT_KEY (set to path of LXD TLS client key)"
-  echo "- LXD_ENABLE_AGENT (set to any value to install and enable the LXD agent in all VMs)"
+  echo "- SERVER_URL (set to HTTPS url of server - not localhost)"
+  echo "- SERVER_INSECURE (default: false)"
+  echo "- SERVER_CLIENT_CERT (set to path of TLS client certificate)"
+  echo "- SERVER_CLIENT_KEY (set to path of TLS client key)"
+  echo "- SERVER_ENABLE_AGENT (set to 'lxd' or 'incus' to enable that agent)"
   echo "- BOSH_DEPLOYMENT_DIR (default: \${HOME}/Documents/Source/bosh-deployment)"
   echo "- BOSH_PACKAGE_GOLANG_DIR (default ../bosh-package-golang-release)"
   echo "- CONCOURSE_DIR when deploying Concourse"
   echo "- POSTGRES_DIR when deploying Postgres"
   echo
   echo "Configuration values..."
-  print_varlist lxd_project_name lxd_profile_name lxd_network_name lxd_storage_pool_name internal_ip
+  print_varlist server_project_name server_profile_name server_network_name server_storage_pool_name internal_ip
   echo
   echo "Currently set environment variables..."
-  print_varlist BOSH_LOG_LEVEL LXD_URL LXD_INSECURE LXD_CLIENT_CERT LXD_CLIENT_KEY \
+  print_varlist BOSH_LOG_LEVEL SERVER_URL SERVER_INSECURE SERVER_CLIENT_CERT SERVER_CLIENT_KEY \
                 BOSH_DEPLOYMENT_DIR BOSH_PACKAGE_GOLANG_DIR \
                 CONCOURSE_DIR ZOOKEEPER_DIR POSTGRES_DIR
 }
@@ -75,29 +75,6 @@ function do_final_release() {
   version="$1"
   bosh create-release --final --version=${version} --tarball=bosh-lxd-cpi-release.tgz
 }
-
-### TODO: These aren't really correct at this point. Need to drop and/or fix.
-# function do_init_lxd() {
-#   set -eu
-#
-#   project=$(lxc project list --format csv | grep " ${lxd_project_name}" | cut -d, -f1)
-#   if [ -z "${project}" ]
-#   then
-#     lxc project create  ${lxd_project_name} -c features.images=true -c features.storage.volumes=true
-#   fi
-#   lxc project list  ${lxd_project_name}
-#
-#   # note that a bridge is apparently "managed" and can not be set in the project itself
-#   network=$(lxc network list --format csv | grep " ${lxd_network_name}" | cut -d, -f1)
-#   if [ -z "${network}" ]
-#   then
-#     lxc network create  ${lxd_network_name} --type bridge ipv4.address=10.245.0.1/24 ipv4.nat=true ipv6.address=none dns.mode=none
-#   fi
-#   lxc network list
-#
-#   lxc storage create --project  ${lxd_project_name} boshdir dir source=/storage/boshdev-disks
-#   lxc storage list  ${lxd_storage_pool_name}
-# }
 
 function do_fix_blobs() {
   golang_releases=${BOSH_PACKAGE_GOLANG_DIR:-"../bosh-package-golang-release"}
@@ -140,21 +117,21 @@ function do_destroy() {
   rm -f cpi
   rm -f state.json
 
-  lxc --project  ${lxd_project_name} list --format json |
+  lxc --project  ${server_project_name} list --format json |
     jq -r '.[] | .name | select(test("vm-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"))' |
     xargs --verbose --no-run-if-empty --max-args=1 lxc delete -f
-  lxc --project  ${lxd_project_name} image list --format json |
+  lxc --project  ${server_project_name} image list --format json |
     jq -r '.[] | select(.aliases[0].name // "not present" | test("img-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) | .fingerprint' |
     xargs --verbose --no-run-if-empty --max-args=1 lxc image delete
-  lxc --project  ${lxd_project_name} storage volume list --format json |
-    jq -r --arg poolname "${lxd_storage_pool_name}" '.[] | select(.pool == $poolname) | .name' |
-    xargs --verbose --no-run-if-empty --max-args=1  lxc storage volume delete  ${lxd_storage_pool_name}
+  lxc --project  ${server_project_name} storage volume list --format json |
+    jq -r --arg poolname "${server_storage_pool_name}" '.[] | select(.pool == $poolname) | .name' |
+    xargs --verbose --no-run-if-empty --max-args=1  lxc storage volume delete  ${server_storage_pool_name}
 
   echo "Visual confirmation:"
-  lxc --project  ${lxd_project_name} list
-  lxc --project  ${lxd_project_name} image list
-  lxc --project  ${lxd_project_name} storage list
-  lxc --project  ${lxd_project_name} storage volume list  ${lxd_storage_pool_name}
+  lxc --project  ${server_project_name} list
+  lxc --project  ${server_project_name} image list
+  lxc --project  ${server_project_name} storage list
+  lxc --project  ${server_project_name} storage volume list  ${server_storage_pool_name}
 }
 
 function do_generate_certs() {
@@ -182,18 +159,18 @@ function do_deploy_bosh() {
   set -eu
   bosh_deployment="${BOSH_DEPLOYMENT_DIR:-${HOME}/Documents/Source/bosh-deployment}"
 
-  if [ -z "${LXD_URL:-}" ]
+  if [ -z "${SERVER_URL:-}" ]
   then
-    echo "LXD_URL must be set."
+    echo "SERVER_URL must be set."
     exit 1
   fi
 
-  local_release="${LXD_LOCAL_RELEASE:-}"
-  lxd_url="${LXD_URL}"
-  lxd_insecure="${LXD_INSECURE:-false}"
-  lxd_client_cert="${LXD_CLIENT_CERT:-}"
-  lxd_client_key="${LXD_CLIENT_KEY:-}"
-  lxd_enable_agent="${LXD_ENABLE_AGENT:-}"
+  local_release="${SERVER_LOCAL_RELEASE:-}"
+  server_url="${SERVER_URL}"
+  server_insecure="${SERVER_INSECURE:-false}"
+  server_client_cert="${SERVER_CLIENT_CERT:-}"
+  server_client_key="${SERVER_CLIENT_KEY:-}"
+  server_enable_agent="${SERVER_ENABLE_AGENT:-}"
   jumpbox_enable="${BOSH_JUMPBOX_ENABLE:-}"
   snapshots_enable="${BOSH_SNAPSHOTS_ENABLE:-}"
   resize_disk_enable="${BOSH_RESIZE_DISK_ENABLE:-}"
@@ -204,7 +181,7 @@ function do_deploy_bosh() {
   [ ! -z "${snapshots_enable}"    ] && bosh_args+=(--ops-file=ops/enable-snapshots.yml)
   [ ! -z "${resize_disk_enable}"  ] && bosh_args+=(--ops-file=${bosh_deployment}/misc/cpi-resize-disk.yml)
   [ ! -z "${internal_dns_enable}" ] && bosh_args+=(--ops-file=${bosh_deployment}/misc/dns.yml)
-  [ ! -z "${lxd_enable_agent}"    ] && bosh_args+=(--ops-file=ops/enable-lxd-agent.yml)
+  [ ! -z "${server_enable_agent}" ] && bosh_args+=(--ops-file=ops/enable-${server_enable_agent}-agent.yml)
 
   if [ ! -z "${local_release}" ]
   then
@@ -223,10 +200,10 @@ function do_deploy_bosh() {
     --state=state.json \
     --vars-store=creds/bosh.yml \
     --vars-file=manifests/bosh-vars.yml \
-    --var=lxd_url=$lxd_url \
-    --var=lxd_insecure=$lxd_insecure \
-    --var-file=lxd_client_cert=$lxd_client_cert \
-    --var-file=lxd_client_key=$lxd_client_key "${bosh_args[@]}"
+    --var=server_url=$server_url \
+    --var=server_insecure=$server_insecure \
+    --var-file=server_client_cert=$server_client_cert \
+    --var-file=server_client_key=$server_client_key "${bosh_args[@]}"
 
   bosh interpolate creds/bosh.yml --path /jumpbox_ssh/private_key > creds/jumpbox.pk
   chmod 600 creds/jumpbox.pk
@@ -273,9 +250,9 @@ function do_runtime_config() {
     bosh update-runtime-config --name bosh-dns ${BOSH_DEPLOYMENT_DIR}/runtime-configs/dns.yml
   fi
 
-  if [ ! -z "${LXD_ENABLE_AGENT:-}" ]
+  if [ ! -z "${SERVER_ENABLE_AGENT:-}" ]
   then
-    bosh update-runtime-config --name lxd-agent manifests/enable-lxd-agent-config.yml
+    bosh update-runtime-config --name ${SERVER_ENABLE_AGENT}-agent manifests/enable-${SERVER_ENABLE_AGENT}-agent-config.yml
   fi
 }
 
@@ -360,10 +337,10 @@ function do_deploy_postgres() {
 }
 
 function read_config_file() {
-  lxd_project_name=$(bosh interpolate manifests/bosh-vars.yml --path /lxd_project_name)
-  lxd_profile_name=$(bosh interpolate manifests/bosh-vars.yml --path /lxd_profile_name)
-  lxd_network_name=$(bosh interpolate manifests/bosh-vars.yml --path /lxd_network_name)
-  lxd_storage_pool_name=$(bosh interpolate manifests/bosh-vars.yml --path /lxd_storage_pool_name)
+  server_project_name=$(bosh interpolate manifests/bosh-vars.yml --path /server_project_name)
+  server_profile_name=$(bosh interpolate manifests/bosh-vars.yml --path /server_profile_name)
+  server_network_name=$(bosh interpolate manifests/bosh-vars.yml --path /server_network_name)
+  server_storage_pool_name=$(bosh interpolate manifests/bosh-vars.yml --path /server_storage_pool_name)
   internal_ip=$(bosh interpolate manifests/bosh-vars.yml --path /internal_ip)
 }
 

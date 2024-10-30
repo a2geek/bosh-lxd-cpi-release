@@ -3,5 +3,5 @@
   path: /instance_groups/name=bosh/properties/lxd_cpi/throttle_config
   value:
     enabled: true
-    limit: ((lxd_throttle_limit))
-    hold: ((lxd_throttle_hold))
+    limit: ((server_throttle_limit))
+    hold: ((server_throttle_hold))
