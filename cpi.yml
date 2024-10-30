@@ -38,7 +38,7 @@
 - type: replace
   path: /instance_groups/name=bosh/properties/lxd_cpi?
   value:
-    lxd: &lxd_settings
+    server: &server_settings
       project_name: ((server_project_name))
       profile_name: ((server_profile_name))
       network_name: ((server_network_name))
@@ -62,7 +62,7 @@
 - type: replace
   path: /cloud_provider/properties/lxd_cpi?
   value:
-    lxd: *lxd_settings
+    server: *server_settings
     agent:
       mbus: "https://mbus:((mbus_bootstrap_password))@0.0.0.0:6868"
     agent_config:
