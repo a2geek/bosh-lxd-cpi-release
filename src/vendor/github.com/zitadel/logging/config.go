@@ -116,8 +116,9 @@ func (c *Config) Slog() *slog.Logger {
 		return logger
 	}
 	opts := &slog.HandlerOptions{
-		AddSource: c.AddSource,
-		Level:     level,
+		AddSource:   c.AddSource,
+		Level:       level,
+		ReplaceAttr: c.fieldMapToPlaceKey(),
 	}
 
 	switch c.Formatter.Format {
@@ -131,4 +132,20 @@ func (c *Config) Slog() *slog.Logger {
 		logger.Warn("unknown slog format in config, using text handler", "format", c.Formatter.Format)
 	}
 	return slog.New(slog.NewTextHandler(os.Stderr, opts))
+}
+
+func (c *Config) fieldMapToPlaceKey() func(groups []string, a slog.Attr) slog.Attr {
+	fieldMap, ok := c.Formatter.Data["fieldmap"].(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	return func(groups []string, a slog.Attr) slog.Attr {
+		for key, newKey := range fieldMap {
+			if a.Key == key {
+				a.Key = newKey.(string)
+				return a
+			}
+		}
+		return a
+	}
 }

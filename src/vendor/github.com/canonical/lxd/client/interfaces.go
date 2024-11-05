@@ -73,6 +73,7 @@ type InstanceServer interface {
 	ImageServer
 
 	// Server functions
+	GetMetadataConfiguration() (metadataConfiguration *api.MetadataConfiguration, err error)
 	GetMetrics() (metrics string, err error)
 	GetServer() (server *api.Server, ETag string, err error)
 	GetServerResources() (resources *api.Resources, err error)
@@ -444,6 +445,9 @@ type InstanceServer interface {
 	GetIdentity(authenticationMethod string, nameOrIdentifier string) (identity *api.Identity, ETag string, err error)
 	GetCurrentIdentityInfo() (identityInfo *api.IdentityInfo, ETag string, err error)
 	UpdateIdentity(authenticationMethod string, nameOrIdentifier string, identityPut api.IdentityPut, ETag string) error
+	DeleteIdentity(authenticationMethod string, nameOrIdentifier string) error
+	CreateIdentityTLS(identitiesTLSPost api.IdentitiesTLSPost) error
+	CreateIdentityTLSToken(identitiesTLSPost api.IdentitiesTLSPost) (*api.CertificateAddToken, error)
 	GetIdentityProviderGroupNames() (identityProviderGroupNames []string, err error)
 	GetIdentityProviderGroups() (identityProviderGroups []api.IdentityProviderGroup, err error)
 	GetIdentityProviderGroup(identityProviderGroupName string) (identityProviderGroup *api.IdentityProviderGroup, ETag string, err error)
