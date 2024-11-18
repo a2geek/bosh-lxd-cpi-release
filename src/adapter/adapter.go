@@ -18,7 +18,9 @@ type ApiAdapter interface {
 	GetStoragePoolVolume(pool, name string) (string, error)
 	GetStoragePoolVolumeUsage(pool string) (map[string]int, error)
 	ResizeStoragePoolVolume(pool, name string, newSize int) error
+	// FIXME - target needed
 	CreateStoragePoolVolumeFromISO(pool, diskName string, backupFile io.Reader) error
+	// FIXME - target needed
 	CreateStoragePoolVolume(pool, name string, size int) error
 	UpdateStoragePoolVolumeDescription(pool, diskName, description string) error
 
@@ -49,8 +51,9 @@ type InstanceMetadata struct {
 	StemcellAlias string
 	InstanceType  string
 	Project       string
-	Devices       map[string]map[string]string
 	Profiles      []string
+	Target        string
+	Devices       map[string]map[string]string
 	Config        map[string]string
 }
 

@@ -29,14 +29,15 @@ func (c CPI) CreateVMV2(
 	theCid := "vm-" + id
 	vmCID := apiv1.NewVMCID(theCid)
 
-	props := LXDVMCloudProperties{}
-	err = cloudProps.As(&props)
+	vmProps := LXDVMCloudProperties{}
+	err = cloudProps.As(&vmProps)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Cloud Props")
 	}
 
 	devices := make(map[string]map[string]string)
 	eth := 0
+	target := ""
 	for _, net := range networks {
 		name := fmt.Sprintf("eth%d", eth)
 		devices[name] = map[string]string{
@@ -46,6 +47,14 @@ func (c CPI) CreateVMV2(
 			"type":         "nic",
 			"ipv4.address": net.IP(),
 		}
+
+		networkProps := LXDNetworkCloudProperties{}
+		err = net.CloudProps().As(networkProps)
+		if err != nil {
+			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Network Props")
+		}
+		target = networkProps.Target
+
 		eth++
 	}
 
@@ -58,10 +67,11 @@ func (c CPI) CreateVMV2(
 	err = c.adapter.CreateInstance(adapter.InstanceMetadata{
 		Name:          theCid,
 		StemcellAlias: stemcellCID.AsString(),
-		InstanceType:  props.InstanceType,
+		InstanceType:  vmProps.InstanceType,
 		Project:       c.config.Server.Project,
-		Devices:       devices,
 		Profiles:      []string{c.config.Server.Profile},
+		Target:        target,
+		Devices:       devices,
 		Config: map[string]string{
 			"raw.qemu": "-bios " + c.config.Server.BIOSPath,
 		},
@@ -79,14 +89,14 @@ func (c CPI) CreateVMV2(
 	agentEnv := apiv1.AgentEnvFactory{}.ForVM(agentID, vmCID, networks, env, c.config.Agent)
 	agentEnv.AttachSystemDisk(apiv1.NewDiskHintFromString("/dev/sda"))
 
-	if props.EphemeralDisk > 0 {
+	if vmProps.EphemeralDisk > 0 {
 		diskId, err := c.uuidGen.Generate()
 		if err != nil {
 			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating Disk id")
 		}
 		diskCid := DISK_EPHEMERAL_PREFIX + diskId
 
-		err = c.adapter.CreateStoragePoolVolume(c.config.Server.StoragePool, diskCid, props.EphemeralDisk)
+		err = c.adapter.CreateStoragePoolVolume(c.config.Server.StoragePool, diskCid, vmProps.EphemeralDisk)
 		if err != nil {
 			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Create ephemeral disk")
 		}

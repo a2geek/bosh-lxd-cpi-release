@@ -22,7 +22,11 @@ func (a *lxdApiAdapter) CreateInstance(meta adapter.InstanceMetadata) error {
 		},
 		Type: api.InstanceTypeVM,
 	}
-	return wait(a.client.CreateInstance(instancesPost))
+	c := a.client
+	if meta.Target != "" {
+		c = c.UseTarget(meta.Target)
+	}
+	return wait(c.CreateInstance(instancesPost))
 }
 
 func (a *lxdApiAdapter) DeleteInstance(name string) error {
