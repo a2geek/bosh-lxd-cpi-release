@@ -44,6 +44,10 @@ properties:
   lxd_cpi.server.profile_name:
     description: "Name of Profile with which to build VMs"
     default: "default"
+  lxd_cpi.server.target:
+    description: "Name of location/target to deploy VM when using cluster; name as LXD shows the host in a cluster."
+    default: ""
+    examples: "lxdhost1"
   lxd_cpi.server.network_name:
     description: "Name of Network with which to place VMs"
     example: "lxdbr0"

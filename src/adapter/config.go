@@ -8,6 +8,7 @@ type Config struct {
 	InsecureSkipVerify bool
 	Project            string
 	Profile            string
+	Target             string
 	Network            string
 	StoragePool        string
 	BIOSPath           string

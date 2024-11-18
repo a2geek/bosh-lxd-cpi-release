@@ -1,7 +1,6 @@
 package cpi
 
-// LXDCloudProperties represents the StemcellCloudProps supplied by the Bosh
-// stemcell in CreateStemcell.
+// LXDCloudProperties represents the StemcellCloudProps supplied by BOSH.
 type LXDCloudProperties struct {
 	Architecture    string `json:"architecture" yaml:"architecture"`
 	ContainerFormat string `json:"container_format" yaml:"container_format"`
@@ -16,11 +15,15 @@ type LXDCloudProperties struct {
 	Version         string `json:"version" yaml:"version"`
 }
 
-// LXDVMCloudProperties represents the StemcellCloudProps supplied by the Bosh
-// stemcell in CreateVM.
+// LXDVMCloudProperties represents the StemcellCloudProps supplied by BOSH.
 type LXDVMCloudProperties struct {
 	// InstanceType as described at https://github.com/dustinkirkland/instance-type
 	InstanceType string `json:"instance_type" yaml:"instance_type"`
 	// EphemeralDisk sized in megabytes.
 	EphemeralDisk int `json:"ephemeral_disk" yaml:"ephemeral_disk"`
+}
+
+// LXDNetworkCloudProperties represents the NetworkCloudProps supplied by BOSH.
+type LXDNetworkCloudProperties struct {
+	Target string `json:"target" yaml:"target"`
 }
