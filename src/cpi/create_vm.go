@@ -86,6 +86,11 @@ func (c CPI) CreateVMV2(
 		}
 	}()
 
+	target, err = c.adapter.GetInstanceLocation(theCid)
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "VM Location")
+	}
+
 	agentEnv := apiv1.AgentEnvFactory{}.ForVM(agentID, vmCID, networks, env, c.config.Agent)
 	agentEnv.AttachSystemDisk(apiv1.NewDiskHintFromString("/dev/sda"))
 
@@ -96,7 +101,7 @@ func (c CPI) CreateVMV2(
 		}
 		diskCid := DISK_EPHEMERAL_PREFIX + diskId
 
-		err = c.adapter.CreateStoragePoolVolume(c.config.Server.StoragePool, diskCid, vmProps.EphemeralDisk)
+		err = c.adapter.CreateStoragePoolVolume(target, c.config.Server.StoragePool, diskCid, vmProps.EphemeralDisk)
 		if err != nil {
 			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Create ephemeral disk")
 		}

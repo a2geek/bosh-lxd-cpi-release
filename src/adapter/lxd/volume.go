@@ -29,7 +29,7 @@ func (a *lxdApiAdapter) ResizeStoragePoolVolume(pool, name string, newSize int) 
 	return a.client.UpdateStoragePoolVolume(pool, "custom", name, writable, etag)
 }
 
-func (a *lxdApiAdapter) CreateStoragePoolVolume(pool, name string, size int) error {
+func (a *lxdApiAdapter) CreateStoragePoolVolume(target, pool, name string, size int) error {
 	storageVolumeRequest := api.StorageVolumesPost{
 		Name:        name,
 		Type:        "custom",
@@ -41,11 +41,19 @@ func (a *lxdApiAdapter) CreateStoragePoolVolume(pool, name string, size int) err
 		},
 	}
 
-	return a.client.CreateStoragePoolVolume(pool, storageVolumeRequest)
+	c := a.client
+	if target != "" {
+		c = c.UseTarget(target)
+	}
+	return c.CreateStoragePoolVolume(pool, storageVolumeRequest)
 }
 
-func (a *lxdApiAdapter) CreateStoragePoolVolumeFromISO(pool, diskName string, backupFile io.Reader) error {
-	return wait(a.client.CreateStoragePoolVolumeFromISO(pool, client.StoragePoolVolumeBackupArgs{
+func (a *lxdApiAdapter) CreateStoragePoolVolumeFromISO(target, pool, diskName string, backupFile io.Reader) error {
+	c := a.client
+	if target != "" {
+		c = c.UseTarget(target)
+	}
+	return wait(c.CreateStoragePoolVolumeFromISO(pool, client.StoragePoolVolumeBackupArgs{
 		Name:       diskName,
 		BackupFile: backupFile,
 	}))

@@ -33,9 +33,9 @@ func (a *lxdApiAdapter) DeleteInstance(name string) error {
 	return wait(a.client.DeleteInstance(name))
 }
 
-func (a *lxdApiAdapter) GetInstance(name string) (string, error) {
-	_, etag, err := a.client.GetInstance(name)
-	return etag, err
+func (a *lxdApiAdapter) GetInstanceLocation(name string) (string, error) {
+	instance, _, err := a.client.GetInstance(name)
+	return instance.Location, err
 }
 
 func (a *lxdApiAdapter) UpdateInstanceDescription(name, newDescription string) error {

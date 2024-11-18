@@ -29,7 +29,7 @@ func (a *incusApiAdapter) ResizeStoragePoolVolume(pool, name string, newSize int
 	return a.client.UpdateStoragePoolVolume(pool, "custom", name, writable, etag)
 }
 
-func (a *incusApiAdapter) CreateStoragePoolVolume(pool, name string, size int) error {
+func (a *incusApiAdapter) CreateStoragePoolVolume(target, pool, name string, size int) error {
 	storageVolumeRequest := api.StorageVolumesPost{
 		Name:        name,
 		Type:        "custom",
@@ -41,11 +41,19 @@ func (a *incusApiAdapter) CreateStoragePoolVolume(pool, name string, size int) e
 		},
 	}
 
-	return a.client.CreateStoragePoolVolume(pool, storageVolumeRequest)
+	c := a.client
+	if target != "" {
+		c = c.UseTarget(target)
+	}
+	return c.CreateStoragePoolVolume(pool, storageVolumeRequest)
 }
 
-func (a *incusApiAdapter) CreateStoragePoolVolumeFromISO(pool, diskName string, backupFile io.Reader) error {
-	return wait(a.client.CreateStoragePoolVolumeFromISO(pool, client.StoragePoolVolumeBackupArgs{
+func (a *incusApiAdapter) CreateStoragePoolVolumeFromISO(target, pool, diskName string, backupFile io.Reader) error {
+	c := a.client
+	if target != "" {
+		c = c.UseTarget(target)
+	}
+	return wait(c.CreateStoragePoolVolumeFromISO(pool, client.StoragePoolVolumeBackupArgs{
 		Name:       diskName,
 		BackupFile: backupFile,
 	}))
