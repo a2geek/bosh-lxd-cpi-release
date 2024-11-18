@@ -110,6 +110,7 @@ function do_deploy_cf() {
     -o $CF_DEPLOYMENT_DIR/operations/override-app-domains.yml \
     -o $CF_DEPLOYMENT_DIR/operations/scale-to-one-az.yml \
     -o $CF_DEPLOYMENT_DIR/operations/use-haproxy.yml \
+    -o manifests/cf-fqdns.yml \
     -l $cpi_config_dir/cloudfoundry-vars.yml
 #    -o $CF_DEPLOYMENT_DIR/operations/set-router-static-ips.yml \
 }
@@ -330,6 +331,7 @@ function do_deploy_concourse() {
        -o $CONCOURSE_DIR/cluster/operations/basic-auth.yml \
        -o $CONCOURSE_DIR/cluster/operations/static-web.yml \
        -o $CONCOURSE_DIR/cluster/operations/privileged-http.yml \
+       -o manifests/concourse-fqdns.yml \
        -l $CONCOURSE_DIR/versions.yml \
        --vars-store=creds/concourse.yml \
        -l ${cpi_config_dir}/concourse-vars.yml
