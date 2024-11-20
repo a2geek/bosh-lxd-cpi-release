@@ -21,9 +21,6 @@ type LXDVMCloudProperties struct {
 	InstanceType string `json:"instance_type" yaml:"instance_type"`
 	// EphemeralDisk sized in megabytes.
 	EphemeralDisk int `json:"ephemeral_disk" yaml:"ephemeral_disk"`
-}
-
-// LXDNetworkCloudProperties represents the NetworkCloudProps supplied by BOSH.
-type LXDNetworkCloudProperties struct {
+	// Target is the cluster group (or empty)
 	Target string `json:"target" yaml:"target"`
 }

@@ -37,7 +37,6 @@ func (c CPI) CreateVMV2(
 
 	devices := make(map[string]map[string]string)
 	eth := 0
-	target := ""
 	for _, net := range networks {
 		name := fmt.Sprintf("eth%d", eth)
 		devices[name] = map[string]string{
@@ -47,14 +46,6 @@ func (c CPI) CreateVMV2(
 			"type":         "nic",
 			"ipv4.address": net.IP(),
 		}
-
-		networkProps := LXDNetworkCloudProperties{}
-		err = net.CloudProps().As(networkProps)
-		if err != nil {
-			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Network Props")
-		}
-		target = networkProps.Target
-
 		eth++
 	}
 
@@ -70,7 +61,7 @@ func (c CPI) CreateVMV2(
 		InstanceType:  vmProps.InstanceType,
 		Project:       c.config.Server.Project,
 		Profiles:      []string{c.config.Server.Profile},
-		Target:        target,
+		Target:        vmProps.Target,
 		Devices:       devices,
 		Config: map[string]string{
 			"raw.qemu": "-bios " + c.config.Server.BIOSPath,
@@ -86,10 +77,11 @@ func (c CPI) CreateVMV2(
 		}
 	}()
 
-	target, err = c.adapter.GetInstanceLocation(theCid)
+	target, err := c.adapter.GetInstanceLocation(theCid)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "VM Location")
 	}
+	c.logger.Debug("create_vm", "locating disks at '%s' after creation", target)
 
 	agentEnv := apiv1.AgentEnvFactory{}.ForVM(agentID, vmCID, networks, env, c.config.Agent)
 	agentEnv.AttachSystemDisk(apiv1.NewDiskHintFromString("/dev/sda"))
