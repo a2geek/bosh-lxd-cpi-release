@@ -68,6 +68,10 @@ function do_stress_test() {
   done
 }
 
+function do_dev_release() {
+  bosh create-release --force --tarball=bosh-lxd-cpi-release.tgz
+}
+
 function do_final_release() {
   set -eu
 
