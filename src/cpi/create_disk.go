@@ -15,7 +15,7 @@ func (c CPI) CreateDisk(size int,
 	theCid := DISK_PERSISTENT_PREFIX + id
 	diskCid := apiv1.NewDiskCID(theCid)
 
-	target, err := c.adapter.GetInstanceLocation(theCid)
+	target, err := c.adapter.GetInstanceLocation(associatedVMCID.AsString())
 	if err != nil {
 		return apiv1.DiskCID{}, bosherr.WrapError(err, "Finding disk location")
 	}
