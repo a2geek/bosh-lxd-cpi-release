@@ -35,7 +35,10 @@ func (a *lxdApiAdapter) DeleteInstance(name string) error {
 
 func (a *lxdApiAdapter) GetInstanceLocation(name string) (string, error) {
 	instance, _, err := a.client.GetInstance(name)
-	return instance.Location, err
+	if err != nil {
+		return "", err
+	}
+	return instance.Location, nil
 }
 
 func (a *lxdApiAdapter) UpdateInstanceDescription(name, newDescription string) error {
