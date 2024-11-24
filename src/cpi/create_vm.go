@@ -29,7 +29,11 @@ func (c CPI) CreateVMV2(
 	theCid := "vm-" + id
 	vmCID := apiv1.NewVMCID(theCid)
 
-	vmProps := LXDVMCloudProperties{}
+	// Default to global configuration
+	vmProps := LXDVMCloudProperties{
+		Target:  c.config.Server.Target,
+		Network: c.config.Server.Network,
+	}
 	err = cloudProps.As(&vmProps)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Cloud Props")
@@ -39,13 +43,17 @@ func (c CPI) CreateVMV2(
 	eth := 0
 	for _, net := range networks {
 		name := fmt.Sprintf("eth%d", eth)
-		devices[name] = map[string]string{
-			"name":         name,
-			"nictype":      "bridged",
-			"parent":       c.config.Server.Network,
-			"type":         "nic",
-			"ipv4.address": net.IP(),
+		settings := map[string]string{
+			"name":    name,
+			"nictype": "bridged",
+			"parent":  vmProps.Network,
+			"type":    "nic",
 		}
+		if c.config.Server.Managed {
+			settings["ipv4.address"] = net.IP()
+		}
+		devices[name] = settings
+
 		eth++
 	}
 

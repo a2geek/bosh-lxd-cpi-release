@@ -23,4 +23,6 @@ type LXDVMCloudProperties struct {
 	EphemeralDisk int `json:"ephemeral_disk" yaml:"ephemeral_disk"`
 	// Target is the cluster group (or empty)
 	Target string `json:"target" yaml:"target"`
+	// Network is an override to allow individual networks per AZ
+	Network string `json:"network" yaml:"network"`
 }

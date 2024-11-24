@@ -48,6 +48,9 @@ properties:
     description: "Name of location/target to deploy VM when using cluster; name as LXD shows the host in a cluster."
     default: ""
     examples: "lxdhost1"
+  lxd_cpi.server.managed:
+    description: "Indicates if this is a managed connection. Implication is that the ipv4.address needs to be set."
+    default: "true"
   lxd_cpi.server.network_name:
     description: "Name of Network with which to place VMs"
     example: "lxdbr0"

@@ -9,6 +9,7 @@ type Config struct {
 	Project            string
 	Profile            string
 	Target             string
+	Managed            bool
 	Network            string
 	StoragePool        string
 	BIOSPath           string
