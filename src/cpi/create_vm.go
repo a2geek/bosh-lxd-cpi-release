@@ -41,7 +41,8 @@ func (c CPI) CreateVMV2(
 
 	devices := make(map[string]map[string]string)
 	eth := 0
-	for _, net := range networks {
+	newNetworks := apiv1.Networks{}
+	for key, net := range networks {
 		name := fmt.Sprintf("eth%d", eth)
 		settings := map[string]string{
 			"name":    name,
@@ -49,8 +50,19 @@ func (c CPI) CreateVMV2(
 			"parent":  vmProps.Network,
 			"type":    "nic",
 		}
+		newNetworks[key] = net
 		if c.config.Server.Managed {
 			settings["ipv4.address"] = net.IP()
+			// Hypothesis: manual (we assign IP) but map over to dynamic so the bosh agent just lets LXD fix the IP
+			newNet := apiv1.NewNetwork(apiv1.NetworkOpts{
+				Type:    "dynamic",
+				IP:      net.IP(),
+				Netmask: net.Netmask(),
+				Gateway: net.Gateway(),
+				DNS:     net.DNS(),
+				Default: net.Default(),
+			})
+			newNetworks[key] = newNet
 		}
 		devices[name] = settings
 
@@ -91,7 +103,7 @@ func (c CPI) CreateVMV2(
 	}
 	c.logger.Debug("create_vm", "locating disks at '%s' after creation", target)
 
-	agentEnv := apiv1.AgentEnvFactory{}.ForVM(agentID, vmCID, networks, env, c.config.Agent)
+	agentEnv := apiv1.AgentEnvFactory{}.ForVM(agentID, vmCID, newNetworks, env, c.config.Agent)
 	agentEnv.AttachSystemDisk(apiv1.NewDiskHintFromString("/dev/sda"))
 
 	if vmProps.EphemeralDisk > 0 {
@@ -120,5 +132,5 @@ func (c CPI) CreateVMV2(
 	}
 
 	err = c.adapter.SetInstanceAction(vmCID.AsString(), adapter.StartAction)
-	return vmCID, networks, err
+	return vmCID, newNetworks, err
 }
