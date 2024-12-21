@@ -7,9 +7,11 @@ type ApiAdapter interface {
 	CreateAndUploadImage(meta ImageMetadata) error
 	DeleteImage(alias string) error
 
+	IsManagedNetwork(name string) (bool, error)
+
 	CreateInstance(meta InstanceMetadata) error
 	DeleteInstance(name string) error
-	GetInstance(name string) (string, error)
+	GetInstanceLocation(name string) (string, error)
 	UpdateInstanceDescription(name, newDescription string) error
 	SetInstanceAction(instanceName string, action Action) error
 	IsInstanceStopped(name string) (bool, error)
@@ -18,8 +20,8 @@ type ApiAdapter interface {
 	GetStoragePoolVolume(pool, name string) (string, error)
 	GetStoragePoolVolumeUsage(pool string) (map[string]int, error)
 	ResizeStoragePoolVolume(pool, name string, newSize int) error
-	CreateStoragePoolVolumeFromISO(pool, diskName string, backupFile io.Reader) error
-	CreateStoragePoolVolume(pool, name string, size int) error
+	CreateStoragePoolVolumeFromISO(target, pool, diskName string, backupFile io.Reader) error
+	CreateStoragePoolVolume(target, pool, name string, size int) error
 	UpdateStoragePoolVolumeDescription(pool, diskName, description string) error
 
 	DeleteStoragePoolVolumeSnapshot(pool, volumeName, snapshotName string) error
@@ -49,8 +51,9 @@ type InstanceMetadata struct {
 	StemcellAlias string
 	InstanceType  string
 	Project       string
-	Devices       map[string]map[string]string
 	Profiles      []string
+	Target        string
+	Devices       map[string]map[string]string
 	Config        map[string]string
 }
 

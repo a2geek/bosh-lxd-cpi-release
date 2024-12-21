@@ -62,7 +62,9 @@
 - type: replace
   path: /cloud_provider/properties/lxd_cpi?
   value:
-    server: *server_settings
+    server: 
+      <<: *server_settings
+      target: hydra1
     agent:
       mbus: "https://mbus:((mbus_bootstrap_password))@0.0.0.0:6868"
     agent_config:

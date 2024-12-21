@@ -22,16 +22,20 @@ func (a *incusApiAdapter) CreateInstance(meta adapter.InstanceMetadata) error {
 		},
 		Type: api.InstanceTypeVM,
 	}
-	return wait(a.client.CreateInstance(instancesPost))
+	c := a.client
+	if meta.Target != "" {
+		c = c.UseTarget(meta.Target)
+	}
+	return wait(c.CreateInstance(instancesPost))
 }
 
 func (a *incusApiAdapter) DeleteInstance(name string) error {
 	return wait(a.client.DeleteInstance(name))
 }
 
-func (a *incusApiAdapter) GetInstance(name string) (string, error) {
-	_, etag, err := a.client.GetInstance(name)
-	return etag, err
+func (a *incusApiAdapter) GetInstanceLocation(name string) (string, error) {
+	instance, _, err := a.client.GetInstance(name)
+	return instance.Location, err
 }
 
 func (a *incusApiAdapter) UpdateInstanceDescription(name, newDescription string) error {

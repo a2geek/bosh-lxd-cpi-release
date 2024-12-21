@@ -1,7 +1,10 @@
 azs:
 - name: z1
+  cloud_properties:
+    target: az1
 - name: z2
-- name: z3
+  cloud_properties:
+    target: az2
 
 vm_types:
 - name: default
@@ -43,12 +46,18 @@ networks:
 - name: default
   type: manual
   subnets:
-  - azs: [z1,z2,z3]
-    range: 10.245.0.0/24
+  - az: z1
+    range: 240.0.4.1/24
     dns: [192.168.1.1]
-    reserved: 10.245.0.2-10.245.0.10
-    gateway: 10.245.0.1
-    static: 10.245.0.250-10.245.0.254
+    reserved: 240.0.4.2-240.0.4.9
+    gateway: 240.0.4.1
+    static: 240.0.4.10-240.0.4.19
+  - az: z2
+    range: 240.0.5.1/24
+    dns: [192.168.1.1]
+    reserved: 240.0.5.2-240.0.5.9
+    gateway: 240.0.5.1
+    static: 240.0.5.10-240.0.5.19
 
 vm_extensions:
 # Used by cf-deployment

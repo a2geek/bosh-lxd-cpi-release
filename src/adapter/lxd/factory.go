@@ -21,6 +21,9 @@ func NewLXDAdapter(config adapter.Config) (adapter.ApiAdapter, error) {
 	if len(config.Project) != 0 {
 		c = c.UseProject(config.Project)
 	}
+	if len(config.Target) != 0 {
+		c = c.UseTarget(config.Target)
+	}
 	return &lxdApiAdapter{
 		client: c,
 	}, nil

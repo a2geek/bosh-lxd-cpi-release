@@ -29,23 +29,53 @@ func (c CPI) CreateVMV2(
 	theCid := "vm-" + id
 	vmCID := apiv1.NewVMCID(theCid)
 
-	props := LXDVMCloudProperties{}
-	err = cloudProps.As(&props)
+	// Default to global configuration
+	vmProps := LXDVMCloudProperties{
+		Target:  c.config.Server.Target,
+		Network: c.config.Server.Network,
+	}
+	err = cloudProps.As(&vmProps)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Cloud Props")
 	}
 
+	managedNetwork, err := c.adapter.IsManagedNetwork(vmProps.Network)
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Managed Network")
+	}
+
 	devices := make(map[string]map[string]string)
 	eth := 0
-	for _, net := range networks {
+	newNetworks := apiv1.Networks{}
+	for key, net := range networks {
 		name := fmt.Sprintf("eth%d", eth)
-		devices[name] = map[string]string{
-			"name":         name,
-			"nictype":      "bridged",
-			"parent":       c.config.Server.Network,
-			"type":         "nic",
-			"ipv4.address": net.IP(),
+		settings := map[string]string{
+			"name":    name,
+			"nictype": "bridged",
+			"parent":  vmProps.Network,
+			"type":    "nic",
 		}
+		newNetworks[key] = net
+		if managedNetwork {
+			if net.IP() != "" {
+				// If we have a managed network, let's ensure the expected IP address gets set
+				settings["ipv4.address"] = net.IP()
+			}
+			if c.config.Server.ManagedNetworkAssignment == "dhcp" {
+				// Remap network to be a BOSH 'dynamic' network so BOSH/Agent reports the DHCP assigned IP
+				newNet := apiv1.NewNetwork(apiv1.NetworkOpts{
+					Type:    "dynamic",
+					IP:      net.IP(),
+					Netmask: net.Netmask(),
+					Gateway: net.Gateway(),
+					DNS:     net.DNS(),
+					Default: net.Default(),
+				})
+				newNetworks[key] = newNet
+			}
+		}
+		devices[name] = settings
+
 		eth++
 	}
 
@@ -58,10 +88,11 @@ func (c CPI) CreateVMV2(
 	err = c.adapter.CreateInstance(adapter.InstanceMetadata{
 		Name:          theCid,
 		StemcellAlias: stemcellCID.AsString(),
-		InstanceType:  props.InstanceType,
+		InstanceType:  vmProps.InstanceType,
 		Project:       c.config.Server.Project,
-		Devices:       devices,
 		Profiles:      []string{c.config.Server.Profile},
+		Target:        vmProps.Target,
+		Devices:       devices,
 		Config: map[string]string{
 			"raw.qemu": "-bios " + c.config.Server.BIOSPath,
 		},
@@ -76,17 +107,23 @@ func (c CPI) CreateVMV2(
 		}
 	}()
 
-	agentEnv := apiv1.AgentEnvFactory{}.ForVM(agentID, vmCID, networks, env, c.config.Agent)
+	target, err := c.adapter.GetInstanceLocation(theCid)
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "VM Location")
+	}
+	c.logger.Debug("create_vm", "locating disks at '%s' after creation", target)
+
+	agentEnv := apiv1.AgentEnvFactory{}.ForVM(agentID, vmCID, newNetworks, env, c.config.Agent)
 	agentEnv.AttachSystemDisk(apiv1.NewDiskHintFromString("/dev/sda"))
 
-	if props.EphemeralDisk > 0 {
+	if vmProps.EphemeralDisk > 0 {
 		diskId, err := c.uuidGen.Generate()
 		if err != nil {
 			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating Disk id")
 		}
 		diskCid := DISK_EPHEMERAL_PREFIX + diskId
 
-		err = c.adapter.CreateStoragePoolVolume(c.config.Server.StoragePool, diskCid, props.EphemeralDisk)
+		err = c.adapter.CreateStoragePoolVolume(target, c.config.Server.StoragePool, diskCid, vmProps.EphemeralDisk)
 		if err != nil {
 			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Create ephemeral disk")
 		}
@@ -105,5 +142,5 @@ func (c CPI) CreateVMV2(
 	}
 
 	err = c.adapter.SetInstanceAction(vmCID.AsString(), adapter.StartAction)
-	return vmCID, networks, err
+	return vmCID, newNetworks, err
 }
