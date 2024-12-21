@@ -7,6 +7,8 @@ type ApiAdapter interface {
 	CreateAndUploadImage(meta ImageMetadata) error
 	DeleteImage(alias string) error
 
+	IsManagedNetwork(name string) (bool, error)
+
 	CreateInstance(meta InstanceMetadata) error
 	DeleteInstance(name string) error
 	GetInstanceLocation(name string) (string, error)

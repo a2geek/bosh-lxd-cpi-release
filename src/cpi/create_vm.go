@@ -39,6 +39,11 @@ func (c CPI) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Cloud Props")
 	}
 
+	managedNetwork, err := c.adapter.IsManagedNetwork(vmProps.Network)
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Managed Network")
+	}
+
 	devices := make(map[string]map[string]string)
 	eth := 0
 	newNetworks := apiv1.Networks{}
@@ -51,18 +56,23 @@ func (c CPI) CreateVMV2(
 			"type":    "nic",
 		}
 		newNetworks[key] = net
-		if c.config.Server.Managed {
-			settings["ipv4.address"] = net.IP()
-			// Hypothesis: manual (we assign IP) but map over to dynamic so the bosh agent just lets LXD fix the IP
-			newNet := apiv1.NewNetwork(apiv1.NetworkOpts{
-				Type:    "dynamic",
-				IP:      net.IP(),
-				Netmask: net.Netmask(),
-				Gateway: net.Gateway(),
-				DNS:     net.DNS(),
-				Default: net.Default(),
-			})
-			newNetworks[key] = newNet
+		if managedNetwork {
+			if net.IP() != "" {
+				// If we have a managed network, let's ensure the expected IP address gets set
+				settings["ipv4.address"] = net.IP()
+			}
+			if c.config.Server.ManagedNetworkAssignment == "dhcp" {
+				// Remap network to be a BOSH 'dynamic' network so BOSH/Agent reports the DHCP assigned IP
+				newNet := apiv1.NewNetwork(apiv1.NetworkOpts{
+					Type:    "dynamic",
+					IP:      net.IP(),
+					Netmask: net.Netmask(),
+					Gateway: net.Gateway(),
+					DNS:     net.DNS(),
+					Default: net.Default(),
+				})
+				newNetworks[key] = newNet
+			}
 		}
 		devices[name] = settings
 
