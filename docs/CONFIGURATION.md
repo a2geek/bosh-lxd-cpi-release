@@ -55,3 +55,75 @@
 | `lxd_cpi.throttle_config.path` | Unix socket location (default `/var/vcap/sys/run/lxd_cpi/throttle.sock`). |
 | `lxd_cpi.throttle_config.limit` | Maximum number of processes to allow concurrently (default `4`). |
 | `lxd_cpi.throttle_config.hold` | Maximum length of lock hold (default `2m`). |
+
+## Cloud Config
+
+This CPI supports both `manual` and `dynamic` networks.
+
+To configure for `manual`, configure as usual. Note that if using the Ubuntu Fan overlay, it is highly suggested that the global `managed_network_assignment` be set to `dhcp` so LXD can configure the network correctly.
+
+For `dynamic`, the global `managed_network_assignment` must be set to `dhcp`.
+
+Sample cloud config for `manual`:
+
+```yaml
+azs:
+- name: z1
+- name: z2
+- name: z3
+
+networks:
+- name: default
+  type: manual
+  subnets:
+  - azs: [z1,z2,z3]
+    range: 192.168.124.0/24
+    gateway: 192.168.124.1
+    dns: [192.168.5.1]
+    reserved: 192.168.124.2-192.168.124.4
+    static: 192.168.124.5-192.168.124.10
+```
+
+Sample cloud config for `dynamic`:
+
+```yaml
+azs:
+- name: z1
+- name: z2
+
+networks:
+- name: default
+  type: dynamic
+  subnets:
+  - azs: [z1, z2]
+    dns: [192.168.1.1]
+```
+
+Sample cloud config for a static network in a cluster:
+
+```yaml
+azs:
+- name: z1
+  cloud_properties:
+    target: "@az1"
+- name: z2
+  cloud_properties:
+    target: "@az2"
+
+networks:
+- name: default
+  type: manual
+  subnets:
+  - az: z1
+    range: 240.4.0.1/24
+    dns: [192.168.1.1]
+    reserved: 240.4.0.2-240.4.0.9
+    gateway: 240.4.0.1
+    static: 240.4.0.10-240.4.0.19
+  - az: z2
+    range: 240.5.0.1/24
+    dns: [192.168.1.1]
+    reserved: 240.5.0.2-240.5.0.9
+    gateway: 240.5.0.1
+    static: 240.5.0.10-240.5.0.19
+```
