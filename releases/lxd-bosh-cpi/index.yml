@@ -3,6 +3,8 @@ builds:
     version: v2
   754251d6-1504-4cfd-702c-7e1d464c58fc:
     version: v1
+  d256df52-fff3-433b-4d7c-4ea99788da4a:
+    version: v4
   d637e3ed-d7ca-4af5-6d6b-27bd19eb2aef:
     version: v3
 format-version: "2"
