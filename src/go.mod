@@ -7,7 +7,7 @@ require (
 	github.com/canonical/lxd v0.0.0-20241105131838-efae303214c5
 	github.com/cloudfoundry/bosh-cpi-go v0.0.0-20241030212755-0e796ef21b6f
 	github.com/cloudfoundry/bosh-utils v0.0.533
-	github.com/diskfs/go-diskfs v1.4.2
+	github.com/diskfs/go-diskfs v1.5.1
 	github.com/lxc/incus v0.7.0
 	golang.org/x/text v0.22.0
 	gopkg.in/yaml.v2 v2.4.0
