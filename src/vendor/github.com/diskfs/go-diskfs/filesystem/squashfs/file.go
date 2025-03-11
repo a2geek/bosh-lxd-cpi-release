@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/diskfs/go-diskfs/filesystem"
 )
 
 // File represents a single file in a squashfs filesystem
@@ -45,7 +47,7 @@ func (fl *File) Read(b []byte) (int, error) {
 	// 5- read in and uncompress the necessary blocks
 	fs := fl.filesystem
 	size := fl.size() - fl.offset
-	location := int64(fl.startBlock)
+	location := int64(fl.blocksStart)
 	maxRead := len(b)
 
 	// if there is nothing left to read, just return EOF
@@ -148,7 +150,7 @@ func (fl *File) Read(b []byte) (int, error) {
 //
 //nolint:unused,revive // but it is important to implement the interface
 func (fl *File) Write(p []byte) (int, error) {
-	return 0, fmt.Errorf("cannot write to a read-only squashfs filesystem")
+	return 0, filesystem.ErrReadonlyFilesystem
 }
 
 // Seek set the offset to a particular point in the file
