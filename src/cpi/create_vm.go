@@ -57,15 +57,21 @@ func (c CPI) CreateVMV2(
 		}
 		newNetworks[key] = net
 		if managedNetwork {
-			if net.IP() != "" {
-				// If we have a managed network, let's ensure the expected IP address gets set
-				settings["ipv4.address"] = net.IP()
+			// Capture the "planned" IP -- but don't use if we have a BOSH dynamic network
+			// We skip BOSH dynamic networks because those shouldn't assign (and can assign wrong IPs - specifically the Ubuntu FAN)
+			plannedIP := net.IP()
+			if net.IsDynamic() {
+				plannedIP = ""
+			}
+			// If we have a managed network, let's ensure the expected IP address gets set
+			if plannedIP != "" {
+				settings["ipv4.address"] = plannedIP
 			}
 			if c.config.Server.ManagedNetworkAssignment == "dhcp" {
 				// Remap network to be a BOSH 'dynamic' network so BOSH/Agent reports the DHCP assigned IP
 				newNet := apiv1.NewNetwork(apiv1.NetworkOpts{
 					Type:    "dynamic",
-					IP:      net.IP(),
+					IP:      plannedIP,
 					Netmask: net.Netmask(),
 					Gateway: net.Gateway(),
 					DNS:     net.DNS(),

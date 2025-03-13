@@ -81,3 +81,36 @@ func (a *incusApiAdapter) GetStoragePoolVolumeUsage(pool string) (map[string]int
 	}
 	return data, nil
 }
+
+func (a *incusApiAdapter) ColocateStoragePoolVolumeWithInstance(instanceName, pool, diskName string) error {
+	instanceLoc, err := a.GetInstanceLocation(instanceName)
+	if err != nil {
+		return err
+	}
+
+	volume, _, err := a.client.GetStoragePoolVolume(pool, "custom", diskName)
+	if err != nil {
+		return err
+	}
+
+	if instanceLoc == volume.Location {
+		return nil
+	}
+
+	srcServer := a.client.UseTarget(volume.Location)
+	dstServer := a.client.UseTarget(instanceLoc)
+
+	args := &client.StoragePoolVolumeCopyArgs{
+		Name:       volume.Name,
+		Mode:       "move",
+		VolumeOnly: false,
+	}
+
+	// Manual move:
+	err = wait(dstServer.CopyStoragePoolVolume(pool, srcServer, pool, *volume, args))
+	if err != nil {
+		return err
+	}
+
+	return srcServer.DeleteStoragePoolVolume(pool, "custom", diskName)
+}

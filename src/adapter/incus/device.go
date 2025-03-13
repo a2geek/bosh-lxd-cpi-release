@@ -21,16 +21,41 @@ func (a *incusApiAdapter) AttachDevice(instanceName, deviceName string, device m
 	return wait(a.client.UpdateInstance(instanceName, instance.Writable(), etag))
 }
 
-func (a *incusApiAdapter) DetachDevice(instanceName, deviceName string) error {
+func (a *incusApiAdapter) DetachDeviceByName(instanceName, deviceName string) error {
 	instance, _, err := a.client.GetInstance(instanceName)
 	if err != nil {
 		return err
 	}
 
-	// Check if the device already exists
+	// Check that the device already exists
 	_, ok := instance.Devices[deviceName]
-	if !ok {
-		return fmt.Errorf("device does not exist: '%s'", deviceName)
+	if ok {
+		delete(instance.Devices, deviceName)
+
+		return wait(a.client.UpdateInstance(instanceName, instance.Writable(), ""))
+	} else {
+		a.logger.Warn("incusApiAdapter", "device does not exist: '%s'", deviceName)
+		return nil
+	}
+}
+
+func (a *incusApiAdapter) DetachDeviceBySource(instanceName, sourceName string) error {
+	instance, _, err := a.client.GetInstance(instanceName)
+	if err != nil {
+		return err
+	}
+
+	// Check that the device already exists
+	deviceName := ""
+	for name, device := range instance.Devices {
+		if device["source"] == sourceName {
+			deviceName = name
+			break
+		}
+	}
+	if deviceName == "" {
+		a.logger.Warn("incusApiAdapter", "device source does not exist: '%s'", sourceName)
+		return nil
 	}
 
 	delete(instance.Devices, deviceName)

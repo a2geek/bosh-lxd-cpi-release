@@ -20,7 +20,7 @@ func NewFactory(config config.Config, logger boshlog.Logger) CPIFactory {
 }
 
 func (f CPIFactory) New(_ apiv1.CallContext) (apiv1.CPI, error) {
-	apiAdapter, err := factory.NewAdapter(f.config.Server)
+	apiAdapter, err := factory.NewAdapter(f.config.Server, f.logger)
 	if err != nil {
 		return nil, err
 	}

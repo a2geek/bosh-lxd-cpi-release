@@ -41,7 +41,7 @@ func (c CPI) writeAgentFileToVM(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) erro
 	}
 
 	if disk, ok := disks[DISK_DEVICE_CONFIG]; ok {
-		err = c.adapter.DetachDevice(vmCID.AsString(), DISK_DEVICE_CONFIG)
+		err = c.adapter.DetachDeviceByName(vmCID.AsString(), DISK_DEVICE_CONFIG)
 		if err != nil {
 			return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Remove", vmCID.AsString())
 		}
