@@ -3,7 +3,6 @@ package lxd
 import (
 	"strings"
 
-	lxd "github.com/canonical/lxd/client"
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 )
 
@@ -16,7 +15,12 @@ func checkError(err error) error {
 	return err
 }
 
-func wait(op lxd.Operation, err error) error {
+// Reducing multiple interfaces to what we use
+type WaitOperation interface {
+	Wait() (err error)
+}
+
+func wait(op WaitOperation, err error) error {
 	if checkError(err) != nil {
 		return err
 	}
