@@ -36,6 +36,11 @@ func (c CPI) AttachDiskV2(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) (apiv1.DiskH
 		return apiv1.NewDiskHintFromString(""), bosherr.Error("Unable to find device for persistent disk")
 	}
 
+	err = c.adapter.ColocateStoragePoolVolumeWithInstance(vmCID.AsString(), c.config.Server.StoragePool, diskCID.AsString())
+	if err != nil {
+		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Colocate disk")
+	}
+
 	err = c.attachDiskDeviceToVM(vmCID, name, diskCID.AsString())
 	if err != nil {
 		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Attach disk")

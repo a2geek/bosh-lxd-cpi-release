@@ -5,6 +5,7 @@ import (
 	"io"
 
 	client "github.com/canonical/lxd/client"
+	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
 )
 
@@ -80,4 +81,38 @@ func (a *lxdApiAdapter) GetStoragePoolVolumeUsage(pool string) (map[string]int, 
 		data[volume.Name] = len(volume.UsedBy)
 	}
 	return data, nil
+}
+
+func (a *lxdApiAdapter) ColocateStoragePoolVolumeWithInstance(instanceName, pool, diskName string) error {
+	instanceLoc, err := a.GetInstanceLocation(instanceName)
+	if err != nil {
+		return err
+	}
+
+	volume, _, err := a.client.GetStoragePoolVolume(pool, "custom", diskName)
+	if err != nil {
+		return err
+	}
+
+	if instanceLoc == volume.Location {
+		return nil
+	}
+
+	srcServer := a.client.UseTarget(volume.Location)
+	dstServer := a.client.UseTarget(instanceLoc)
+
+	args := &lxd.StoragePoolVolumeCopyArgs{
+		Name:       volume.Name,
+		Mode:       "move",
+		VolumeOnly: false,
+	}
+
+	// Manually move since MoveStoragePoolVolume() gives error:
+	// "Moving storage volumes between remotes is not implemented"
+	err = wait(dstServer.CopyStoragePoolVolume(pool, srcServer, pool, *volume, args))
+	if err != nil {
+		return err
+	}
+
+	return srcServer.DeleteStoragePoolVolume(pool, "custom", diskName)
 }

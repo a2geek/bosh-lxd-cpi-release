@@ -23,6 +23,7 @@ type ApiAdapter interface {
 	CreateStoragePoolVolumeFromISO(target, pool, diskName string, backupFile io.Reader) error
 	CreateStoragePoolVolume(target, pool, name string, size int) error
 	UpdateStoragePoolVolumeDescription(pool, diskName, description string) error
+	ColocateStoragePoolVolumeWithInstance(instanceName, pool, diskName string) error
 
 	DeleteStoragePoolVolumeSnapshot(pool, volumeName, snapshotName string) error
 	CreateStoragePoolVolumeSnapshot(pool, volumeName, snapshotName, description string) error
