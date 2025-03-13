@@ -4,9 +4,10 @@ import (
 	"bosh-lxd-cpi/adapter"
 
 	client "github.com/canonical/lxd/client"
+	boshlog "github.com/cloudfoundry/bosh-utils/logger"
 )
 
-func NewLXDAdapter(config adapter.Config) (adapter.ApiAdapter, error) {
+func NewLXDAdapter(config adapter.Config, logger boshlog.Logger) (adapter.ApiAdapter, error) {
 	connectionArgs := &client.ConnectionArgs{
 		TLSClientCert:      config.TLSClientCert,
 		TLSClientKey:       config.TLSClientKey,
@@ -26,9 +27,11 @@ func NewLXDAdapter(config adapter.Config) (adapter.ApiAdapter, error) {
 	}
 	return &lxdApiAdapter{
 		client: c,
+		logger: logger,
 	}, nil
 }
 
 type lxdApiAdapter struct {
 	client client.InstanceServer
+	logger boshlog.Logger
 }

@@ -3,10 +3,11 @@ package incus
 import (
 	"bosh-lxd-cpi/adapter"
 
+	boshlog "github.com/cloudfoundry/bosh-utils/logger"
 	client "github.com/lxc/incus/client"
 )
 
-func NewIncusAdapter(config adapter.Config) (adapter.ApiAdapter, error) {
+func NewIncusAdapter(config adapter.Config, logger boshlog.Logger) (adapter.ApiAdapter, error) {
 	connectionArgs := &client.ConnectionArgs{
 		TLSClientCert:      config.TLSClientCert,
 		TLSClientKey:       config.TLSClientKey,
@@ -26,9 +27,11 @@ func NewIncusAdapter(config adapter.Config) (adapter.ApiAdapter, error) {
 	}
 	return &incusApiAdapter{
 		client: c,
+		logger: logger,
 	}, nil
 }
 
 type incusApiAdapter struct {
 	client client.InstanceServer
+	logger boshlog.Logger
 }

@@ -35,7 +35,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	adapter, err := factory.NewAdapter(config.Server)
+	adapter, err := factory.NewAdapter(config.Server, logger)
 	if err != nil {
 		logger.Error("main", "API Adapter: %s", err.Error())
 		os.Exit(2)
