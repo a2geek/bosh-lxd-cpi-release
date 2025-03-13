@@ -28,7 +28,8 @@ type ApiAdapter interface {
 	CreateStoragePoolVolumeSnapshot(pool, volumeName, snapshotName, description string) error
 
 	AttachDevice(instanceName, deviceName string, device map[string]string) error
-	DetachDevice(instanceName, deviceName string) error
+	DetachDeviceByName(instanceName, deviceName string) error
+	DetachDeviceBySource(instanceName, sourceName string) error
 	GetDevices(instanceName string) (map[string]map[string]string, error)
 
 	Disconnect()

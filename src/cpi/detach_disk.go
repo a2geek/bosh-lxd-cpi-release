@@ -13,7 +13,7 @@ func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
 		return bosherr.WrapError(err, "Stopping instance")
 	}
 
-	err = c.adapter.DetachDevice(vmCID.AsString(), diskCID.AsString())
+	err = c.adapter.DetachDeviceBySource(vmCID.AsString(), diskCID.AsString())
 	if err != nil {
 		return bosherr.WrapError(err, "Detach Device")
 	}
