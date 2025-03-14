@@ -45,7 +45,7 @@ func (c fat32Manager) Write(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) ([]byte,
 	// partition size of 68000 is about 33.25MB.
 
 	diskSize := uint64(35 * 1024 * 1024)
-	image, err := diskfs.Create(diskFileName, int64(diskSize), diskfs.Raw, diskfs.SectorSizeDefault)
+	image, err := diskfs.Create(diskFileName, int64(diskSize), diskfs.SectorSizeDefault)
 	if err != nil {
 		return nil, err
 	}
