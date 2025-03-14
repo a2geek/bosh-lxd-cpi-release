@@ -35,7 +35,7 @@ func (m cdromManager) Write(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) ([]byte,
 	}
 
 	var diskSize int64 = 5 * 1024 * 1024 // 5 MB
-	image, err := diskfs.Create(cdromFileName, diskSize, diskfs.Raw, diskfs.SectorSizeDefault)
+	image, err := diskfs.Create(cdromFileName, diskSize, diskfs.SectorSizeDefault)
 	if err != nil {
 		return nil, err
 	}
