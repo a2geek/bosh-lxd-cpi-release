@@ -9,8 +9,8 @@
 - type: replace
   path: /resource_pools/name=vms/stemcell?
   value:
-    url: https://bosh.io/d/stemcells/bosh-openstack-kvm-ubuntu-jammy-go_agent?v=1.682
-    sha1: 6ba1f68609242efff0b64a60e55608dd665123a5
+    url: https://bosh.io/d/stemcells/bosh-openstack-kvm-ubuntu-jammy-go_agent?v=1.785
+    sha1: a235bbad385e0a9bb3ca2148cd007cc09f20183c
 
 # Configure LXD sizes
 - type: replace
