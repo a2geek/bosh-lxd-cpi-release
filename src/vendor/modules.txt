@@ -29,7 +29,7 @@ github.com/cloudfoundry/bosh-utils/errors
 github.com/cloudfoundry/bosh-utils/logger
 github.com/cloudfoundry/bosh-utils/system
 github.com/cloudfoundry/bosh-utils/uuid
-# github.com/diskfs/go-diskfs v1.5.2
+# github.com/diskfs/go-diskfs v1.6.0
 ## explicit; go 1.22
 github.com/diskfs/go-diskfs
 github.com/diskfs/go-diskfs/backend
