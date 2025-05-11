@@ -1,15 +1,34 @@
-# Pieces borrowed from other Go CPI implementations
+#!/bin/bash
 
 set -ex
 
 platform=$(uname | tr '[:upper:]' '[:lower:]')
-if [ -z "$BOSH_PACKAGES_DIR" ]; then
-	pkg_dir=$(readlink -nf /var/vcap/packages/golang-1-${platform})
-else
-	pkg_dir=$BOSH_PACKAGES_DIR/golang-1-${platform}
-fi
+machine=$(uname -m | tr '[:upper:]' '[:lower:]')
 
-source ${pkg_dir}/bosh/compile.env
+if [ -z "$BOSH_PACKAGES_DIR" ]
+then
+	BOSH_PACKAGES_DIR=$(readlink -nf /var/vcap/packages)
+fi
+pkg_dir="$BOSH_PACKAGES_DIR/golang-1-${platform}"
+
+if [ "${platform}-${machine}" == "linux-x86_64" ]
+then
+	# This is from the actual bosh package
+	source ${pkg_dir}/bosh/compile.env
+else
+	echo "Desktop install, downloading and installing go dynamically..."
+	# Presumption is initial deploy, so sitting on some desktop -- go to the internet and get a copy
+	[ "${machine}" == "x86_64" ] && machine="amd64"
+	archive="go1.24.3.${platform}-${machine}.tar.gz"
+	url="https://go.dev/dl/${archive}"
+	curl -LO "${url}"
+	# Install it...
+	mkdir -p ${pkg_dir}
+	tar xzf ${archive} -C ${BOSH_PACKAGES_DIR} --strip-components=1
+	rm ${archive}
+	# Setup environment
+	PATH=${pkg_dir}/bin:${PATH}
+fi
 
 # Since HOME is not set we must set GOPATH and GOCACHE
 mkdir -p /tmp/go/.cache
@@ -18,14 +37,6 @@ export GOCACHE=${GOPATH}/.cache
 
 mkdir -p $BOSH_INSTALL_TARGET/bin
 
-export GOARCH=arm64
-export GOOS=darwin
-go build -mod=vendor -o $BOSH_INSTALL_TARGET/bin/cpi-${GOOS} cmd/cpi/main.go
-go build -mod=vendor -o $BOSH_INSTALL_TARGET/bin/cleanup-${GOOS} cmd/cleanup/main.go
-go build -mod=vendor -o $BOSH_INSTALL_TARGET/bin/throttle-${GOOS} cmd/throttle/main.go
-
-export GOARCH=amd64
-export GOOS=linux
-go build -mod=vendor -o $BOSH_INSTALL_TARGET/bin/cpi-${GOOS} cmd/cpi/main.go
-go build -mod=vendor -o $BOSH_INSTALL_TARGET/bin/cleanup-${GOOS} cmd/cleanup/main.go
-go build -mod=vendor -o $BOSH_INSTALL_TARGET/bin/throttle-${GOOS} cmd/throttle/main.go
+go build -mod=vendor -o $BOSH_INSTALL_TARGET/bin/cpi cmd/cpi/main.go
+go build -mod=vendor -o $BOSH_INSTALL_TARGET/bin/cleanup cmd/cleanup/main.go
+go build -mod=vendor -o $BOSH_INSTALL_TARGET/bin/throttle cmd/throttle/main.go

@@ -6,5 +6,4 @@ exec > ${LOG_DIR} 2>&1
 pkgs_dir=${BOSH_PACKAGES_DIR:-/var/vcap/packages}
 jobs_dir=${BOSH_JOBS_DIR:-/var/vcap/jobs}
 
-platform=$(uname | tr '[:upper:]' '[:lower:]')
-exec $pkgs_dir/lxd_cpi/bin/cleanup-${platform} -configPath $jobs_dir/lxd_cpi/config/cpi.json -logLevel DEBUG
+exec $pkgs_dir/lxd_cpi/bin/cleanup -configPath $jobs_dir/lxd_cpi/config/cpi.json -logLevel DEBUG

@@ -3,7 +3,6 @@ name: lxd_cpi
 
 dependencies:
 - golang-1-linux
-- golang-1-darwin
 
 files:
 - "**/*"

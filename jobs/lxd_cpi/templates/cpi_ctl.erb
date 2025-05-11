@@ -6,7 +6,6 @@ AGENT_DIR=<%= p("lxd_cpi.agent_config.filestore_path") %>
 PIDFILE=$RUN_DIR/cpi.pid
 BIN_DIR=/var/vcap/packages/lxd_cpi/bin
 CONFIG_DIR=/var/vcap/jobs/lxd_cpi/config
-PLATFORM=$(uname | tr '[:upper:]' '[:lower:]')
 
 case $1 in
 
@@ -17,7 +16,7 @@ case $1 in
     echo $$ > $PIDFILE
 
     exec chpst -u vcap:vcap \
-      ${BIN_DIR}/throttle-${PLATFORM} \
+      ${BIN_DIR}/throttle \
       -configPath ${CONFIG_DIR}/cpi.json \
       -logLevel DEBUG \
       >> ${LOG_DIR}/throttle-stdout.log \
