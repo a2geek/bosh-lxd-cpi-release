@@ -24,7 +24,7 @@ else
 	curl -LO "${url}"
 	# Install it...
 	mkdir -p ${pkg_dir}
-	tar xzf ${archive} -C ${BOSH_PACKAGES_DIR} --strip-components=1
+	tar xzf ${archive} -C ${pkg_dir} --strip-components=1
 	rm ${archive}
 	# Setup environment
 	PATH=${pkg_dir}/bin:${PATH}
