@@ -18,7 +18,10 @@ then
 else
 	echo "Desktop install, downloading and installing go dynamically..."
 	# Presumption is initial deploy, so sitting on some desktop -- go to the internet and get a copy
-	[ "${machine}" == "x86_64" ] && machine="amd64"
+	case "${machine}" in
+		"x86_64") machine="amd64" ;;
+		"aarch64") machine="arm64" ;;
+	esac
 	archive="go1.24.3.${platform}-${machine}.tar.gz"
 	url="https://go.dev/dl/${archive}"
 	curl -LO "${url}"
