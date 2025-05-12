@@ -9,4 +9,6 @@ builds:
     version: v4
   d637e3ed-d7ca-4af5-6d6b-27bd19eb2aef:
     version: v3
+  e223d924-5d23-4637-49c7-d4e3d0311c54:
+    version: v6
 format-version: "2"
