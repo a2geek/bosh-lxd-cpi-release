@@ -1,10 +1,10 @@
-director_name: lxd
-server_project_name: boshdev
+director_name: boshdev
+server_project_name: default
 server_profile_name: default
-server_network_name: boshdevbr0
+server_network_name: fanbr1
 server_storage_pool_name: default
-internal_cidr: 10.245.0.0/24
-internal_gw: 10.245.0.1
-internal_ip: 10.245.0.11
+internal_cidr: 10.0.5.0/24
+internal_gw: 10.0.5.1
+internal_ip: 10.0.5.3
 internal_dns: 
   - 192.168.1.1
