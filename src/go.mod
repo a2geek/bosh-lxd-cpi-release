@@ -7,10 +7,10 @@ toolchain go1.24.1
 require (
 	github.com/canonical/lxd v0.0.0-20241105131838-efae303214c5
 	github.com/cloudfoundry/bosh-cpi-go v0.0.0-20241030212755-0e796ef21b6f
-	github.com/cloudfoundry/bosh-utils v0.0.543
+	github.com/cloudfoundry/bosh-utils v0.0.552
 	github.com/diskfs/go-diskfs v1.6.0
 	github.com/lxc/incus v0.7.0
-	golang.org/x/text v0.25.0
+	golang.org/x/text v0.27.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -21,7 +21,7 @@ require (
 	github.com/elliotwutingfeng/asciiset v0.0.0-20240214025120-24af97c84155 // indirect
 	github.com/flosch/pongo2 v0.0.0-20200913210552-0d938eb266f3 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
-	github.com/go-logr/logr v1.4.2 // indirect
+	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/schema v1.4.1 // indirect
@@ -43,9 +43,9 @@ require (
 	go.opentelemetry.io/otel v1.31.0 // indirect
 	go.opentelemetry.io/otel/metric v1.31.0 // indirect
 	go.opentelemetry.io/otel/trace v1.31.0 // indirect
-	golang.org/x/crypto v0.38.0 // indirect
+	golang.org/x/crypto v0.40.0 // indirect
 	golang.org/x/oauth2 v0.23.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
-	golang.org/x/term v0.32.0 // indirect
+	golang.org/x/sys v0.34.0 // indirect
+	golang.org/x/term v0.33.0 // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 )
