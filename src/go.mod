@@ -36,7 +36,7 @@ require (
 	github.com/pkg/sftp v1.13.7 // indirect
 	github.com/pkg/xattr v0.4.10 // indirect
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af // indirect
-	github.com/ulikunitz/xz v0.5.12 // indirect
+	github.com/ulikunitz/xz v0.5.14 // indirect
 	github.com/zitadel/logging v0.6.1 // indirect
 	github.com/zitadel/oidc/v2 v2.12.2 // indirect
 	github.com/zitadel/oidc/v3 v3.32.1 // indirect
