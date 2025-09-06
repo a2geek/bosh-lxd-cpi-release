@@ -1,3 +1,6 @@
+# github.com/anchore/go-lzo v0.1.0
+## explicit; go 1.24.0
+github.com/anchore/go-lzo
 # github.com/bmatcuk/doublestar v1.3.4
 ## explicit; go 1.12
 github.com/bmatcuk/doublestar
@@ -23,14 +26,14 @@ github.com/charlievieth/fs
 ## explicit; go 1.22.0
 github.com/cloudfoundry/bosh-cpi-go/apiv1
 github.com/cloudfoundry/bosh-cpi-go/rpc
-# github.com/cloudfoundry/bosh-utils v0.0.543
+# github.com/cloudfoundry/bosh-utils v0.0.554
 ## explicit; go 1.23.0
 github.com/cloudfoundry/bosh-utils/errors
 github.com/cloudfoundry/bosh-utils/logger
 github.com/cloudfoundry/bosh-utils/system
 github.com/cloudfoundry/bosh-utils/uuid
-# github.com/diskfs/go-diskfs v1.6.0
-## explicit; go 1.22
+# github.com/diskfs/go-diskfs v1.7.0
+## explicit; go 1.24.0
 github.com/diskfs/go-diskfs
 github.com/diskfs/go-diskfs/backend
 github.com/diskfs/go-diskfs/backend/file
@@ -61,7 +64,7 @@ github.com/flosch/pongo2
 github.com/go-jose/go-jose/v4
 github.com/go-jose/go-jose/v4/cipher
 github.com/go-jose/go-jose/v4/json
-# github.com/go-logr/logr v1.4.2
+# github.com/go-logr/logr v1.4.3
 ## explicit; go 1.18
 github.com/go-logr/logr
 github.com/go-logr/logr/funcr
@@ -134,7 +137,7 @@ github.com/pkg/xattr
 github.com/sirupsen/logrus
 github.com/sirupsen/logrus/hooks/syslog
 github.com/sirupsen/logrus/hooks/writer
-# github.com/ulikunitz/xz v0.5.12
+# github.com/ulikunitz/xz v0.5.14
 ## explicit; go 1.12
 github.com/ulikunitz/xz
 github.com/ulikunitz/xz/internal/hash
@@ -183,7 +186,7 @@ go.opentelemetry.io/otel/metric/embedded
 ## explicit; go 1.22
 go.opentelemetry.io/otel/trace
 go.opentelemetry.io/otel/trace/embedded
-# golang.org/x/crypto v0.38.0
+# golang.org/x/crypto v0.41.0
 ## explicit; go 1.23.0
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/chacha20
@@ -199,16 +202,16 @@ golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 golang.org/x/oauth2
 golang.org/x/oauth2/clientcredentials
 golang.org/x/oauth2/internal
-# golang.org/x/sys v0.33.0
+# golang.org/x/sys v0.35.0
 ## explicit; go 1.23.0
 golang.org/x/sys/cpu
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/term v0.32.0
+# golang.org/x/term v0.34.0
 ## explicit; go 1.23.0
 golang.org/x/term
-# golang.org/x/text v0.25.0
+# golang.org/x/text v0.28.0
 ## explicit; go 1.23.0
 golang.org/x/text/cases
 golang.org/x/text/internal
