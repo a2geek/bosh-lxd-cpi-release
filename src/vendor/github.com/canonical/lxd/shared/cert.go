@@ -6,6 +6,7 @@
 package shared
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -17,6 +18,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -341,7 +343,7 @@ func GenCert(certf string, keyf string, certtype bool, options CertOptions) erro
 
 // GenerateMemCert creates client or server certificate and key pair,
 // returning them as byte arrays in memory.
-func GenerateMemCert(client bool, options CertOptions) ([]byte, []byte, error) {
+func GenerateMemCert(client bool, options CertOptions) (cert []byte, key []byte, err error) {
 	privk, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to generate key: %w", err)
@@ -379,7 +381,7 @@ func GenerateMemCert(client bool, options CertOptions) ([]byte, []byte, error) {
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
 			Organization: []string{"LXD"},
-			CommonName:   fmt.Sprintf("%s@%s", username, hostname),
+			CommonName:   username + "@" + hostname,
 		},
 		NotBefore: validFrom,
 		NotAfter:  validTo,
@@ -424,8 +426,8 @@ func GenerateMemCert(client bool, options CertOptions) ([]byte, []byte, error) {
 		return nil, nil, err
 	}
 
-	cert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
-	key := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: data})
+	cert = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	key = pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: data})
 
 	return cert, key, nil
 }
@@ -434,7 +436,7 @@ func GenerateMemCert(client bool, options CertOptions) ([]byte, []byte, error) {
 func ParseCert(cert []byte) (*x509.Certificate, error) {
 	certBlock, _ := pem.Decode(cert)
 	if certBlock == nil {
-		return nil, fmt.Errorf("Invalid PEM block")
+		return nil, errors.New("Invalid PEM block")
 	}
 
 	return x509.ParseCertificate(certBlock.Bytes)
@@ -459,7 +461,7 @@ func CertFingerprint(cert *x509.Certificate) string {
 func CertFingerprintStr(c string) (string, error) {
 	pemCertificate, _ := pem.Decode([]byte(c))
 	if pemCertificate == nil {
-		return "", fmt.Errorf("invalid certificate")
+		return "", errors.New("invalid certificate")
 	}
 
 	cert, err := x509.ParseCertificate(pemCertificate.Bytes)
@@ -471,7 +473,7 @@ func CertFingerprintStr(c string) (string, error) {
 }
 
 // GetRemoteCertificate returns the unverified peer certificate found at a remote address.
-func GetRemoteCertificate(address string, useragent string) (*x509.Certificate, error) {
+func GetRemoteCertificate(ctx context.Context, address string, useragent string) (*x509.Certificate, error) {
 	// Setup a permissive TLS config
 	tlsConfig, err := GetTLSConfig(nil)
 	if err != nil {
@@ -490,7 +492,7 @@ func GetRemoteCertificate(address string, useragent string) (*x509.Certificate, 
 	}
 
 	// Connect
-	req, err := http.NewRequest("GET", address, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, address, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -507,7 +509,7 @@ func GetRemoteCertificate(address string, useragent string) (*x509.Certificate, 
 
 	// Retrieve the certificate
 	if resp.TLS == nil || len(resp.TLS.PeerCertificates) == 0 {
-		return nil, fmt.Errorf("Unable to read remote TLS certificate")
+		return nil, errors.New("Unable to read remote TLS certificate")
 	}
 
 	return resp.TLS.PeerCertificates[0], nil
@@ -527,19 +529,19 @@ func CertificateTokenDecode(input string) (*api.CertificateAddToken, error) {
 	}
 
 	if j.ClientName == "" {
-		return nil, fmt.Errorf("No client name in certificate add token")
+		return nil, errors.New("No client name in certificate add token")
 	}
 
 	if len(j.Addresses) < 1 {
-		return nil, fmt.Errorf("No server addresses in certificate add token")
+		return nil, errors.New("No server addresses in certificate add token")
 	}
 
 	if j.Secret == "" {
-		return nil, fmt.Errorf("No secret in certificate add token")
+		return nil, errors.New("No secret in certificate add token")
 	}
 
 	if j.Fingerprint == "" {
-		return nil, fmt.Errorf("No certificate fingerprint in certificate add token")
+		return nil, errors.New("No certificate fingerprint in certificate add token")
 	}
 
 	return &j, nil
@@ -550,7 +552,7 @@ func CertificateTokenDecode(input string) (*api.CertificateAddToken, error) {
 func GenerateTrustCertificate(cert *CertInfo, name string) (*api.Certificate, error) {
 	block, _ := pem.Decode(cert.PublicKey())
 	if block == nil {
-		return nil, fmt.Errorf("Failed to decode certificate")
+		return nil, errors.New("Failed to decode certificate")
 	}
 
 	fingerprint, err := CertFingerprintStr(string(cert.PublicKey()))

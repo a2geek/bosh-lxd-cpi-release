@@ -1,11 +1,12 @@
 package simplestreams
 
 import (
-	"fmt"
+	"errors"
+	"slices"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/canonical/lxd/shared"
 	"github.com/canonical/lxd/shared/api"
 	"github.com/canonical/lxd/shared/osarch"
 )
@@ -70,7 +71,7 @@ func (s *Products) ToLXD() ([]api.Image, map[string][][]string) {
 	downloads := map[string][][]string{}
 
 	images := []api.Image{}
-	nameLayoutLong := "20060102_0304" // Date and time.
+	nameLayoutLong := "20060102_1504" // Date and time.
 	nameLayoutShort := "20060102"     // Date only.
 	eolLayout := "2006-01-02"
 
@@ -107,9 +108,9 @@ func (s *Products) ToLXD() ([]api.Image, map[string][][]string) {
 			addImage := func(meta *ProductVersionItem, root *ProductVersionItem) error {
 				// Look for deltas
 				deltas := []ProductVersionItem{}
-				if root != nil && shared.ValueInSlice(root.FileType, []string{"squashfs", "disk-kvm.img"}) {
+				if root != nil && slices.Contains([]string{"squashfs", "disk-kvm.img"}, root.FileType) {
 					for _, item := range version.Items {
-						if item.FileType == fmt.Sprintf("%s.vcdiff", root.FileType) {
+						if item.FileType == root.FileType+".vcdiff" {
 							deltas = append(deltas, item)
 						}
 					}
@@ -118,19 +119,21 @@ func (s *Products) ToLXD() ([]api.Image, map[string][][]string) {
 				// Figure out the fingerprint
 				fingerprint := ""
 				if root != nil {
-					if root.FileType == "root.tar.xz" {
+					switch root.FileType {
+					case "root.tar.xz":
 						if meta.LXDHashSha256RootXz != "" {
 							fingerprint = meta.LXDHashSha256RootXz
 						} else {
 							fingerprint = meta.LXDHashSha256
 						}
-					} else if root.FileType == "squashfs" {
+
+					case "squashfs":
 						fingerprint = meta.LXDHashSha256SquashFs
-					} else if root.FileType == "disk-kvm.img" {
+					case "disk-kvm.img":
 						fingerprint = meta.LXDHashSha256DiskKvmImg
-					} else if root.FileType == "disk1.img" {
+					case "disk1.img":
 						fingerprint = meta.LXDHashSha256DiskImg
-					} else if root.FileType == "uefi1.img" {
+					case "uefi1.img":
 						fingerprint = meta.LXDHashSha256DiskUefiImg
 					}
 				} else {
@@ -138,7 +141,7 @@ func (s *Products) ToLXD() ([]api.Image, map[string][][]string) {
 				}
 
 				if fingerprint == "" {
-					return fmt.Errorf("No LXD image fingerprint found")
+					return errors.New("No LXD image fingerprint found")
 				}
 
 				// Figure out the size
@@ -149,19 +152,19 @@ func (s *Products) ToLXD() ([]api.Image, map[string][][]string) {
 
 				// Determine filename
 				if meta.Path == "" {
-					return fmt.Errorf("Missing path field on metadata entry")
+					return errors.New("Missing path field on metadata entry")
 				}
 
 				fields := strings.Split(meta.Path, "/")
 				filename := fields[len(fields)-1]
 
 				// Generate the actual image entry
-				description := fmt.Sprintf("%s %s %s", product.OperatingSystem, product.ReleaseTitle, product.Architecture)
+				description := product.OperatingSystem + " " + product.ReleaseTitle + " " + product.Architecture
 				if version.Label != "" {
-					description = fmt.Sprintf("%s (%s)", description, version.Label)
+					description += " (" + version.Label + ")"
 				}
 
-				description = fmt.Sprintf("%s (%s)", description, name)
+				description += " (" + name + ")"
 
 				image := api.Image{}
 				image.Architecture = architectureName
@@ -216,7 +219,7 @@ func (s *Products) ToLXD() ([]api.Image, map[string][][]string) {
 				// Add the provided aliases
 				if product.Aliases != "" {
 					image.Aliases = []api.ImageAlias{}
-					for _, entry := range strings.Split(product.Aliases, ",") {
+					for entry := range strings.SplitSeq(product.Aliases, ",") {
 						image.Aliases = append(image.Aliases, api.ImageAlias{Name: entry})
 					}
 				}
@@ -233,11 +236,11 @@ func (s *Products) ToLXD() ([]api.Image, map[string][][]string) {
 				// Set the file list
 				var imgDownloads [][]string
 				if root == nil {
-					imgDownloads = [][]string{{meta.Path, meta.HashSha256, "meta", fmt.Sprintf("%d", meta.Size)}}
+					imgDownloads = [][]string{{meta.Path, meta.HashSha256, "meta", strconv.FormatInt(meta.Size, 10)}}
 				} else {
 					imgDownloads = [][]string{
-						{meta.Path, meta.HashSha256, "meta", fmt.Sprintf("%d", meta.Size)},
-						{root.Path, root.HashSha256, "root", fmt.Sprintf("%d", root.Size)}}
+						{meta.Path, meta.HashSha256, "meta", strconv.FormatInt(meta.Size, 10)},
+						{root.Path, root.HashSha256, "root", strconv.FormatInt(root.Size, 10)}}
 				}
 
 				// Add the deltas
@@ -251,15 +254,16 @@ func (s *Products) ToLXD() ([]api.Image, map[string][][]string) {
 					// Locate source image fingerprint
 					var srcFingerprint string
 					for _, item := range srcImage.Items {
-						if !shared.ValueInSlice(item.FileType, lxdCompatItems) {
+						if !slices.Contains(lxdCompatItems, item.FileType) {
 							continue
 						}
 
 						// Take correct source image fingerprint based on
 						// delta file type.
-						if delta.FileType == "disk-kvm.img.vcdiff" {
+						switch delta.FileType {
+						case "disk-kvm.img.vcdiff":
 							srcFingerprint = item.LXDHashSha256DiskKvmImg
-						} else if delta.FileType == "squashfs.vcdiff" {
+						case "squashfs.vcdiff":
 							srcFingerprint = item.LXDHashSha256SquashFs
 						}
 
@@ -275,8 +279,8 @@ func (s *Products) ToLXD() ([]api.Image, map[string][][]string) {
 					imgDownloads = append(imgDownloads, []string{
 						delta.Path,
 						delta.HashSha256,
-						fmt.Sprintf("root.delta-%s", srcFingerprint),
-						fmt.Sprintf("%d", delta.Size)})
+						"root.delta-" + srcFingerprint,
+						strconv.FormatInt(delta.Size, 10)})
 				}
 
 				// Add the image
@@ -288,15 +292,15 @@ func (s *Products) ToLXD() ([]api.Image, map[string][][]string) {
 
 			// Locate a valid LXD image
 			for _, item := range version.Items {
-				if shared.ValueInSlice(item.FileType, lxdCompatCombinedItems) {
+				if slices.Contains(lxdCompatCombinedItems, item.FileType) {
 					err := addImage(&item, nil)
 					if err != nil {
 						continue
 					}
-				} else if shared.ValueInSlice(item.FileType, lxdCompatItems) {
+				} else if slices.Contains(lxdCompatItems, item.FileType) {
 					// Locate the root files
 					for _, subItem := range version.Items {
-						if shared.ValueInSlice(subItem.FileType, []string{"disk1.img", "disk-kvm.img", "uefi1.img", "root.tar.xz", "squashfs"}) {
+						if slices.Contains([]string{"disk1.img", "disk-kvm.img", "uefi1.img", "root.tar.xz", "squashfs"}, subItem.FileType) {
 							err := addImage(&item, &subItem)
 							if err != nil {
 								continue

@@ -5,9 +5,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"net"
-	"os"
 	"strings"
 	"time"
 )
@@ -59,16 +59,9 @@ func IsConnectionError(err error) bool {
 // parameters. This is used as baseline config for both client and server
 // certificates used by LXD.
 func InitTLSConfig() *tls.Config {
-	config := &tls.Config{}
-
-	// Restrict to TLS 1.3 unless LXD_INSECURE_TLS is set.
-	if IsFalseOrEmpty(os.Getenv("LXD_INSECURE_TLS")) {
-		config.MinVersion = tls.VersionTLS13
-	} else {
-		config.MinVersion = tls.VersionTLS12
+	return &tls.Config{
+		MinVersion: tls.VersionTLS13,
 	}
-
-	return config
 }
 
 func finalizeTLSConfig(tlsConfig *tls.Config, tlsRemoteCert *x509.Certificate) {
@@ -131,7 +124,7 @@ func GetTLSConfigMem(tlsClientCert string, tlsClientKey string, tlsClientCA stri
 		// Ignore any content outside of the PEM bytes we care about
 		certBlock, _ := pem.Decode([]byte(tlsRemoteCertPEM))
 		if certBlock == nil {
-			return nil, fmt.Errorf("Invalid remote certificate")
+			return nil, errors.New("Invalid remote certificate")
 		}
 
 		var err error

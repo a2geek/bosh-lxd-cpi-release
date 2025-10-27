@@ -1,11 +1,18 @@
 package api
 
+import (
+	"time"
+)
+
 const (
 	// AuthenticationMethodTLS is the default authentication method for interacting with LXD remotely.
 	AuthenticationMethodTLS = "tls"
 
-	// AuthenticationMethodOIDC is a token based authentication method.
+	// AuthenticationMethodOIDC is the OpenID Connect authentication method.
 	AuthenticationMethodOIDC = "oidc"
+
+	// AuthenticationMethodBearer is the authentication method used when the caller sends a bearer token that was issued by LXD.
+	AuthenticationMethodBearer = "bearer"
 )
 
 const (
@@ -32,7 +39,27 @@ const (
 
 	// IdentityTypeOIDCClient represents an identity that authenticates with OIDC.
 	IdentityTypeOIDCClient = "OIDC client"
+
+	// IdentityTypeBearerTokenDevLXD represents an identity that bears a LXD token that can be used to interact with the DevLXD API.
+	IdentityTypeBearerTokenDevLXD = "DevLXD token bearer"
 )
+
+// WithEntitlements is meant to be an embedded struct to API types eligible for entitlement enrichment,
+// that is, entities that can have access entitlements granted to the requesting user.
+//
+// swagger:model
+//
+// API extension: entities_with_entitlements.
+type WithEntitlements struct {
+	// AccessEntitlements represents the entitlements that are granted to the requesting user on the attached entity.
+	// Example: ["can_view", "can_edit"]
+	AccessEntitlements []string `json:"access_entitlements,omitempty" yaml:"access_entitlements,omitempty"`
+}
+
+// ReportEntitlements adds entitlements to the identity.
+func (e *WithEntitlements) ReportEntitlements(entitlements []string) {
+	e.AccessEntitlements = entitlements
+}
 
 // Identity is the type for an authenticated party that can make requests to the HTTPS API.
 //
@@ -40,6 +67,8 @@ const (
 //
 // API extension: access_management.
 type Identity struct {
+	WithEntitlements `yaml:",inline"`
+
 	// AuthenticationMethod is the authentication method that the identity
 	// authenticates to LXD with.
 	// Example: tls
@@ -61,18 +90,25 @@ type Identity struct {
 	// Groups is the list of groups for which the identity is a member.
 	// Example: ["foo", "bar"]
 	Groups []string `json:"groups" yaml:"groups"`
+
+	// TLSCertificate is a PEM encoded x509 certificate. This is only set if the AuthenticationMethod is AuthenticationMethodTLS.
+	//
+	// API extension: access_management_tls.
+	TLSCertificate string `json:"tls_certificate" yaml:"tls_certificate"`
 }
 
 // Writable converts a Identity struct into a IdentityPut struct (filters read-only fields).
 func (i Identity) Writable() IdentityPut {
 	return IdentityPut{
-		Groups: i.Groups,
+		Groups:         i.Groups,
+		TLSCertificate: i.TLSCertificate,
 	}
 }
 
 // SetWritable sets applicable values from IdentityPut struct to Identity struct.
 func (i *Identity) SetWritable(put IdentityPut) {
 	i.Groups = put.Groups
+	i.TLSCertificate = put.TLSCertificate
 }
 
 // IdentityInfo expands an Identity to include effective group membership and effective permissions.
@@ -92,6 +128,10 @@ type IdentityInfo struct {
 	// Effective permissions is the combined and deduplicated list of permissions that the identity has by virtue of
 	// direct membership to a LXD group, or effective membership of a LXD group via identity provider group mappings.
 	EffectivePermissions []Permission `json:"effective_permissions" yaml:"effective_permissions"`
+
+	// FineGrained is a boolean indicating whether the identity is fine-grained,
+	// meaning that permissions are managed via group membership.
+	FineGrained bool `json:"fine_grained" yaml:"fine_grained"`
 }
 
 // IdentityPut contains the editable fields of an IdentityInfo.
@@ -103,6 +143,11 @@ type IdentityPut struct {
 	// Groups is the list of groups for which the identity is a member.
 	// Example: ["foo", "bar"]
 	Groups []string `json:"groups" yaml:"groups"`
+
+	// TLSCertificate is a base64 encoded x509 certificate. This can only be set if the authentication method of the identity is AuthenticationMethodTLS.
+	//
+	// API extension: access_management_tls.
+	TLSCertificate string `json:"tls_certificate" yaml:"tls_certificate"`
 }
 
 // IdentitiesTLSPost contains required information for the creation of a TLS identity.
@@ -131,12 +176,52 @@ type IdentitiesTLSPost struct {
 	Groups []string `json:"groups" yaml:"groups"`
 }
 
+// IdentitiesBearerPost contains required information for the creation of a token identity.
+//
+// swagger:model
+//
+// API extension: auth_bearer_devlxd.
+type IdentitiesBearerPost struct {
+	// Type of identity
+	// Example: DevLXD token bearer
+	Type string `json:"type" yaml:"type"`
+
+	// Name associated with the identity
+	// Example: foo
+	Name string `json:"name" yaml:"name"`
+
+	// Groups is the list of groups for which the identity is a member.
+	// Example: ["foo", "bar"]
+	Groups []string `json:"groups" yaml:"groups"`
+}
+
+// IdentityBearerToken contains a token issued for an identity whose authentication method is
+// api.AuthenticationMethodBearer.
+//
+// swagger:model
+//
+// API extension: auth_bearer_devlxd.
+type IdentityBearerToken struct {
+	Token string `json:"token" yaml:"token"`
+}
+
+// IdentityBearerTokenPost contains parameters used when issuing a token for a bearer identity.
+//
+// swagger:model
+//
+// API extension: auth_bearer_devlxd.
+type IdentityBearerTokenPost struct {
+	Expiry string `json:"expiry" yaml:"expiry"`
+}
+
 // AuthGroup is the type for a LXD group.
 //
 // swagger:model
 //
 // API extension: access_management.
 type AuthGroup struct {
+	WithEntitlements `yaml:",inline"`
+
 	// Name is the name of the group.
 	// Example: default-c1-viewers
 	Name string `json:"name" yaml:"name"`
@@ -212,6 +297,8 @@ type AuthGroupPut struct {
 //
 // API extension: access_management.
 type IdentityProviderGroup struct {
+	WithEntitlements `yaml:",inline"`
+
 	// Name is the name of the IdP group.
 	Name string `json:"name" yaml:"name"`
 
@@ -253,6 +340,20 @@ type IdentityProviderGroupPut struct {
 	Groups []string `json:"groups" yaml:"groups"`
 }
 
+// IdentityProviderGroupsPost is used for creating an IdentityProviderGroup.
+//
+// swagger:model
+//
+// API extension: access_management.
+type IdentityProviderGroupsPost struct {
+	// Name is the name of the IdP group.
+	Name string `json:"name" yaml:"name"`
+
+	// Groups are the groups the IdP group resolves to.
+	// Example: ["foo", "bar"]
+	Groups []string `json:"groups" yaml:"groups"`
+}
+
 // Permission represents a permission that may be granted to a group.
 //
 // swagger:model
@@ -283,4 +384,39 @@ type PermissionInfo struct {
 	// Groups is a list of groups that have the Entitlement on the Entity.
 	// Example: ["foo", "bar"]
 	Groups []string `json:"groups" yaml:"groups"`
+}
+
+// OIDCSession contains session details for a current login.
+//
+// swagger:model
+//
+// API extension: auth_oidc_sessions.
+type OIDCSession struct {
+	// UUID is the session UUID.
+	// Example: 01993985-7b5d-7a7e-afeb-23e8f6a15cf4
+	UUID string `json:"uuid" yaml:"uuid"`
+
+	// Email is the email of the user that holds the session.
+	// Example: jane.doe@example.com
+	Email string `json:"email" yaml:"email"`
+
+	// Username is the name of the user that holds the session.
+	// Example: Jane Doe
+	Username string `json:"username" yaml:"username"`
+
+	// IP is the IP address of the user that holds the session.
+	// Example: 10.21.242.46
+	IP string `json:"ip" yaml:"ip"`
+
+	// UserAgent is the UserAgent of the user that holds the session.
+	// Example: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36
+	UserAgent string `json:"user_agent" yaml:"user_agent"`
+
+	// ExpiresAt is when the session will expire.
+	// Example: 2025-09-11T15:14:04+00:00
+	ExpiresAt time.Time `json:"expires_at" yaml:"expires_at"`
+
+	// CreatedAt is when the session was started.
+	// Example: 2025-09-11T15:14:04+00:00
+	CreatedAt time.Time `json:"created_at" yaml:"created_at"`
 }
