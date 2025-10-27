@@ -7,12 +7,7 @@ import (
 
 // GetParentAndSnapshotName returns the parent name, snapshot name, and whether it actually was a snapshot name.
 func GetParentAndSnapshotName(name string) (parentName string, snapshotName string, isSnapshot bool) {
-	fields := strings.SplitN(name, "/", 2)
-	if len(fields) == 1 {
-		return name, "", false
-	}
-
-	return fields[0], fields[1], true
+	return strings.Cut(name, "/")
 }
 
 // InstanceType represents the type if instance being returned or requested via the API.
@@ -26,6 +21,23 @@ const InstanceTypeContainer = InstanceType("container")
 
 // InstanceTypeVM defines the instance type value for a virtual-machine.
 const InstanceTypeVM = InstanceType("virtual-machine")
+
+const (
+	// SourceTypeMigration represents instance creation from migration.
+	SourceTypeMigration = "migration"
+
+	// SourceTypeConversion represents instance creation from conversion.
+	SourceTypeConversion = "conversion"
+
+	// SourceTypeImage represents instance creation from an image.
+	SourceTypeImage = "image"
+
+	// SourceTypeCopy represents instance creation from a copy operation.
+	SourceTypeCopy = "copy"
+
+	// SourceTypeNone represents an unknown source type for instance creation.
+	SourceTypeNone = "none"
+)
 
 // InstancesPost represents the fields available for a new LXD instance.
 //
@@ -91,7 +103,9 @@ type InstancePost struct {
 
 	// Whether snapshots should be discarded (migration only, deprecated, use instance_only)
 	// Example: false
-	ContainerOnly bool `json:"container_only" yaml:"container_only"` // Deprecated, use InstanceOnly.
+	//
+	// Deprecated: use InstanceOnly.
+	ContainerOnly bool `json:"container_only" yaml:"container_only"`
 
 	// Target for the migration, will use pull mode if not set (migration only)
 	Target *InstancePostTarget `json:"target" yaml:"target"`
@@ -118,19 +132,25 @@ type InstancePost struct {
 	// Example: {"security.nesting": "true"}
 	//
 	// API extension: instance_move_config
-	Config map[string]string
+	Config map[string]string `json:"Config" yaml:"config"`
 
 	// Instance devices.
 	// Example: {"root": {"type": "disk", "pool": "default", "path": "/"}}
 	//
 	// API extension: instance_move_config
-	Devices map[string]map[string]string
+	Devices map[string]map[string]string `json:"Devices" yaml:"devices"`
 
 	// List of profiles applied to the instance.
 	// Example: ["default"]
 	//
 	// API extension: instance_move_config
-	Profiles []string
+	Profiles []string `json:"Profiles" yaml:"profiles"`
+
+	// Whether the instances's snapshot should receive target instances profile on copy
+	// Example: true
+	//
+	// API extension: override_snapshot_profiles_on_copy
+	OverrideSnapshotProfiles bool `json:"override_snapshot_profiles" yaml:"override_snapshot_profiles"`
 }
 
 // InstancePostTarget represents the migration target host and operation.
@@ -148,9 +168,19 @@ type InstancePostTarget struct {
 	Operation string `json:"operation,omitempty" yaml:"operation,omitempty"`
 
 	// Migration websockets credentials
-	// Example: {"migration": "random-string", "criu": "random-string"}
+	// Example: {"migration": "random-string"}
 	Websockets map[string]string `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 }
+
+const (
+	// DiskVolumesModeRoot represents the "root" disk volumes mode.
+	// This mode performs an action on the root disk only.
+	DiskVolumesModeRoot = "root"
+
+	// DiskVolumesModeAllExclusive represents the "all-exclusive" disk volumes mode.
+	// This mode performs an action on the root disk and all exclusive (non-shared) disk volumes.
+	DiskVolumesModeAllExclusive = "all-exclusive"
+)
 
 // InstancePut represents the modifiable fields of a LXD instance.
 //
@@ -182,6 +212,12 @@ type InstancePut struct {
 	// Example: snap0
 	Restore string `json:"restore,omitempty" yaml:"restore,omitempty"`
 
+	// Which disk volumes to restore from an instance snapshot. Possible values are "root" or "all-exclusive".
+	// Example: all-exclusive
+	//
+	// API extension: instance_snapshot_multi_volume
+	RestoreDiskVolumesMode string `json:"restore_disk_volumes_mode,omitempty" yaml:"restore_disk_volumes_mode,omitempty"`
+
 	// Whether the instance currently has saved state on disk
 	// Example: false
 	Stateful bool `json:"stateful" yaml:"stateful"`
@@ -207,6 +243,8 @@ type InstanceRebuildPost struct {
 //
 // API extension: instances.
 type Instance struct {
+	WithEntitlements `yaml:",inline"` //nolint:musttag
+
 	// Instance name
 	// Example: foo
 	Name string `json:"name" yaml:"name"`
@@ -409,7 +447,9 @@ type InstanceSource struct {
 
 	// Whether the copy should skip the snapshots (for copy, deprecated, use instance_only)
 	// Example: false
-	ContainerOnly bool `json:"container_only,omitempty" yaml:"container_only,omitempty"` // Deprecated, use InstanceOnly.
+	//
+	// Deprecated: Use InstanceOnly.
+	ContainerOnly bool `json:"container_only,omitempty" yaml:"container_only,omitempty"`
 
 	// Whether this is refreshing an existing instance (for migration and copy)
 	// Example: false
@@ -437,6 +477,12 @@ type InstanceSource struct {
 	//
 	// API extension: instance_import_conversion
 	ConversionOptions []string `json:"conversion_options" yaml:"conversion_options"`
+
+	// Whether the instances's snapshot should receive target instances profile on copy
+	// Example: true
+	//
+	// API extension: override_snapshot_profiles_on_copy
+	OverrideSnapshotProfiles bool `json:"override_snapshot_profiles" yaml:"override_snapshot_profiles"`
 }
 
 // InstanceUEFIVars represents the UEFI variables of a LXD virtual machine.

@@ -1,5 +1,13 @@
 package api
 
+const (
+	// AuthTrusted is the value of [ServerUntrusted.Auth] returned by the server when the client has authenticated.
+	AuthTrusted = "trusted"
+
+	// AuthUntrusted is the value of [ServerUntrusted.Auth] returned by the server when the client not authenticated.
+	AuthUntrusted = "untrusted"
+)
+
 // ServerEnvironment represents the read-only environment fields of a LXD server.
 type ServerEnvironment struct {
 	// List of addresses the server is listening on
@@ -9,6 +17,12 @@ type ServerEnvironment struct {
 	// List of architectures supported by the server
 	// Example: ["x86_64", "i686"]
 	Architectures []string `json:"architectures" yaml:"architectures"`
+
+	// Range of supported backup metadata versions
+	// Example: [1, 2]
+	//
+	// API extension: backup_metadata_version
+	BackupMetadataVersionRange []uint32 `json:"backup_metadata_version_range" yaml:"backup_metadata_version_range"`
 
 	// Server certificate as PEM encoded X509
 	// Example: X509 PEM certificate
@@ -196,14 +210,25 @@ type ServerUntrusted struct {
 	//
 	// API extension: oidc
 	AuthMethods []string `json:"auth_methods" yaml:"auth_methods"`
+
+	// Whether the requester sent a client certificate with the request
+	// Read only: true
+	// Example: false
+	//
+	// API extension: client_cert_presence
+	ClientCertificate bool `json:"client_certificate" yaml:"client_certificate"`
+
+	// Server configuration map (refer to doc/server.md) The available fields for public endpoint (before authentication) are limited.
+	// Example: {"user.microcloud": "true"}
+	Config map[string]any `json:"config" yaml:"config"`
 }
 
 // Server represents a LXD server
 //
 // swagger:model
 type Server struct {
-	ServerPut       `yaml:",inline"`
-	ServerUntrusted `yaml:",inline"`
+	WithEntitlements `yaml:",inline"`
+	ServerUntrusted  `yaml:",inline"`
 
 	// The current user username as seen by LXD
 	// Read only: true
@@ -226,5 +251,7 @@ type Server struct {
 
 // Writable converts a full Server struct into a ServerPut struct (filters read-only fields).
 func (srv *Server) Writable() ServerPut {
-	return srv.ServerPut
+	return ServerPut{
+		Config: srv.Config,
+	}
 }

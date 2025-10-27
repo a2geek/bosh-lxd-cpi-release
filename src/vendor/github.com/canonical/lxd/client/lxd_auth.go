@@ -1,6 +1,7 @@
 package lxd
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -171,7 +172,7 @@ func (r *ProtocolLXD) GetIdentityIdentifiersByAuthenticationMethod(authenticatio
 	}
 
 	urls := []string{}
-	baseURL := fmt.Sprintf("auth/identities/%s", authenticationMethod)
+	baseURL := "auth/identities/" + authenticationMethod
 	_, err = r.queryStruct(http.MethodGet, baseURL, nil, "", &urls)
 	if err != nil {
 		return nil, err
@@ -299,7 +300,7 @@ func (r *ProtocolLXD) CreateIdentityTLSToken(tlsIdentitiesPost api.IdentitiesTLS
 	}
 
 	if !tlsIdentitiesPost.Token {
-		return nil, fmt.Errorf("Token needs to be true when requesting a token")
+		return nil, errors.New("Token needs to be true when requesting a token")
 	}
 
 	var token api.CertificateAddToken
@@ -309,6 +310,52 @@ func (r *ProtocolLXD) CreateIdentityTLSToken(tlsIdentitiesPost api.IdentitiesTLS
 	}
 
 	return &token, nil
+}
+
+// CreateIdentityBearer creates a bearer token identity.
+func (r *ProtocolLXD) CreateIdentityBearer(identitiesBearerPost api.IdentitiesBearerPost) error {
+	err := r.CheckExtension("auth_bearer_devlxd")
+	if err != nil {
+		return err
+	}
+
+	_, err = r.queryStruct(http.MethodPost, api.NewURL().Path("auth", "identities", api.AuthenticationMethodBearer).String(), identitiesBearerPost, "", nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// IssueBearerIdentityToken revokes the existing token for the identity and issues a new token.
+func (r *ProtocolLXD) IssueBearerIdentityToken(nameOrIdentifier string, identityBearerTokenPost api.IdentityBearerTokenPost) (*api.IdentityBearerToken, error) {
+	err := r.CheckExtension("auth_bearer_devlxd")
+	if err != nil {
+		return nil, err
+	}
+
+	var token api.IdentityBearerToken
+	_, err = r.queryStruct(http.MethodPost, api.NewURL().Path("auth", "identities", api.AuthenticationMethodBearer, nameOrIdentifier, "token").String(), identityBearerTokenPost, "", &token)
+	if err != nil {
+		return nil, err
+	}
+
+	return &token, nil
+}
+
+// RevokeBearerIdentityToken revokes the existing token for the identity.
+func (r *ProtocolLXD) RevokeBearerIdentityToken(nameOrIdentifier string) error {
+	err := r.CheckExtension("auth_bearer_devlxd")
+	if err != nil {
+		return err
+	}
+
+	_, err = r.queryStruct(http.MethodDelete, api.NewURL().Path("auth", "identities", api.AuthenticationMethodBearer, nameOrIdentifier, "token").String(), nil, "", nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GetIdentityProviderGroupNames returns a list of identity provider group names.
@@ -361,7 +408,7 @@ func (r *ProtocolLXD) GetIdentityProviderGroup(identityProviderGroupName string)
 }
 
 // CreateIdentityProviderGroup creates a new identity provider group.
-func (r *ProtocolLXD) CreateIdentityProviderGroup(identityProviderGroup api.IdentityProviderGroup) error {
+func (r *ProtocolLXD) CreateIdentityProviderGroup(identityProviderGroup api.IdentityProviderGroupsPost) error {
 	err := r.CheckExtension("access_management")
 	if err != nil {
 		return err
@@ -469,4 +516,95 @@ func (r *ProtocolLXD) GetPermissionsInfo(args GetPermissionsArgs) ([]api.Permiss
 	}
 
 	return permissions, nil
+}
+
+// GetOIDCSessionUUIDs gets all OIDC session UUIDs.
+func (r *ProtocolLXD) GetOIDCSessionUUIDs() ([]string, error) {
+	err := r.CheckExtension("auth_oidc_sessions")
+	if err != nil {
+		return nil, err
+	}
+
+	urls := []string{}
+	_, err = r.queryStruct(http.MethodGet, api.NewURL().Path("auth", "oidc-sessions").String(), nil, "", &urls)
+	if err != nil {
+		return nil, err
+	}
+
+	return urlsToResourceNames("/1.0/auth/oidc-sessions", urls...)
+}
+
+// GetOIDCSessionUUIDsByEmail gets a list of session UUIDs for the user with the given email address.
+func (r *ProtocolLXD) GetOIDCSessionUUIDsByEmail(email string) ([]string, error) {
+	err := r.CheckExtension("auth_oidc_sessions")
+	if err != nil {
+		return nil, err
+	}
+
+	urls := []string{}
+	_, err = r.queryStruct(http.MethodGet, api.NewURL().Path("auth", "oidc-sessions").WithQuery("email", email).String(), nil, "", &urls)
+	if err != nil {
+		return nil, err
+	}
+
+	return urlsToResourceNames("/1.0/auth/oidc-sessions", urls...)
+}
+
+// GetOIDCSessions gets all OIDC sessions.
+func (r *ProtocolLXD) GetOIDCSessions() ([]api.OIDCSession, error) {
+	err := r.CheckExtension("auth_oidc_sessions")
+	if err != nil {
+		return nil, err
+	}
+
+	var sessions []api.OIDCSession
+	_, err = r.queryStruct(http.MethodGet, api.NewURL().Path("auth", "oidc-sessions").WithQuery("recursion", "1").String(), nil, "", &sessions)
+	if err != nil {
+		return nil, err
+	}
+
+	return sessions, nil
+}
+
+// GetOIDCSessionsByEmail gets all OIDC sessions for the user with the given email address.
+func (r *ProtocolLXD) GetOIDCSessionsByEmail(email string) ([]api.OIDCSession, error) {
+	err := r.CheckExtension("auth_oidc_sessions")
+	if err != nil {
+		return nil, err
+	}
+
+	var sessions []api.OIDCSession
+	_, err = r.queryStruct(http.MethodGet, api.NewURL().Path("auth", "oidc-sessions").WithQuery("recursion", "1").WithQuery("email", email).String(), nil, "", &sessions)
+	if err != nil {
+		return nil, err
+	}
+
+	return sessions, nil
+}
+
+// GetOIDCSession gets an [api.OIDCSession] by session ID.
+func (r *ProtocolLXD) GetOIDCSession(sessionID string) (*api.OIDCSession, error) {
+	err := r.CheckExtension("auth_oidc_sessions")
+	if err != nil {
+		return nil, err
+	}
+
+	var session api.OIDCSession
+	_, err = r.queryStruct(http.MethodGet, api.NewURL().Path("auth", "oidc-sessions", sessionID).String(), nil, "", &session)
+	if err != nil {
+		return nil, err
+	}
+
+	return &session, nil
+}
+
+// DeleteOIDCSession deletes an OIDC session (revokes the session for the user).
+func (r *ProtocolLXD) DeleteOIDCSession(sessionID string) error {
+	err := r.CheckExtension("auth_oidc_sessions")
+	if err != nil {
+		return err
+	}
+
+	_, err = r.queryStruct(http.MethodDelete, api.NewURL().Path("auth", "oidc-sessions", sessionID).String(), nil, "", nil)
+	return err
 }

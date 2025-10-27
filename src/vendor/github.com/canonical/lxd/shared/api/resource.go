@@ -556,7 +556,7 @@ type ResourcesNetworkCardSRIOV struct {
 	VFs []ResourcesNetworkCard `json:"vfs" yaml:"vfs"`
 }
 
-// ResourceNetworkCardVDPA represents the VDPA configuration of the network card
+// ResourcesNetworkCardVDPA represents the VDPA configuration of the network card
 //
 // swagger:model
 //
@@ -679,6 +679,18 @@ type ResourcesStorageDisk struct {
 	//
 	// API extension: resources_disk_address
 	USBAddress string `json:"usb_address,omitempty" yaml:"usb_address,omitempty"`
+
+	// UUID of the filesystem on the device
+	// Example: 9313518c-0e13-4067-9746-5c1703830b78
+	//
+	// API extension: resources_device_fs_uuid
+	DeviceFSUUID string `json:"device_fs_uuid" yaml:"device_fs_uuid"`
+
+	// Parent device type
+	// Example: bcache
+	//
+	// API extension: resources_disk_used_by
+	UsedBy string `json:"used_by,omitempty" yaml:"used_by,omitempty"`
 }
 
 // ResourcesStorageDiskPartition represents a partition on a disk
@@ -710,6 +722,12 @@ type ResourcesStorageDiskPartition struct {
 	// Mounted status of the partition.
 	// Example: true
 	Mounted bool `json:"mounted" yaml:"mounted"`
+
+	// UUID of the filesystem on the device
+	// Example: 9313518c-0e13-4067-9746-5c1703830b78
+	//
+	// API extension: resources_device_fs_uuid
+	DeviceFSUUID string `json:"device_fs_uuid" yaml:"device_fs_uuid"`
 }
 
 // ResourcesMemory represents the memory resources available on the system

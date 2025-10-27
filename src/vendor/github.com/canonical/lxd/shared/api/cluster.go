@@ -82,12 +82,6 @@ type ClusterPut struct {
 	// API extension: clustering_join
 	ServerAddress string `json:"server_address" yaml:"server_address"`
 
-	// The trust password of the cluster you're trying to join (deprecated, use cluster_token)
-	// Example: blah
-	//
-	// API extension: clustering_join
-	ClusterPassword string `json:"cluster_password" yaml:"cluster_password"` // Deprecated, use ClusterToken.
-
 	// The cluster join token for the cluster you're trying to join
 	// Example: blah
 	//
@@ -280,6 +274,26 @@ type ClusterCertificatePut struct {
 	ClusterCertificateKey string `json:"cluster_certificate_key" yaml:"cluster_certificate_key"`
 }
 
+const (
+	// ClusterEvacuateModeStop indicates that all instances on the evacuated member should be stopped.
+	ClusterEvacuateModeStop = "stop"
+
+	// ClusterEvacuateModeMigrate indicates that all instances on the evacuated member should be migrated to other members.
+	ClusterEvacuateModeMigrate = "migrate"
+
+	// ClusterEvacuateModeLiveMigrate indicates that all instances on the evacuated member should be live-migrated to other members.
+	ClusterEvacuateModeLiveMigrate = "live-migrate"
+
+	// ClusterEvacuateModeAuto indicates that the system should automatically choose the best evacuation method for the instance based on instance type and device capabilities.
+	ClusterEvacuateModeAuto = "auto"
+
+	// ClusterEvacuateModeHeal is used internally to indicate that instances should be evacuated during automatic cluster healing.
+	ClusterEvacuateModeHeal = "heal"
+
+	// ClusterRestoreModeSkip indicates that cluster member status should be restored without starting local instances or migrating back evacuated instances.
+	ClusterRestoreModeSkip = "skip"
+)
+
 // ClusterMemberStatePost represents the fields required to evacuate a cluster member.
 //
 // swagger:model
@@ -291,9 +305,11 @@ type ClusterMemberStatePost struct {
 	Action string `json:"action" yaml:"action"`
 
 	// Override the configured evacuation mode.
+	// Valid modes for the "evacuate" action are "stop", "migrate", and "live-migrate".
+	// Valid modes for the "restore" action are "skip".
 	// Example: stop
 	//
-	// API extension: clustering_evacuate_mode
+	// API extension: clustering_evacuation_mode
 	Mode string `json:"mode" yaml:"mode"`
 }
 
@@ -327,6 +343,11 @@ type ClusterGroup struct {
 	// List of members in this group
 	// Example: ["node1", "node3"]
 	Members []string `json:"members" yaml:"members"`
+
+	// UsedBy is a list or LXD entity URLs that reference the cluster group.
+	//
+	// API extension: clustering_groups_used_by
+	UsedBy []string `json:"used_by" yaml:"used_by"`
 }
 
 // ClusterGroupPost represents the fields required to rename a cluster group.

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
@@ -67,6 +68,28 @@ type Operation struct {
 	//
 	// API extension: operation_location
 	Location string `json:"location" yaml:"location"`
+
+	// Requestor is a record of the original operation requestor.
+	//
+	// API extension: operation_requestor
+	Requestor *OperationRequestor `json:"requestor,omitempty" yaml:"requestor,omitempty"`
+}
+
+// OperationRequestor represents the initial requestor of an operation
+//
+// API extension: operation_requestor.
+type OperationRequestor struct {
+	// Username is the username of the requestor. This is the identifier of the identity, or the username if using the unix socket.
+	// Example: jane.doe@example.com
+	Username string `yaml:"username" json:"username"`
+
+	// Protocol represents the method used to authenticate the requestor.
+	// Example: oidc
+	Protocol string `yaml:"protocol" json:"protocol"`
+
+	// Address is the origin address of the request.
+	// Example: 10.0.2.15
+	Address string `yaml:"address" json:"address"`
 }
 
 // ToCertificateAddToken creates a certificate add token from the operation metadata.
@@ -78,7 +101,7 @@ func (op *Operation) ToCertificateAddToken() (*CertificateAddToken, error) {
 
 	clientName, ok := req["name"].(string)
 	if !ok {
-		return nil, fmt.Errorf("Failed to get client name")
+		return nil, errors.New("Failed to get client name")
 	}
 
 	secret, ok := op.Metadata["secret"].(string)

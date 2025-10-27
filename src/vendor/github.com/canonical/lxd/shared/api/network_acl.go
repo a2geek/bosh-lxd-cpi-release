@@ -243,6 +243,8 @@ type NetworkACLPut struct {
 //
 // API extension: network_acl.
 type NetworkACL struct {
+	WithEntitlements `yaml:",inline"`
+
 	// The new name for the ACL
 	// Example: bar
 	Name string `json:"name" yaml:"name"` // Name of ACL.
@@ -265,6 +267,12 @@ type NetworkACL struct {
 	// Read only: true
 	// Example: ["/1.0/instances/c1", "/1.0/instances/v1", "/1.0/networks/lxdbr0"]
 	UsedBy []string `json:"used_by" yaml:"used_by"` // Resources that use the ACL.
+
+	// Project name
+	// Example: project1
+	//
+	// API extension: network_acls_all_projects
+	Project string `json:"project" yaml:"project"` // Project the ACL belongs to.
 }
 
 // Writable converts a full NetworkACL struct into a NetworkACLPut struct (filters read-only fields).
