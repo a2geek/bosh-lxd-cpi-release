@@ -5,7 +5,7 @@ go 1.25.3
 require (
 	github.com/canonical/lxd v0.0.0-20251027144234-87db7262de72
 	github.com/cloudfoundry/bosh-cpi-go v0.0.0-20251025100150-f55ea7596702
-	github.com/cloudfoundry/bosh-utils v0.0.577
+	github.com/cloudfoundry/bosh-utils v0.0.578
 	github.com/diskfs/go-diskfs v1.7.0
 	github.com/lxc/incus v0.7.0
 	golang.org/x/text v0.32.0
