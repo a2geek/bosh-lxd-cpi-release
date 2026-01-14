@@ -453,7 +453,6 @@ var APIExtensions = []string{
 	"oidc_client_secret",
 	"pci_hotplug",
 	"device_patch_removal",
-	"auth_secrets",
 	"daemon_storage_per_project",
 	"ovn_internal_load_balancer",
 	"auth_bearer_devlxd",
@@ -469,6 +468,8 @@ var APIExtensions = []string{
 	"vm_persistent_bus",
 	"instance_placement_groups",
 	"ovn_nic_acceleration_parent",
+	"storage_and_profile_operations",
+	"storage_source_recover",
 }
 
 // APIExtensionsCount returns the number of available API extensions.
