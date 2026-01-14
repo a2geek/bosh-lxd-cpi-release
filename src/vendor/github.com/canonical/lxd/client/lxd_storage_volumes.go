@@ -251,20 +251,30 @@ func (r *ProtocolLXD) GetStoragePoolVolumeState(pool string, volType string, nam
 }
 
 // CreateStoragePoolVolume defines a new storage volume.
-func (r *ProtocolLXD) CreateStoragePoolVolume(pool string, volume api.StorageVolumesPost) error {
+func (r *ProtocolLXD) CreateStoragePoolVolume(pool string, volume api.StorageVolumesPost) (Operation, error) {
 	err := r.CheckExtension("storage")
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	var op Operation
 
 	// Send the request
-	path := "/storage-pools/" + url.PathEscape(pool) + "/volumes/" + url.PathEscape(volume.Type)
-	_, _, err = r.query(http.MethodPost, path, volume, "")
+	path := api.NewURL().Path("storage-pools", url.PathEscape(pool), "volumes", url.PathEscape(volume.Type))
+	err = r.CheckExtension("storage_and_profile_operations")
 	if err != nil {
-		return err
+		// Fallback to older behavior without operations.
+		op = noopOperation{}
+		_, _, err = r.query(http.MethodPost, path.String(), volume, "")
+	} else {
+		op, _, err = r.queryOperation(http.MethodPost, path.String(), volume, "", true)
 	}
 
-	return nil
+	if err != nil {
+		return nil, err
+	}
+
+	return op, nil
 }
 
 // CreateStoragePoolVolumeSnapshot defines a new storage volume.
@@ -377,20 +387,30 @@ func (r *ProtocolLXD) DeleteStoragePoolVolumeSnapshot(pool string, volumeType st
 }
 
 // UpdateStoragePoolVolumeSnapshot updates the volume to match the provided StoragePoolVolume struct.
-func (r *ProtocolLXD) UpdateStoragePoolVolumeSnapshot(pool string, volumeType string, volumeName string, snapshotName string, volume api.StorageVolumeSnapshotPut, ETag string) error {
+func (r *ProtocolLXD) UpdateStoragePoolVolumeSnapshot(pool string, volumeType string, volumeName string, snapshotName string, volume api.StorageVolumeSnapshotPut, ETag string) (Operation, error) {
 	err := r.CheckExtension("storage_api_volume_snapshots")
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	var op Operation
 
 	// Send the request
-	path := "/storage-pools/" + url.PathEscape(pool) + "/volumes/" + url.PathEscape(volumeType) + "/" + url.PathEscape(volumeName) + "/snapshots/" + url.PathEscape(snapshotName)
-	_, _, err = r.queryOperation(http.MethodPut, path, volume, ETag, true)
+	path := api.NewURL().Path("storage-pools", pool, "volumes", volumeType, volumeName, "snapshots", snapshotName)
+	err = r.CheckExtension("storage_and_profile_operations")
 	if err != nil {
-		return err
+		// Fallback to older behavior without operations.
+		op = noopOperation{}
+		_, _, err = r.query(http.MethodPut, path.String(), volume, ETag)
+	} else {
+		op, _, err = r.queryOperation(http.MethodPut, path.String(), volume, ETag, true)
 	}
 
-	return nil
+	if err != nil {
+		return nil, err
+	}
+
+	return op, nil
 }
 
 // MigrateStoragePoolVolume requests that LXD prepares for a storage volume migration.
@@ -819,62 +839,92 @@ func (r *ProtocolLXD) MoveStoragePoolVolume(pool string, source InstanceServer, 
 }
 
 // UpdateStoragePoolVolume updates the volume to match the provided StoragePoolVolume struct.
-func (r *ProtocolLXD) UpdateStoragePoolVolume(pool string, volType string, name string, volume api.StorageVolumePut, ETag string) error {
+func (r *ProtocolLXD) UpdateStoragePoolVolume(pool string, volType string, name string, volume api.StorageVolumePut, ETag string) (Operation, error) {
 	err := r.CheckExtension("storage")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if volume.Restore != "" {
 		err := r.CheckExtension("storage_api_volume_snapshots")
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
+	var op Operation
+
 	// Send the request
-	path := "/storage-pools/" + url.PathEscape(pool) + "/volumes/" + url.PathEscape(volType) + "/" + url.PathEscape(name)
-	_, _, err = r.query(http.MethodPut, path, volume, ETag)
+	path := api.NewURL().Path("storage-pools", pool, "volumes", volType, name)
+	err = r.CheckExtension("storage_and_profile_operations")
 	if err != nil {
-		return err
+		// Fallback to older behavior without operations.
+		op = noopOperation{}
+		_, _, err = r.query(http.MethodPut, path.String(), volume, ETag)
+	} else {
+		op, _, err = r.queryOperation(http.MethodPut, path.String(), volume, ETag, true)
 	}
 
-	return nil
+	if err != nil {
+		return nil, err
+	}
+
+	return op, nil
 }
 
 // DeleteStoragePoolVolume deletes a storage pool.
-func (r *ProtocolLXD) DeleteStoragePoolVolume(pool string, volType string, name string) error {
+func (r *ProtocolLXD) DeleteStoragePoolVolume(pool string, volType string, name string) (Operation, error) {
 	err := r.CheckExtension("storage")
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	var op Operation
 
 	// Send the request
-	path := "/storage-pools/" + url.PathEscape(pool) + "/volumes/" + url.PathEscape(volType) + "/" + url.PathEscape(name)
-	_, _, err = r.query(http.MethodDelete, path, nil, "")
+	path := api.NewURL().Path("storage-pools", pool, "volumes", volType, name)
+	err = r.CheckExtension("storage_and_profile_operations")
 	if err != nil {
-		return err
+		// Fallback to older behavior without operations.
+		op = noopOperation{}
+		_, _, err = r.query(http.MethodDelete, path.String(), nil, "")
+	} else {
+		op, _, err = r.queryOperation(http.MethodDelete, path.String(), nil, "", true)
 	}
 
-	return nil
+	if err != nil {
+		return nil, err
+	}
+
+	return op, nil
 }
 
 // RenameStoragePoolVolume renames a storage volume.
-func (r *ProtocolLXD) RenameStoragePoolVolume(pool string, volType string, name string, volume api.StorageVolumePost) error {
+func (r *ProtocolLXD) RenameStoragePoolVolume(pool string, volType string, name string, volume api.StorageVolumePost) (Operation, error) {
 	err := r.CheckExtension("storage_api_volume_rename")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	path := "/storage-pools/" + url.PathEscape(pool) + "/volumes/" + url.PathEscape(volType) + "/" + url.PathEscape(name)
+	path := api.NewURL().Path("storage-pools", pool, "volumes", volType, name)
+
+	var op Operation
 
 	// Send the request
-	_, _, err = r.query(http.MethodPost, path, volume, "")
+	err = r.CheckExtension("storage_and_profile_operations")
 	if err != nil {
-		return err
+		// Fallback to older behavior without operations.
+		op = noopOperation{}
+		_, _, err = r.query(http.MethodPost, path.String(), volume, "")
+	} else {
+		op, _, err = r.queryOperation(http.MethodPost, path.String(), volume, "", true)
 	}
 
-	return nil
+	if err != nil {
+		return nil, err
+	}
+
+	return op, nil
 }
 
 // GetStoragePoolVolumeBackupNames returns a list of volume backup names.
