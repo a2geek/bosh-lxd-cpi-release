@@ -10,7 +10,7 @@ import (
 )
 
 func (a *lxdApiAdapter) DeleteStoragePoolVolume(pool, name string) error {
-	return a.client.DeleteStoragePoolVolume(pool, "custom", name)
+	return wait(a.client.DeleteStoragePoolVolume(pool, "custom", name))
 }
 
 func (a *lxdApiAdapter) GetStoragePoolVolume(pool, name string) (string, error) {
@@ -27,7 +27,7 @@ func (a *lxdApiAdapter) ResizeStoragePoolVolume(pool, name string, newSize int) 
 	writable := volume.Writable()
 	writable.Config["size"] = fmt.Sprintf("%dMiB", newSize)
 
-	return a.client.UpdateStoragePoolVolume(pool, "custom", name, writable, etag)
+	return wait(a.client.UpdateStoragePoolVolume(pool, "custom", name, writable, etag))
 }
 
 func (a *lxdApiAdapter) CreateStoragePoolVolume(target, pool, name string, size int) error {
@@ -46,7 +46,7 @@ func (a *lxdApiAdapter) CreateStoragePoolVolume(target, pool, name string, size 
 	if target != "" {
 		c = c.UseTarget(target)
 	}
-	return c.CreateStoragePoolVolume(pool, storageVolumeRequest)
+	return wait(c.CreateStoragePoolVolume(pool, storageVolumeRequest))
 }
 
 func (a *lxdApiAdapter) CreateStoragePoolVolumeFromISO(target, pool, diskName string, backupFile io.Reader) error {
@@ -68,7 +68,7 @@ func (a *lxdApiAdapter) UpdateStoragePoolVolumeDescription(pool, diskName, descr
 
 	volume.Description = description
 
-	return a.client.UpdateStoragePoolVolume(pool, "custom", diskName, volume.Writable(), etag)
+	return wait(a.client.UpdateStoragePoolVolume(pool, "custom", diskName, volume.Writable(), etag))
 }
 func (a *lxdApiAdapter) GetStoragePoolVolumeUsage(pool string) (map[string]int, error) {
 	volumes, err := a.client.GetStoragePoolVolumes(pool)
@@ -114,5 +114,5 @@ func (a *lxdApiAdapter) ColocateStoragePoolVolumeWithInstance(instanceName, pool
 		return err
 	}
 
-	return srcServer.DeleteStoragePoolVolume(pool, "custom", diskName)
+	return wait(srcServer.DeleteStoragePoolVolume(pool, "custom", diskName))
 }
