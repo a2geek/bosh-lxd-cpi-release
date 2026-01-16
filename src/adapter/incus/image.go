@@ -9,8 +9,8 @@ import (
 
 	yaml "gopkg.in/yaml.v2"
 
-	client "github.com/lxc/incus/client"
-	"github.com/lxc/incus/shared/api"
+	client "github.com/lxc/incus/v6/client"
+	"github.com/lxc/incus/v6/shared/api"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )

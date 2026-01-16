@@ -1,7 +1,7 @@
 package incus
 
 import (
-	"github.com/lxc/incus/shared/api"
+	"github.com/lxc/incus/v6/shared/api"
 )
 
 func (a *incusApiAdapter) DeleteStoragePoolVolumeSnapshot(pool, volumeName, snapshotName string) error {

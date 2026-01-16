@@ -3,7 +3,7 @@ package incus
 import (
 	"bosh-lxd-cpi/adapter"
 
-	"github.com/lxc/incus/shared/api"
+	"github.com/lxc/incus/v6/shared/api"
 )
 
 func (a *incusApiAdapter) CreateInstance(meta adapter.InstanceMetadata) error {

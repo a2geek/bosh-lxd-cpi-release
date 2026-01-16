@@ -4,7 +4,7 @@ import (
 	"bosh-lxd-cpi/adapter"
 
 	boshlog "github.com/cloudfoundry/bosh-utils/logger"
-	client "github.com/lxc/incus/client"
+	client "github.com/lxc/incus/v6/client"
 )
 
 func NewIncusAdapter(config adapter.Config, logger boshlog.Logger) (adapter.ApiAdapter, error) {

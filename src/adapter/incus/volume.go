@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	client "github.com/lxc/incus/client"
-	"github.com/lxc/incus/shared/api"
+	client "github.com/lxc/incus/v6/client"
+	"github.com/lxc/incus/v6/shared/api"
 )
 
 func (a *incusApiAdapter) DeleteStoragePoolVolume(pool, name string) error {

@@ -4,7 +4,7 @@ github.com/anchore/go-lzo
 # github.com/bmatcuk/doublestar v1.3.4
 ## explicit; go 1.12
 github.com/bmatcuk/doublestar
-# github.com/canonical/lxd v0.0.0-20260114155047-17522a855720
+# github.com/canonical/lxd v0.0.0-20260115153158-c1f4cb66bb08
 ## explicit; go 1.25.4
 github.com/canonical/lxd/client
 github.com/canonical/lxd/shared
@@ -30,7 +30,7 @@ github.com/charlievieth/fs
 ## explicit; go 1.24.0
 github.com/cloudfoundry/bosh-cpi-go/apiv1
 github.com/cloudfoundry/bosh-cpi-go/rpc
-# github.com/cloudfoundry/bosh-utils v0.0.580
+# github.com/cloudfoundry/bosh-utils v0.0.581
 ## explicit; go 1.24.0
 github.com/cloudfoundry/bosh-utils/errors
 github.com/cloudfoundry/bosh-utils/logger
@@ -78,9 +78,6 @@ github.com/go-logr/stdr
 # github.com/google/uuid v1.6.0
 ## explicit
 github.com/google/uuid
-# github.com/gorilla/schema v1.4.1
-## explicit; go 1.20
-github.com/gorilla/schema
 # github.com/gorilla/securecookie v1.1.2
 ## explicit; go 1.20
 github.com/gorilla/securecookie
@@ -100,23 +97,23 @@ github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/kr/fs v0.1.0
 ## explicit
 github.com/kr/fs
-# github.com/lxc/incus v0.7.0
+# github.com/lxc/incus/v6 v6.2.0
 ## explicit; go 1.21
-github.com/lxc/incus/client
-github.com/lxc/incus/shared/api
-github.com/lxc/incus/shared/cancel
-github.com/lxc/incus/shared/ioprogress
-github.com/lxc/incus/shared/logger
-github.com/lxc/incus/shared/osarch
-github.com/lxc/incus/shared/proxy
-github.com/lxc/incus/shared/simplestreams
-github.com/lxc/incus/shared/subprocess
-github.com/lxc/incus/shared/tcp
-github.com/lxc/incus/shared/termios
-github.com/lxc/incus/shared/tls
-github.com/lxc/incus/shared/units
-github.com/lxc/incus/shared/util
-github.com/lxc/incus/shared/ws
+github.com/lxc/incus/v6/client
+github.com/lxc/incus/v6/shared/api
+github.com/lxc/incus/v6/shared/cancel
+github.com/lxc/incus/v6/shared/ioprogress
+github.com/lxc/incus/v6/shared/logger
+github.com/lxc/incus/v6/shared/osarch
+github.com/lxc/incus/v6/shared/proxy
+github.com/lxc/incus/v6/shared/simplestreams
+github.com/lxc/incus/v6/shared/subprocess
+github.com/lxc/incus/v6/shared/tcp
+github.com/lxc/incus/v6/shared/termios
+github.com/lxc/incus/v6/shared/tls
+github.com/lxc/incus/v6/shared/units
+github.com/lxc/incus/v6/shared/util
+github.com/lxc/incus/v6/shared/ws
 # github.com/muhlemmer/gu v0.3.1
 ## explicit; go 1.18
 github.com/muhlemmer/gu
@@ -138,8 +135,8 @@ github.com/pkg/sftp/internal/encoding/ssh/filexfer/openssh
 # github.com/pkg/xattr v0.4.12
 ## explicit; go 1.14
 github.com/pkg/xattr
-# github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
-## explicit; go 1.13
+# github.com/sirupsen/logrus v1.9.4
+## explicit; go 1.17
 github.com/sirupsen/logrus
 github.com/sirupsen/logrus/hooks/syslog
 github.com/sirupsen/logrus/hooks/writer
@@ -149,18 +146,9 @@ github.com/ulikunitz/xz
 github.com/ulikunitz/xz/internal/hash
 github.com/ulikunitz/xz/internal/xlog
 github.com/ulikunitz/xz/lzma
-# github.com/zitadel/logging v0.6.2
-## explicit; go 1.23.7
+# github.com/zitadel/logging v0.7.0
+## explicit; go 1.24.10
 github.com/zitadel/logging
-# github.com/zitadel/oidc/v2 v2.12.2
-## explicit; go 1.19
-github.com/zitadel/oidc/v2/pkg/client
-github.com/zitadel/oidc/v2/pkg/client/rp
-github.com/zitadel/oidc/v2/pkg/crypto
-github.com/zitadel/oidc/v2/pkg/http
-github.com/zitadel/oidc/v2/pkg/oidc
-github.com/zitadel/oidc/v2/pkg/oidc/grants/tokenexchange
-github.com/zitadel/oidc/v2/pkg/strings
 # github.com/zitadel/oidc/v3 v3.45.3
 ## explicit; go 1.24.0
 github.com/zitadel/oidc/v3/internal/otel
@@ -204,10 +192,8 @@ go.opentelemetry.io/otel/trace/noop
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/chacha20
 golang.org/x/crypto/curve25519
-golang.org/x/crypto/ed25519
 golang.org/x/crypto/internal/alias
 golang.org/x/crypto/internal/poly1305
-golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 # golang.org/x/oauth2 v0.34.0
@@ -234,11 +220,6 @@ golang.org/x/text/internal/tag
 golang.org/x/text/language
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
-# gopkg.in/go-jose/go-jose.v2 v2.6.3
-## explicit
-gopkg.in/go-jose/go-jose.v2
-gopkg.in/go-jose/go-jose.v2/cipher
-gopkg.in/go-jose/go-jose.v2/json
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit; go 1.15
 gopkg.in/yaml.v2
