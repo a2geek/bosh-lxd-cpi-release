@@ -91,6 +91,11 @@ func (c CPI) CreateVMV2(
 		"path": "/",
 	}
 
+	instanceConfig := map[string]string{}
+	if c.config.Server.BIOSPath != "" {
+		instanceConfig["raw.qemu"] = "-bios " + c.config.Server.BIOSPath
+	}
+
 	err = c.adapter.CreateInstance(adapter.InstanceMetadata{
 		Name:          theCid,
 		StemcellAlias: stemcellCID.AsString(),
@@ -99,9 +104,7 @@ func (c CPI) CreateVMV2(
 		Profiles:      []string{c.config.Server.Profile},
 		Target:        vmProps.Target,
 		Devices:       devices,
-		Config: map[string]string{
-			"raw.qemu": "-bios " + c.config.Server.BIOSPath,
-		},
+		Config:        instanceConfig,
 	})
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating VM")
