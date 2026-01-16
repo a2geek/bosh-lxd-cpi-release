@@ -3,13 +3,13 @@ package incus
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
-	"os"
-	"os/exec"
-	"runtime"
 	"strings"
 	"time"
 
@@ -21,11 +21,16 @@ import (
 // It takes in parameters for client certificates, keys, Certificate Authority, server certificates,
 // a boolean for skipping verification, a proxy function, and a transport wrapper function.
 // It returns the HTTP client with the provided configurations and handles any errors that might occur during the setup process.
-func tlsHTTPClient(client *http.Client, tlsClientCert string, tlsClientKey string, tlsCA string, tlsServerCert string, insecureSkipVerify bool, proxyFunc func(req *http.Request) (*url.URL, error), transportWrapper func(t *http.Transport) HTTPTransporter) (*http.Client, error) {
+func tlsHTTPClient(client *http.Client, tlsClientCert string, tlsClientKey string, tlsCA string, tlsServerCert string, insecureSkipVerify bool, identicalCertificate bool, proxyFunc func(req *http.Request) (*url.URL, error), transportWrapper func(t *http.Transport) HTTPTransporter) (*http.Client, error) {
 	// Get the TLS configuration
 	tlsConfig, err := localtls.GetTLSConfigMem(tlsClientCert, tlsClientKey, tlsCA, tlsServerCert, insecureSkipVerify)
 	if err != nil {
 		return nil, err
+	}
+
+	// If asked for an exact match, skip normal validation.
+	if identicalCertificate {
+		tlsConfig.InsecureSkipVerify = true
 	}
 
 	// Define the http transport
@@ -71,7 +76,36 @@ func tlsHTTPClient(client *http.Client, tlsClientCert string, tlsClientKey strin
 				return nil, err
 			}
 
+			if identicalCertificate {
+				// Look for an exact match with the certificate provided.
+				// But ignore any other issue (validity, scope, ...).
+				cs := tlsConn.ConnectionState()
+
+				if len(cs.PeerCertificates) < 1 {
+					return nil, errors.New("Couldn't validate peer certificate")
+				}
+
+				if tlsServerCert == "" {
+					return nil, errors.New("Peer certificate wasn't provided")
+				}
+
+				certBlock, _ := pem.Decode([]byte(tlsServerCert))
+				if certBlock == nil {
+					return nil, errors.New("Invalid remote certificate")
+				}
+
+				expectedRemoteCert, err := x509.ParseCertificate(certBlock.Bytes)
+				if err != nil {
+					return nil, err
+				}
+
+				if !cs.PeerCertificates[0].Equal(expectedRemoteCert) {
+					return nil, errors.New("Remote certificate differs from expected")
+				}
+			}
+
 			if !config.InsecureSkipVerify {
+				// Check certificate validity.
 				err := tlsConn.VerifyHostname(config.ServerName)
 				if err != nil {
 					_ = conn.Close()
@@ -119,7 +153,7 @@ func tlsHTTPClient(client *http.Client, tlsClientCert string, tlsClientKey strin
 // Any errors encountered during the setup process are also handled by the function.
 func unixHTTPClient(args *ConnectionArgs, path string) (*http.Client, error) {
 	// Setup a Unix socket dialer
-	unixDial := func(_ context.Context, network, addr string) (net.Conn, error) {
+	unixDial := func(_ context.Context, _ string, _ string) (net.Conn, error) {
 		raddr, err := net.ResolveUnixAddr("unix", path)
 		if err != nil {
 			return nil, err
@@ -167,22 +201,22 @@ type remoteOperationResult struct {
 	Error error
 }
 
-func remoteOperationError(msg string, errors []remoteOperationResult) error {
+func remoteOperationError(msg string, errorOperationResults []remoteOperationResult) error {
 	// Check if empty
-	if len(errors) == 0 {
+	if len(errorOperationResults) == 0 {
 		return nil
 	}
 
 	// Check if all identical
 	var err error
-	for _, entry := range errors {
+	for _, entry := range errorOperationResults {
 		if err != nil && entry.Error.Error() != err.Error() {
-			errorStrs := make([]string, 0, len(errors))
-			for _, error := range errors {
-				errorStrs = append(errorStrs, fmt.Sprintf("%s: %v", error.URL, error.Error))
+			errorStrings := make([]string, 0, len(errorOperationResults))
+			for _, operationResult := range errorOperationResults {
+				errorStrings = append(errorStrings, fmt.Sprintf("%s: %v", operationResult.URL, operationResult.Error))
 			}
 
-			return fmt.Errorf("%s:\n - %s", msg, strings.Join(errorStrs, "\n - "))
+			return fmt.Errorf("%s:\n - %s", msg, strings.Join(errorStrings, "\n - "))
 		}
 
 		err = entry.Error
@@ -252,35 +286,4 @@ type HTTPTransporter interface {
 
 	// Transport what this struct wraps
 	Transport() *http.Transport
-}
-
-func openBrowser(url string) error {
-	var err error
-
-	browser := os.Getenv("BROWSER")
-	if browser != "" {
-		if browser == "none" {
-			return nil
-		}
-
-		err = exec.Command(browser, url).Start()
-		return err
-	}
-
-	switch runtime.GOOS {
-	case "linux":
-		err = exec.Command("xdg-open", url).Start()
-	case "windows":
-		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
-	case "darwin":
-		err = exec.Command("open", url).Start()
-	default:
-		err = fmt.Errorf("unsupported platform")
-	}
-
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

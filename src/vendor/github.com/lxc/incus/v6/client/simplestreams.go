@@ -1,7 +1,7 @@
 package incus
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 
 	"github.com/lxc/incus/v6/shared/simplestreams"
@@ -15,6 +15,8 @@ type ProtocolSimpleStreams struct {
 	httpHost        string
 	httpUserAgent   string
 	httpCertificate string
+
+	tempPath string
 }
 
 // Disconnect is a no-op for simplestreams.
@@ -35,7 +37,7 @@ func (r *ProtocolSimpleStreams) GetConnectionInfo() (*ConnectionInfo, error) {
 // GetHTTPClient returns the http client used for the connection. This can be used to set custom http options.
 func (r *ProtocolSimpleStreams) GetHTTPClient() (*http.Client, error) {
 	if r.http == nil {
-		return nil, fmt.Errorf("HTTP client isn't set, bad connection")
+		return nil, errors.New("HTTP client isn't set, bad connection")
 	}
 
 	return r.http, nil

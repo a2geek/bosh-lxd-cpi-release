@@ -72,15 +72,19 @@ type InstanceSnapshot struct {
 
 	// Instance configuration (see doc/instances.md)
 	// Example: {"security.nesting": "true"}
-	Config map[string]string `json:"config" yaml:"config"`
+	Config ConfigMap `json:"config" yaml:"config"`
 
 	// Instance creation timestamp
 	// Example: 2021-03-23T20:00:00-04:00
 	CreatedAt time.Time `json:"created_at" yaml:"created_at"`
 
+	// Instance description
+	// Example: My description
+	Description string `json:"description" yaml:"description"`
+
 	// Instance devices (see doc/instances.md)
 	// Example: {"root": {"type": "disk", "pool": "default", "path": "/"}}
-	Devices map[string]map[string]string `json:"devices" yaml:"devices"`
+	Devices DevicesMap `json:"devices" yaml:"devices"`
 
 	// Whether the instance is ephemeral (deleted on shutdown)
 	// Example: false
@@ -88,11 +92,11 @@ type InstanceSnapshot struct {
 
 	// Expanded configuration (all profiles and local config merged)
 	// Example: {"security.nesting": "true"}
-	ExpandedConfig map[string]string `json:"expanded_config,omitempty" yaml:"expanded_config,omitempty"`
+	ExpandedConfig ConfigMap `json:"expanded_config,omitempty" yaml:"expanded_config,omitempty"`
 
 	// Expanded devices (all profiles and local devices merged)
 	// Example: {"root": {"type": "disk", "pool": "default", "path": "/"}}
-	ExpandedDevices map[string]map[string]string `json:"expanded_devices,omitempty" yaml:"expanded_devices,omitempty"`
+	ExpandedDevices DevicesMap `json:"expanded_devices,omitempty" yaml:"expanded_devices,omitempty"`
 
 	// Last start timestamp
 	// Example: 2021-03-23T20:00:00-04:00

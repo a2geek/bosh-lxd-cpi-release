@@ -3,6 +3,7 @@ package incus
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,6 +14,8 @@ import (
 	"time"
 
 	"github.com/lxc/incus/v6/shared/api"
+	"github.com/lxc/incus/v6/shared/logger"
+	"github.com/lxc/incus/v6/shared/simplestreams"
 	"github.com/lxc/incus/v6/shared/subprocess"
 	"github.com/lxc/incus/v6/shared/util"
 )
@@ -27,6 +30,11 @@ func (r *ProtocolSimpleStreams) GetImages() ([]api.Image, error) {
 // GetImagesAllProjects returns a list of available images as Image structs.
 func (r *ProtocolSimpleStreams) GetImagesAllProjects() ([]api.Image, error) {
 	return r.GetImages()
+}
+
+// GetImagesAllProjectsWithFilter returns a filtered list of available images as Image structs.
+func (r *ProtocolSimpleStreams) GetImagesAllProjectsWithFilter(filters []string) ([]api.Image, error) {
+	return nil, errors.New("GetImagesWithFilter is not supported by the simplestreams protocol")
 }
 
 // GetImageFingerprints returns a list of available image fingerprints.
@@ -47,8 +55,8 @@ func (r *ProtocolSimpleStreams) GetImageFingerprints() ([]string, error) {
 }
 
 // GetImagesWithFilter returns a filtered list of available images as Image structs.
-func (r *ProtocolSimpleStreams) GetImagesWithFilter(filters []string) ([]api.Image, error) {
-	return nil, fmt.Errorf("GetImagesWithFilter is not supported by the simplestreams protocol")
+func (r *ProtocolSimpleStreams) GetImagesWithFilter(_ []string) ([]api.Image, error) {
+	return nil, errors.New("GetImagesWithFilter is not supported by the simplestreams protocol")
 }
 
 // GetImage returns an Image struct for the provided fingerprint.
@@ -65,7 +73,7 @@ func (r *ProtocolSimpleStreams) GetImage(fingerprint string) (*api.Image, string
 func (r *ProtocolSimpleStreams) GetImageFile(fingerprint string, req ImageFileRequest) (*ImageFileResponse, error) {
 	// Quick checks.
 	if req.MetaFile == nil && req.RootfsFile == nil {
-		return nil, fmt.Errorf("No file requested")
+		return nil, errors.New("No file requested")
 	}
 
 	// Attempt to download from host
@@ -108,7 +116,7 @@ func (r *ProtocolSimpleStreams) GetImageFile(fingerprint string, req ImageFileRe
 
 		size, err := util.DownloadFileHash(context.TODO(), &httpClient, r.httpUserAgent, req.ProgressHandler, req.Canceler, filename, uri, hash, sha256.New(), target)
 		if err != nil {
-			// Handle cancelation
+			// Handle cancellation
 			if err.Error() == "net/http: request canceled" {
 				return -1, err
 			}
@@ -121,6 +129,11 @@ func (r *ProtocolSimpleStreams) GetImageFile(fingerprint string, req ImageFileRe
 
 			size, err = util.DownloadFileHash(context.TODO(), &httpClient, r.httpUserAgent, req.ProgressHandler, req.Canceler, filename, uri, hash, sha256.New(), target)
 			if err != nil {
+				if errors.Is(err, util.ErrNotFound) {
+					logger.Info("Unable to download file by hash, invalidate potentially outdated cache", logger.Ctx{"filename": filename, "uri": uri, "hash": hash})
+					r.ssClient.InvalidateCache()
+				}
+
 				return -1, err
 			}
 		}
@@ -148,6 +161,48 @@ func (r *ProtocolSimpleStreams) GetImageFile(fingerprint string, req ImageFileRe
 		downloaded := false
 		_, err := exec.LookPath("xdelta3")
 		if err == nil && req.DeltaSourceRetriever != nil {
+			applyDelta := func(file simplestreams.DownloadableFile, srcPath string, target io.Writer) (int64, error) {
+				// Create temporary file for the delta
+				deltaFile, err := os.CreateTemp(r.tempPath, "incus_image_")
+				if err != nil {
+					return -1, err
+				}
+
+				defer func() { _ = deltaFile.Close() }()
+
+				defer func() { _ = os.Remove(deltaFile.Name()) }()
+
+				// Download the delta
+				_, err = download(file.Path, "rootfs delta", file.Sha256, deltaFile)
+				if err != nil {
+					return -1, err
+				}
+
+				// Create temporary file for the delta
+				patchedFile, err := os.CreateTemp(r.tempPath, "incus_image_")
+				if err != nil {
+					return -1, err
+				}
+
+				defer func() { _ = patchedFile.Close() }()
+
+				defer func() { _ = os.Remove(patchedFile.Name()) }()
+
+				// Apply it
+				_, err = subprocess.RunCommand("xdelta3", "-f", "-d", "-s", srcPath, deltaFile.Name(), patchedFile.Name())
+				if err != nil {
+					return -1, err
+				}
+
+				// Copy to the target
+				size, err := io.Copy(req.RootfsFile, patchedFile)
+				if err != nil {
+					return -1, err
+				}
+
+				return size, nil
+			}
+
 			for filename, file := range files {
 				_, srcFingerprint, prefixFound := strings.Cut(filename, "root.delta-")
 				if !prefixFound {
@@ -160,40 +215,7 @@ func (r *ProtocolSimpleStreams) GetImageFile(fingerprint string, req ImageFileRe
 					continue
 				}
 
-				// Create temporary file for the delta
-				deltaFile, err := os.CreateTemp("", "incus_image_")
-				if err != nil {
-					return nil, err
-				}
-
-				defer func() { _ = deltaFile.Close() }()
-
-				defer func() { _ = os.Remove(deltaFile.Name()) }()
-
-				// Download the delta
-				_, err = download(file.Path, "rootfs delta", file.Sha256, deltaFile)
-				if err != nil {
-					return nil, err
-				}
-
-				// Create temporary file for the delta
-				patchedFile, err := os.CreateTemp("", "incus_image_")
-				if err != nil {
-					return nil, err
-				}
-
-				defer func() { _ = patchedFile.Close() }()
-
-				defer func() { _ = os.Remove(patchedFile.Name()) }()
-
-				// Apply it
-				_, err = subprocess.RunCommand("xdelta3", "-f", "-d", "-s", srcPath, deltaFile.Name(), patchedFile.Name())
-				if err != nil {
-					return nil, err
-				}
-
-				// Copy to the target
-				size, err := io.Copy(req.RootfsFile, patchedFile)
+				size, err := applyDelta(file, srcPath, req.RootfsFile)
 				if err != nil {
 					return nil, err
 				}
@@ -222,18 +244,18 @@ func (r *ProtocolSimpleStreams) GetImageFile(fingerprint string, req ImageFileRe
 }
 
 // GetImageSecret isn't relevant for the simplestreams protocol.
-func (r *ProtocolSimpleStreams) GetImageSecret(fingerprint string) (string, error) {
-	return "", fmt.Errorf("Private images aren't supported by the simplestreams protocol")
+func (r *ProtocolSimpleStreams) GetImageSecret(_ string) (string, error) {
+	return "", errors.New("Private images aren't supported by the simplestreams protocol")
 }
 
 // GetPrivateImage isn't relevant for the simplestreams protocol.
-func (r *ProtocolSimpleStreams) GetPrivateImage(fingerprint string, secret string) (*api.Image, string, error) {
-	return nil, "", fmt.Errorf("Private images aren't supported by the simplestreams protocol")
+func (r *ProtocolSimpleStreams) GetPrivateImage(_ string, _ string) (*api.Image, string, error) {
+	return nil, "", errors.New("Private images aren't supported by the simplestreams protocol")
 }
 
 // GetPrivateImageFile isn't relevant for the simplestreams protocol.
-func (r *ProtocolSimpleStreams) GetPrivateImageFile(fingerprint string, secret string, req ImageFileRequest) (*ImageFileResponse, error) {
-	return nil, fmt.Errorf("Private images aren't supported by the simplestreams protocol")
+func (r *ProtocolSimpleStreams) GetPrivateImageFile(_ string, _ string, _ ImageFileRequest) (*ImageFileResponse, error) {
+	return nil, errors.New("Private images aren't supported by the simplestreams protocol")
 }
 
 // GetImageAliases returns the list of available aliases as ImageAliasesEntry structs.
@@ -303,6 +325,6 @@ func (r *ProtocolSimpleStreams) GetImageAliasArchitectures(imageType string, nam
 }
 
 // ExportImage exports (copies) an image to a remote server.
-func (r *ProtocolSimpleStreams) ExportImage(fingerprint string, image api.ImageExportPost) (Operation, error) {
-	return nil, fmt.Errorf("Exporting images is not supported by the simplestreams protocol")
+func (r *ProtocolSimpleStreams) ExportImage(_ string, _ api.ImageExportPost) (Operation, error) {
+	return nil, errors.New("Exporting images is not supported by the simplestreams protocol")
 }

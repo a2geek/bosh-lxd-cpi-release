@@ -65,6 +65,11 @@ type InstanceState struct {
 	//
 	// API extension: instance_state_started_at.
 	StartedAt time.Time `json:"started_at" yaml:"started_at"`
+
+	// OS information.
+	//
+	// API extension: instances_state_os_info.
+	OSInfo *InstanceStateOSInfo `json:"os_info" yaml:"os_info"`
 }
 
 // InstanceStateDisk represents the disk information section of an instance's state.
@@ -93,6 +98,12 @@ type InstanceStateCPU struct {
 	// CPU usage in nanoseconds
 	// Example: 3637691016
 	Usage int64 `json:"usage" yaml:"usage"`
+
+	// CPU time available per second, in nanoseconds
+	// Example: 4000000000
+	//
+	// API extension: instance_state_cpu_time
+	AllocatedTime int64 `json:"allocated_time" yaml:"allocated_time"`
 }
 
 // InstanceStateMemory represents the memory information section of an instance's state.
@@ -137,7 +148,7 @@ type InstanceStateNetwork struct {
 	Counters InstanceStateNetworkCounters `json:"counters" yaml:"counters"`
 
 	// MAC address
-	// Example: 00:16:3e:0c:ee:dd
+	// Example: 10:66:6a:0c:ee:dd
 	Hwaddr string `json:"hwaddr" yaml:"hwaddr"`
 
 	// Name of the interface on the host
@@ -169,7 +180,7 @@ type InstanceStateNetworkAddress struct {
 	Family string `json:"family" yaml:"family"`
 
 	// IP address
-	// Example: fd42:4c81:5770:1eaf:216:3eff:fe0c:eedd
+	// Example: fd42:4c81:5770:1eaf:1266:6aff:fe0c:eedd
 	Address string `json:"address" yaml:"address"`
 
 	// Network mask
@@ -219,4 +230,31 @@ type InstanceStateNetworkCounters struct {
 	// Number of inbound packets dropped
 	// Example: 179
 	PacketsDroppedInbound int64 `json:"packets_dropped_inbound" yaml:"packets_dropped_inbound"`
+}
+
+// InstanceStateOSInfo represents the operating system information section of an instance's state.
+//
+// swagger:model
+//
+// API extension: instances_state_os_info.
+type InstanceStateOSInfo struct {
+	// Operating system running in the instance.
+	// Example: Debian GNU/Linux
+	OS string `json:"os" yaml:"os"`
+
+	// Version of the operating system.
+	// Example: 12 (bookworm)
+	OSVersion string `json:"os_version" yaml:"os_version"`
+
+	// Version of the kernel running in the instance.
+	// Example: 6.1.0-25-amd64
+	KernelVersion string `json:"kernel_version" yaml:"kernel_version"`
+
+	// Hostname of the instance.
+	// Example: myhost
+	Hostname string `json:"hostname" yaml:"hostname"`
+
+	// FQDN of the instance.
+	// Example: myhost.mydomain.local
+	FQDN string `json:"fqdn" yaml:"fqdn"`
 }

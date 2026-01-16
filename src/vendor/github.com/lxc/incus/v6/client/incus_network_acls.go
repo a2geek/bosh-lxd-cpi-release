@@ -1,6 +1,7 @@
 package incus
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,7 +13,7 @@ import (
 // GetNetworkACLNames returns a list of network ACL names.
 func (r *ProtocolIncus) GetNetworkACLNames() ([]string, error) {
 	if !r.HasExtension("network_acl") {
-		return nil, fmt.Errorf(`The server is missing the required "network_acl" API extension`)
+		return nil, errors.New(`The server is missing the required "network_acl" API extension`)
 	}
 
 	// Fetch the raw URL values.
@@ -30,7 +31,7 @@ func (r *ProtocolIncus) GetNetworkACLNames() ([]string, error) {
 // GetNetworkACLs returns a list of Network ACL structs.
 func (r *ProtocolIncus) GetNetworkACLs() ([]api.NetworkACL, error) {
 	if !r.HasExtension("network_acl") {
-		return nil, fmt.Errorf(`The server is missing the required "network_acl" API extension`)
+		return nil, errors.New(`The server is missing the required "network_acl" API extension`)
 	}
 
 	acls := []api.NetworkACL{}
@@ -47,7 +48,7 @@ func (r *ProtocolIncus) GetNetworkACLs() ([]api.NetworkACL, error) {
 // GetNetworkACLsAllProjects returns all list of Network ACL structs across all projects.
 func (r *ProtocolIncus) GetNetworkACLsAllProjects() ([]api.NetworkACL, error) {
 	if !r.HasExtension("network_acls_all_projects") {
-		return nil, fmt.Errorf(`The server is missing the required "network_acls_all_projects" API extension`)
+		return nil, errors.New(`The server is missing the required "network_acls_all_projects" API extension`)
 	}
 
 	acls := []api.NetworkACL{}
@@ -62,7 +63,7 @@ func (r *ProtocolIncus) GetNetworkACLsAllProjects() ([]api.NetworkACL, error) {
 // GetNetworkACL returns a Network ACL entry for the provided name.
 func (r *ProtocolIncus) GetNetworkACL(name string) (*api.NetworkACL, string, error) {
 	if !r.HasExtension("network_acl") {
-		return nil, "", fmt.Errorf(`The server is missing the required "network_acl" API extension`)
+		return nil, "", errors.New(`The server is missing the required "network_acl" API extension`)
 	}
 
 	acl := api.NetworkACL{}
@@ -81,17 +82,17 @@ func (r *ProtocolIncus) GetNetworkACL(name string) (*api.NetworkACL, string, err
 // Note that it's the caller's responsibility to close the returned ReadCloser.
 func (r *ProtocolIncus) GetNetworkACLLogfile(name string) (io.ReadCloser, error) {
 	if !r.HasExtension("network_acl_log") {
-		return nil, fmt.Errorf(`The server is missing the required "network_acl_log" API extension`)
+		return nil, errors.New(`The server is missing the required "network_acl_log" API extension`)
 	}
 
 	// Prepare the HTTP request
-	url := fmt.Sprintf("%s/1.0/network-acls/%s/log", r.httpBaseURL.String(), url.PathEscape(name))
-	url, err := r.setQueryAttributes(url)
+	uri := fmt.Sprintf("%s/1.0/network-acls/%s/log", r.httpBaseURL.String(), url.PathEscape(name))
+	uri, err := r.setQueryAttributes(uri)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", uri, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +117,7 @@ func (r *ProtocolIncus) GetNetworkACLLogfile(name string) (io.ReadCloser, error)
 // CreateNetworkACL defines a new network ACL using the provided struct.
 func (r *ProtocolIncus) CreateNetworkACL(acl api.NetworkACLsPost) error {
 	if !r.HasExtension("network_acl") {
-		return fmt.Errorf(`The server is missing the required "network_acl" API extension`)
+		return errors.New(`The server is missing the required "network_acl" API extension`)
 	}
 
 	// Send the request.
@@ -131,7 +132,7 @@ func (r *ProtocolIncus) CreateNetworkACL(acl api.NetworkACLsPost) error {
 // UpdateNetworkACL updates the network ACL to match the provided struct.
 func (r *ProtocolIncus) UpdateNetworkACL(name string, acl api.NetworkACLPut, ETag string) error {
 	if !r.HasExtension("network_acl") {
-		return fmt.Errorf(`The server is missing the required "network_acl" API extension`)
+		return errors.New(`The server is missing the required "network_acl" API extension`)
 	}
 
 	// Send the request.
@@ -146,7 +147,7 @@ func (r *ProtocolIncus) UpdateNetworkACL(name string, acl api.NetworkACLPut, ETa
 // RenameNetworkACL renames an existing network ACL entry.
 func (r *ProtocolIncus) RenameNetworkACL(name string, acl api.NetworkACLPost) error {
 	if !r.HasExtension("network_acl") {
-		return fmt.Errorf(`The server is missing the required "network_acl" API extension`)
+		return errors.New(`The server is missing the required "network_acl" API extension`)
 	}
 
 	// Send the request.
@@ -161,7 +162,7 @@ func (r *ProtocolIncus) RenameNetworkACL(name string, acl api.NetworkACLPost) er
 // DeleteNetworkACL deletes an existing network ACL.
 func (r *ProtocolIncus) DeleteNetworkACL(name string) error {
 	if !r.HasExtension("network_acl") {
-		return fmt.Errorf(`The server is missing the required "network_acl" API extension`)
+		return errors.New(`The server is missing the required "network_acl" API extension`)
 	}
 
 	// Send the request.

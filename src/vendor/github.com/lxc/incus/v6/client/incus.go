@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -37,6 +38,9 @@ type ProtocolIncus struct {
 	eventListeners     map[string][]*EventListener
 	eventListenersLock sync.Mutex
 
+	// skipEvents tracks whether we were configured not to connect to the events endpoint
+	skipEvents bool
+
 	http            *http.Client
 	httpCertificate string
 	httpBaseURL     neturl.URL
@@ -50,6 +54,8 @@ type ProtocolIncus struct {
 	project       string
 
 	oidcClient *oidcClient
+
+	tempPath string
 }
 
 // Disconnect gets rid of any background goroutines.
@@ -137,7 +143,7 @@ func (r *ProtocolIncus) isSameServer(server Server) bool {
 // GetHTTPClient returns the http client used for the connection. This can be used to set custom http options.
 func (r *ProtocolIncus) GetHTTPClient() (*http.Client, error) {
 	if r.http == nil {
-		return nil, fmt.Errorf("HTTP client isn't set, bad connection")
+		return nil, errors.New("HTTP client isn't set, bad connection")
 	}
 
 	return r.http, nil
@@ -151,7 +157,32 @@ func (r *ProtocolIncus) DoHTTP(req *http.Request) (*http.Response, error) {
 		return r.oidcClient.do(req)
 	}
 
-	return r.http.Do(req)
+	resp, err := r.http.Do(req)
+	if resp != nil && resp.StatusCode == http.StatusUseProxy && req.GetBody != nil {
+		// Reset the request body.
+		body, err := req.GetBody()
+		if err != nil {
+			return nil, err
+		}
+
+		req.Body = body
+
+		// Retry the request.
+		return r.http.Do(req)
+	}
+
+	return resp, err
+}
+
+// DoWebsocket performs a websocket connection, using OIDC authentication if set.
+func (r *ProtocolIncus) DoWebsocket(dialer websocket.Dialer, uri string, req *http.Request) (*websocket.Conn, *http.Response, error) {
+	r.addClientHeaders(req)
+
+	if r.oidcClient != nil {
+		return r.oidcClient.dial(dialer, uri, req)
+	}
+
+	return dialer.Dial(uri, req.Header)
 }
 
 // addClientHeaders sets headers from client settings.
@@ -221,7 +252,7 @@ func incusParseResponse(resp *http.Response) (*api.Response, string, error) {
 
 	// Handle errors
 	if response.Type == api.ErrorResponse {
-		return &response, "", api.StatusErrorf(resp.StatusCode, response.Error)
+		return &response, "", api.StatusErrorf(resp.StatusCode, "%v", response.Error)
 	}
 
 	return &response, etag, nil
@@ -245,10 +276,12 @@ func (r *ProtocolIncus) rawQuery(method string, url string, data any, ETag strin
 		switch data := data.(type) {
 		case io.Reader:
 			// Some data to be sent along with the request
-			req, err = http.NewRequestWithContext(r.ctx, method, url, data)
+			req, err = http.NewRequestWithContext(r.ctx, method, url, io.NopCloser(data))
 			if err != nil {
 				return nil, "", err
 			}
+
+			req.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(data), nil }
 
 			// Set the encoding accordingly
 			req.Header.Set("Content-Type", "application/octet-stream")
@@ -267,11 +300,13 @@ func (r *ProtocolIncus) rawQuery(method string, url string, data any, ETag strin
 				return nil, "", err
 			}
 
+			req.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(buf.Bytes())), nil }
+
 			// Set the encoding accordingly
 			req.Header.Set("Content-Type", "application/json")
 
 			// Log the data
-			logger.Debugf(logger.Pretty(data))
+			logger.Debugf("%s", logger.Pretty(data))
 		}
 	} else {
 		// No data to be sent along with the request
@@ -357,7 +392,7 @@ func (r *ProtocolIncus) queryStruct(method string, path string, data any, ETag s
 
 	// Log the data
 	logger.Debugf("Got response struct from Incus")
-	logger.Debugf(logger.Pretty(target))
+	logger.Debugf("%s", logger.Pretty(target))
 
 	return etag, nil
 }
@@ -366,14 +401,20 @@ func (r *ProtocolIncus) queryStruct(method string, path string, data any, ETag s
 // It sets up an early event listener, performs the query, processes the response, and manages the lifecycle of the event listener.
 func (r *ProtocolIncus) queryOperation(method string, path string, data any, ETag string) (Operation, string, error) {
 	// Attempt to setup an early event listener
-	skipListener := false
-	listener, err := r.GetEvents()
-	if err != nil {
-		if api.StatusErrorCheck(err, http.StatusForbidden) {
-			skipListener = true
-		}
+	var listener *EventListener
 
-		listener = nil
+	skipListener := r.skipEvents
+	if !skipListener {
+		var err error
+
+		listener, err = r.GetEvents()
+		if err != nil {
+			if api.StatusErrorCheck(err, http.StatusForbidden) {
+				skipListener = true
+			}
+
+			listener = nil
+		}
 	}
 
 	// Send the query
@@ -407,7 +448,7 @@ func (r *ProtocolIncus) queryOperation(method string, path string, data any, ETa
 
 	// Log the data
 	logger.Debugf("Got operation from Incus")
-	logger.Debugf(logger.Pretty(op.Operation))
+	logger.Debugf("%s", logger.Pretty(op.Operation))
 
 	return &op, etag, nil
 }
@@ -423,22 +464,29 @@ func (r *ProtocolIncus) rawWebsocket(url string) (*websocket.Conn, error) {
 
 	// Setup a new websocket dialer based on it
 	dialer := websocket.Dialer{
-		NetDialContext:   httpTransport.DialContext,
-		TLSClientConfig:  httpTransport.TLSClientConfig,
-		Proxy:            httpTransport.Proxy,
-		HandshakeTimeout: time.Second * 5,
+		NetDialTLSContext: httpTransport.DialTLSContext,
+		NetDialContext:    httpTransport.DialContext,
+		TLSClientConfig:   httpTransport.TLSClientConfig,
+		Proxy:             httpTransport.Proxy,
+		HandshakeTimeout:  time.Second * 5,
 	}
 
 	// Create temporary http.Request using the http url, not the ws one, so that we can add the client headers
 	// for the websocket request.
 	req := &http.Request{URL: &r.httpBaseURL, Header: http.Header{}}
-	r.addClientHeaders(req)
 
 	// Establish the connection
-	conn, resp, err := dialer.Dial(url, req.Header)
+	conn, resp, err := r.DoWebsocket(dialer, url, req)
 	if err != nil {
 		if resp != nil {
-			_, _, err = incusParseResponse(resp)
+			apiResp, _, parseErr := incusParseResponse(resp)
+			if parseErr != nil {
+				err = errors.Join(err, parseErr)
+			}
+
+			if apiResp != nil && apiResp.Error != "" {
+				err = errors.Join(err, errors.New(apiResp.Error))
+			}
 		}
 
 		return nil, err

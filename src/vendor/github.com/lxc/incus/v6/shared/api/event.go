@@ -45,7 +45,8 @@ type Event struct {
 
 // ToLogging creates log record for the event.
 func (event *Event) ToLogging() (EventLogRecord, error) {
-	if event.Type == EventTypeLogging || event.Type == EventTypeNetworkACL {
+	switch event.Type {
+	case EventTypeLogging, EventTypeNetworkACL:
 		e := &EventLogging{}
 		err := json.Unmarshal(event.Metadata, &e)
 		if err != nil {
@@ -66,7 +67,8 @@ func (event *Event) ToLogging() (EventLogRecord, error) {
 		}
 
 		return record, nil
-	} else if event.Type == EventTypeLifecycle {
+
+	case EventTypeLifecycle:
 		e := &EventLifecycle{}
 		err := json.Unmarshal(event.Metadata, &e)
 		if err != nil {
@@ -93,7 +95,8 @@ func (event *Event) ToLogging() (EventLogRecord, error) {
 		}
 
 		return record, nil
-	} else if event.Type == EventTypeOperation {
+
+	case EventTypeOperation:
 		e := &Operation{}
 		err := json.Unmarshal(event.Metadata, &e)
 		if err != nil {
@@ -138,7 +141,7 @@ type EventLogging struct {
 	Context map[string]string `yaml:"context" json:"context"`
 }
 
-// EventLifecycle represets a lifecycle type event entry
+// EventLifecycle represents a lifecycle type event entry
 //
 // API extension: event_lifecycle.
 type EventLifecycle struct {

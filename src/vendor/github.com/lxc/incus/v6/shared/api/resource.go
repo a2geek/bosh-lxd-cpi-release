@@ -46,6 +46,11 @@ type Resources struct {
 	//
 	// API extension: resources_load
 	Load ResourcesLoad `json:"load" yaml:"load"`
+
+	// Serial devices
+	//
+	// API extension: resources_serial
+	Serial ResourcesSerial `json:"serial" yaml:"serial"`
 }
 
 // ResourcesCPU represents the cpu resources available on the system
@@ -103,6 +108,21 @@ type ResourcesCPUSocket struct {
 	// Maximum CPU frequency (Mhz)
 	// Example: 3500
 	FrequencyTurbo uint64 `json:"frequency_turbo,omitempty" yaml:"frequency_turbo,omitempty"`
+
+	// Address sizes
+	//
+	// API extension: resources_cpu_address_sizes.
+	AddressSizes *ResourcesCPUAddressSizes `json:"address_sizes,omitempty" yaml:"address_sizes,omitempty"`
+}
+
+// ResourcesCPUAddressSizes resprents address size information for a CPU socket.
+//
+// swagger:model
+//
+// API extension: resources_cpu_address_sizes.
+type ResourcesCPUAddressSizes struct {
+	PhysicalBits uint64 `json:"physical_bits" yaml:"physical_bits"`
+	VirtualBits  uint64 `json:"virtual_bits" yaml:"virtual_bits"`
 }
 
 // ResourcesCPUCache represents a CPU cache
@@ -146,6 +166,12 @@ type ResourcesCPUCore struct {
 	// Current frequency
 	// Example: 3500
 	Frequency uint64 `json:"frequency,omitempty" yaml:"frequency,omitempty"`
+
+	// List of CPU flags
+	// Example: []
+	//
+	// API extension: resources_cpu_flags
+	Flags []string `json:"flags" yaml:"flags"`
 }
 
 // ResourcesCPUThread represents a CPU thread on the system
@@ -561,7 +587,7 @@ type ResourcesNetworkCardSRIOV struct {
 	VFs []ResourcesNetworkCard `json:"vfs" yaml:"vfs"`
 }
 
-// ResourceNetworkCardVDPA represents the VDPA configuration of the network card
+// ResourcesNetworkCardVDPA represents the VDPA configuration of the network card
 //
 // swagger:model
 //
@@ -778,7 +804,7 @@ type ResourcesStoragePool struct {
 	// Disk space usage
 	Space ResourcesStoragePoolSpace `json:"space,omitempty" yaml:"space,omitempty"`
 
-	// DIsk inode usage
+	// Disk inode usage
 	Inodes ResourcesStoragePoolInodes `json:"inodes,omitempty" yaml:"inodes,omitempty"`
 }
 
@@ -1119,4 +1145,61 @@ type ResourcesLoad struct {
 	// The number of active processes
 	// Example: 1234
 	Processes int
+}
+
+// ResourcesSerial represents the serial devices available on the system
+//
+// swagger:model
+//
+// API extension: resources_serial.
+type ResourcesSerial struct {
+	// List of serial devices
+	Devices []ResourcesSerialDevice `json:"devices" yaml:"devices"`
+
+	// Total number of serial devices
+	// Example: 1
+	Total uint64 `json:"total" yaml:"total"`
+}
+
+// ResourcesSerialDevice represents a serial device
+//
+// swagger:model
+//
+// API extension: resources_serial.
+type ResourcesSerialDevice struct {
+	// Kernel device name (e.g. ttyUSB0, ttyACM0)
+	// Example: ttyUSB0
+	ID string `json:"id" yaml:"id"`
+
+	// Device number (major:minor)
+	// Example: 188:0
+	Device string `json:"device" yaml:"device"`
+
+	// Path to /dev/serial/by-id entry
+	// Example: /dev/serial/by-id/usb-FTDI_FT232R_USB_UART_AB0J1234-if00-port0
+	DeviceID string `json:"device_id" yaml:"device_id"`
+
+	// Path to /dev/serial/by-path entry
+	// Example: /dev/serial/by-path/pci-0000:00:14.0-usb-0:2:1.0-port0
+	DevicePath string `json:"device_path" yaml:"device_path"`
+
+	// kernel driver name (cdc_acm, ftdi_sio, pl2303, cp210x...)
+	// Example: cdc_acm
+	Driver string `json:"driver" yaml:"driver"`
+
+	// USB vendor name
+	// Example: Arduino LLC
+	Vendor string `json:"vendor" yaml:"vendor"`
+
+	// USB vendor ID
+	// Example: 2341
+	VendorID string `json:"vendor_id" yaml:"vendor_id"`
+
+	// USB product name
+	// Example: Arduino Uno
+	Product string `json:"product" yaml:"product"`
+
+	// USB product ID
+	// Example: 0043
+	ProductID string `json:"product_id" yaml:"product_id"`
 }

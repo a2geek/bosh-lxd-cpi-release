@@ -36,7 +36,7 @@ type NetworkPost struct {
 type NetworkPut struct {
 	// Network configuration map (refer to doc/networks.md)
 	// Example: {"ipv4.address": "10.0.0.1/24", "ipv4.nat": "true", "ipv6.address": "none"}
-	Config map[string]string `json:"config" yaml:"config"`
+	Config ConfigMap `json:"config" yaml:"config"`
 
 	// Description of the profile
 	// Example: My new bridge
@@ -125,7 +125,7 @@ type NetworkLease struct {
 	Hostname string `json:"hostname" yaml:"hostname"`
 
 	// The MAC address
-	// Example: 00:16:3e:2c:89:d9
+	// Example: 10:66:6a:2c:89:d9
 	Hwaddr string `json:"hwaddr" yaml:"hwaddr"`
 
 	// The IP address
@@ -151,10 +151,10 @@ type NetworkState struct {
 	Addresses []NetworkStateAddress `json:"addresses" yaml:"addresses"`
 
 	// Interface counters
-	Counters NetworkStateCounters `json:"counters" yaml:"counters"`
+	Counters *NetworkStateCounters `json:"counters" yaml:"counters"`
 
 	// MAC address
-	// Example: 00:16:3e:5a:83:57
+	// Example: 10:66:6a:5a:83:57
 	Hwaddr string `json:"hwaddr" yaml:"hwaddr"`
 
 	// MTU
@@ -328,4 +328,22 @@ type NetworkStateOVN struct {
 	//
 	// API extension: network_state_ovn_lr
 	LogicalRouter string `json:"logical_router" yaml:"logical_router"`
+
+	// OVN logical switch name
+	// Example: incus-net1-ls-int
+	//
+	// API extension: network_state_ovn_ls
+	LogicalSwitch string `json:"logical_switch" yaml:"logical_switch"`
+
+	// OVN network uplink ipv4 address
+	// Example: 10.0.0.1
+	//
+	// API extension: network_ovn_state_addresses
+	UplinkIPv4 string `json:"uplink_ipv4" yaml:"uplink_ipv4"`
+
+	// OVN network uplink ipv6 address
+	// Example: 2001:0000:130F:0000:0000:09C0:876A:130B.
+	//
+	// API extension: network_ovn_state_addresses
+	UplinkIPv6 string `json:"uplink_ipv6" yaml:"uplink_ipv6"`
 }

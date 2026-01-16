@@ -61,9 +61,11 @@ func (pt *ProgressTracker) update(n int) {
 	var progressInt int64
 	if pt.Length > 0 {
 		pt.percentage = percentage
-		progressInt = int64(1 + int(percentage))
-		if progressInt > 100 {
-			progressInt = 100
+		progressInt = min(int64(1+int(percentage)), 100)
+
+		// Cap maximum download speed to file size.
+		if speedInt > pt.Length {
+			speedInt = pt.Length
 		}
 	} else {
 		progressInt = pt.total

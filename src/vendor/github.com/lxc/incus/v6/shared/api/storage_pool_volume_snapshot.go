@@ -49,7 +49,7 @@ type StorageVolumeSnapshotPost struct {
 //
 // API extension: storage_api_volume_snapshots.
 type StorageVolumeSnapshot struct {
-	StorageVolumeSnapshotPut `json:",inline" yaml:",inline"`
+	StorageVolumeSnapshotPut `yaml:",inline"`
 
 	// Snapshot name
 	// Example: snap0
@@ -57,7 +57,7 @@ type StorageVolumeSnapshot struct {
 
 	// Storage volume configuration map (refer to doc/storage.md)
 	// Example: {"zfs.remove_snapshots": "true", "size": "50GiB"}
-	Config map[string]string `json:"config" yaml:"config"`
+	Config ConfigMap `json:"config" yaml:"config"`
 
 	// The content type (filesystem or block)
 	// Example: filesystem

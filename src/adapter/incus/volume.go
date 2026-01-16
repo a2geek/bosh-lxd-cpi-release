@@ -53,7 +53,7 @@ func (a *incusApiAdapter) CreateStoragePoolVolumeFromISO(target, pool, diskName 
 	if target != "" {
 		c = c.UseTarget(target)
 	}
-	return wait(c.CreateStoragePoolVolumeFromISO(pool, client.StoragePoolVolumeBackupArgs{
+	return wait(c.CreateStoragePoolVolumeFromISO(pool, client.StorageVolumeBackupArgs{
 		Name:       diskName,
 		BackupFile: backupFile,
 	}))

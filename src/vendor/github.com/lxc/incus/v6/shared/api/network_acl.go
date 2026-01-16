@@ -123,7 +123,7 @@ type NetworkACLPut struct {
 
 	// ACL configuration map (refer to doc/network-acls.md)
 	// Example: {"user.mykey": "foo"}
-	Config map[string]string `json:"config" yaml:"config"`
+	Config ConfigMap `json:"config" yaml:"config"`
 }
 
 // NetworkACL used for displaying an ACL.
@@ -145,6 +145,11 @@ type NetworkACL struct {
 	//
 	// API extension: network_acls_all_projects
 	Project string `json:"project" yaml:"project"` // Project the ACL belongs to.
+}
+
+// URL returns the URL for the network ACL.
+func (acl *NetworkACL) URL(apiVersion string, project string) *URL {
+	return NewURL().Path(apiVersion, "network-acls", acl.Name).Project(project)
 }
 
 // Writable converts a full NetworkACL struct into a NetworkACLPut struct (filters read-only fields).

@@ -26,7 +26,7 @@ type ProfilePost struct {
 type ProfilePut struct {
 	// Instance configuration map (refer to doc/instances.md)
 	// Example: {"limits.cpu": "4", "limits.memory": "4GiB"}
-	Config map[string]string `json:"config" yaml:"config"`
+	Config ConfigMap `json:"config" yaml:"config"`
 
 	// Description of the profile
 	// Example: Medium size instances
@@ -34,7 +34,7 @@ type ProfilePut struct {
 
 	// List of devices
 	// Example: {"root": {"type": "disk", "pool": "default", "path": "/"}, "eth0": {"type": "nic", "network": "mybr0", "name": "eth0"}}
-	Devices map[string]map[string]string `json:"devices" yaml:"devices"`
+	Devices DevicesMap `json:"devices" yaml:"devices"`
 }
 
 // Profile represents a profile

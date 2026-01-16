@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
@@ -46,7 +47,7 @@ type Operation struct {
 	// Example: 103
 	StatusCode StatusCode `json:"status_code" yaml:"status_code"`
 
-	// Affected resourcs
+	// Affected resources
 	// Example: {"instances": ["/1.0/instances/foo"]}
 	Resources map[string][]string `json:"resources" yaml:"resources"`
 
@@ -58,7 +59,7 @@ type Operation struct {
 	// Example: false
 	MayCancel bool `json:"may_cancel" yaml:"may_cancel"`
 
-	// Operation error mesage
+	// Operation error message
 	// Example: Some error message
 	Err string `json:"err" yaml:"err"`
 
@@ -78,7 +79,7 @@ func (op *Operation) ToCertificateAddToken() (*CertificateAddToken, error) {
 
 	clientName, ok := req["name"].(string)
 	if !ok {
-		return nil, fmt.Errorf("Failed to get client name")
+		return nil, errors.New("Failed to get client name")
 	}
 
 	secret, ok := op.Metadata["secret"].(string)

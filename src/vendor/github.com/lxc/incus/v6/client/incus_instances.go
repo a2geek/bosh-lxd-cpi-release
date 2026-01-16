@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -108,7 +109,7 @@ func (r *ProtocolIncus) GetInstances(instanceType api.InstanceType) ([]api.Insta
 // GetInstancesWithFilter returns a filtered list of instances.
 func (r *ProtocolIncus) GetInstancesWithFilter(instanceType api.InstanceType, filters []string) ([]api.Instance, error) {
 	if !r.HasExtension("api_filtering") {
-		return nil, fmt.Errorf("The server is missing the required \"api_filtering\" API extension")
+		return nil, errors.New("The server is missing the required \"api_filtering\" API extension")
 	}
 
 	instances := []api.Instance{}
@@ -143,7 +144,7 @@ func (r *ProtocolIncus) GetInstancesAllProjects(instanceType api.InstanceType) (
 	v.Set("all-projects", "true")
 
 	if !r.HasExtension("instance_all_projects") {
-		return nil, fmt.Errorf("The server is missing the required \"instance_all_projects\" API extension")
+		return nil, errors.New("The server is missing the required \"instance_all_projects\" API extension")
 	}
 
 	// Fetch the raw value
@@ -158,7 +159,7 @@ func (r *ProtocolIncus) GetInstancesAllProjects(instanceType api.InstanceType) (
 // GetInstancesAllProjectsWithFilter returns a filtered list of instances from all projects.
 func (r *ProtocolIncus) GetInstancesAllProjectsWithFilter(instanceType api.InstanceType, filters []string) ([]api.Instance, error) {
 	if !r.HasExtension("api_filtering") {
-		return nil, fmt.Errorf("The server is missing the required \"api_filtering\" API extension")
+		return nil, errors.New("The server is missing the required \"api_filtering\" API extension")
 	}
 
 	instances := []api.Instance{}
@@ -173,7 +174,7 @@ func (r *ProtocolIncus) GetInstancesAllProjectsWithFilter(instanceType api.Insta
 	v.Set("filter", parseFilters(filters))
 
 	if !r.HasExtension("instance_all_projects") {
-		return nil, fmt.Errorf("The server is missing the required \"instance_all_projects\" API extension")
+		return nil, errors.New("The server is missing the required \"instance_all_projects\" API extension")
 	}
 
 	// Fetch the raw value
@@ -221,7 +222,7 @@ func (r *ProtocolIncus) rebuildInstance(instanceName string, instance api.Instan
 // It runs the rebuild process asynchronously and returns a RemoteOperation to monitor the progress and any errors.
 func (r *ProtocolIncus) tryRebuildInstance(instanceName string, req api.InstanceRebuildPost, urls []string, op Operation) (RemoteOperation, error) {
 	if len(urls) == 0 {
-		return nil, fmt.Errorf("The source server isn't listening on the network")
+		return nil, errors.New("The source server isn't listening on the network")
 	}
 
 	rop := remoteOperation{
@@ -339,7 +340,7 @@ func (r *ProtocolIncus) GetInstancesFull(instanceType api.InstanceType) ([]api.I
 	v.Set("recursion", "2")
 
 	if !r.HasExtension("container_full") {
-		return nil, fmt.Errorf("The server is missing the required \"container_full\" API extension")
+		return nil, errors.New("The server is missing the required \"container_full\" API extension")
 	}
 
 	// Fetch the raw value
@@ -354,7 +355,7 @@ func (r *ProtocolIncus) GetInstancesFull(instanceType api.InstanceType) ([]api.I
 // GetInstancesFullWithFilter returns a filtered list of instances including snapshots, backups and state.
 func (r *ProtocolIncus) GetInstancesFullWithFilter(instanceType api.InstanceType, filters []string) ([]api.InstanceFull, error) {
 	if !r.HasExtension("api_filtering") {
-		return nil, fmt.Errorf("The server is missing the required \"api_filtering\" API extension")
+		return nil, errors.New("The server is missing the required \"api_filtering\" API extension")
 	}
 
 	instances := []api.InstanceFull{}
@@ -368,7 +369,7 @@ func (r *ProtocolIncus) GetInstancesFullWithFilter(instanceType api.InstanceType
 	v.Set("filter", parseFilters(filters))
 
 	if !r.HasExtension("container_full") {
-		return nil, fmt.Errorf("The server is missing the required \"container_full\" API extension")
+		return nil, errors.New("The server is missing the required \"container_full\" API extension")
 	}
 
 	// Fetch the raw value
@@ -393,11 +394,11 @@ func (r *ProtocolIncus) GetInstancesFullAllProjects(instanceType api.InstanceTyp
 	v.Set("all-projects", "true")
 
 	if !r.HasExtension("container_full") {
-		return nil, fmt.Errorf("The server is missing the required \"container_full\" API extension")
+		return nil, errors.New("The server is missing the required \"container_full\" API extension")
 	}
 
 	if !r.HasExtension("instance_all_projects") {
-		return nil, fmt.Errorf("The server is missing the required \"instance_all_projects\" API extension")
+		return nil, errors.New("The server is missing the required \"instance_all_projects\" API extension")
 	}
 
 	// Fetch the raw value
@@ -412,7 +413,7 @@ func (r *ProtocolIncus) GetInstancesFullAllProjects(instanceType api.InstanceTyp
 // GetInstancesFullAllProjectsWithFilter returns a filtered list of instances including snapshots, backups and state from all projects.
 func (r *ProtocolIncus) GetInstancesFullAllProjectsWithFilter(instanceType api.InstanceType, filters []string) ([]api.InstanceFull, error) {
 	if !r.HasExtension("api_filtering") {
-		return nil, fmt.Errorf("The server is missing the required \"api_filtering\" API extension")
+		return nil, errors.New("The server is missing the required \"api_filtering\" API extension")
 	}
 
 	instances := []api.InstanceFull{}
@@ -427,11 +428,11 @@ func (r *ProtocolIncus) GetInstancesFullAllProjectsWithFilter(instanceType api.I
 	v.Set("filter", parseFilters(filters))
 
 	if !r.HasExtension("container_full") {
-		return nil, fmt.Errorf("The server is missing the required \"container_full\" API extension")
+		return nil, errors.New("The server is missing the required \"container_full\" API extension")
 	}
 
 	if !r.HasExtension("instance_all_projects") {
-		return nil, fmt.Errorf("The server is missing the required \"instance_all_projects\" API extension")
+		return nil, errors.New("The server is missing the required \"instance_all_projects\" API extension")
 	}
 
 	// Fetch the raw value
@@ -466,7 +467,7 @@ func (r *ProtocolIncus) GetInstanceFull(name string) (*api.InstanceFull, string,
 	instance := api.InstanceFull{}
 
 	if !r.HasExtension("instance_get_full") {
-		// Backware compatibility.
+		// Backward compatibility.
 		ct, _, err := r.GetInstance(name)
 		if err != nil {
 			return nil, "", err
@@ -513,7 +514,7 @@ func (r *ProtocolIncus) GetInstanceFull(name string) (*api.InstanceFull, string,
 // create a instance from a backup.
 func (r *ProtocolIncus) CreateInstanceFromBackup(args InstanceBackupArgs) (Operation, error) {
 	if !r.HasExtension("container_backup") {
-		return nil, fmt.Errorf("The server is missing the required \"container_backup\" API extension")
+		return nil, errors.New("The server is missing the required \"container_backup\" API extension")
 	}
 
 	path, _, err := r.instanceTypeToPath(api.InstanceTypeAny)
@@ -521,7 +522,7 @@ func (r *ProtocolIncus) CreateInstanceFromBackup(args InstanceBackupArgs) (Opera
 		return nil, err
 	}
 
-	if args.PoolName == "" && args.Name == "" {
+	if args.PoolName == "" && args.Name == "" && args.Config == nil && args.Devices == nil {
 		// Send the request
 		op, _, err := r.queryOperation("POST", path, args.BackupFile, "")
 		if err != nil {
@@ -532,11 +533,15 @@ func (r *ProtocolIncus) CreateInstanceFromBackup(args InstanceBackupArgs) (Opera
 	}
 
 	if args.PoolName != "" && !r.HasExtension("container_backup_override_pool") {
-		return nil, fmt.Errorf(`The server is missing the required "container_backup_override_pool" API extension`)
+		return nil, errors.New(`The server is missing the required "container_backup_override_pool" API extension`)
 	}
 
 	if args.Name != "" && !r.HasExtension("backup_override_name") {
-		return nil, fmt.Errorf(`The server is missing the required "backup_override_name" API extension`)
+		return nil, errors.New(`The server is missing the required "backup_override_name" API extension`)
+	}
+
+	if (args.Config != nil || args.Devices != nil) && !r.HasExtension("backup_override_config") {
+		return nil, errors.New(`The server is missing the required "backup_override_config" API extension`)
 	}
 
 	// Prepare the HTTP request
@@ -558,6 +563,16 @@ func (r *ProtocolIncus) CreateInstanceFromBackup(args InstanceBackupArgs) (Opera
 
 	if args.Name != "" {
 		req.Header.Set("X-Incus-name", args.Name)
+	}
+
+	if args.Config != nil {
+		configOverride := strings.Join(args.Config, " ")
+		req.Header.Set("X-Incus-config", configOverride)
+	}
+
+	if args.Devices != nil {
+		devicesOverride := strings.Join(args.Devices, " ")
+		req.Header.Set("X-Incus-devices", devicesOverride)
 	}
 
 	// Send the request
@@ -599,7 +614,7 @@ func (r *ProtocolIncus) CreateInstance(instance api.InstancesPost) (Operation, e
 
 	if instance.Source.InstanceOnly {
 		if !r.HasExtension("container_only_migration") {
-			return nil, fmt.Errorf("The server is missing the required \"container_only_migration\" API extension")
+			return nil, errors.New("The server is missing the required \"container_only_migration\" API extension")
 		}
 	}
 
@@ -616,7 +631,7 @@ func (r *ProtocolIncus) CreateInstance(instance api.InstancesPost) (Operation, e
 // It runs the instance creation asynchronously and returns a RemoteOperation to monitor the progress and any errors.
 func (r *ProtocolIncus) tryCreateInstance(req api.InstancesPost, urls []string, op Operation) (RemoteOperation, error) {
 	if len(urls) == 0 {
-		return nil, fmt.Errorf("The source server isn't listening on the network")
+		return nil, errors.New("The source server isn't listening on the network")
 	}
 
 	rop := remoteOperation{
@@ -626,6 +641,9 @@ func (r *ProtocolIncus) tryCreateInstance(req api.InstancesPost, urls []string, 
 	operation := req.Source.Operation
 
 	// Forward targetOp to remote op
+	chConnect := make(chan error, 1)
+	chWait := make(chan error, 1)
+
 	go func() {
 		success := false
 		var errors []remoteOperationResult
@@ -665,13 +683,35 @@ func (r *ProtocolIncus) tryCreateInstance(req api.InstancesPost, urls []string, 
 			break
 		}
 
-		if !success {
-			rop.err = remoteOperationError("Failed instance creation", errors)
+		if success {
+			chConnect <- nil
+			close(chConnect)
+		} else {
+			chConnect <- remoteOperationError("Failed instance creation", errors)
+			close(chConnect)
+
 			if op != nil {
 				_ = op.Cancel()
 			}
 		}
+	}()
 
+	if op != nil {
+		go func() {
+			chWait <- op.Wait()
+			close(chWait)
+		}()
+	}
+
+	go func() {
+		var err error
+
+		select {
+		case err = <-chConnect:
+		case err = <-chWait:
+		}
+
+		rop.err = err
 		close(rop.chDone)
 	}()
 
@@ -725,41 +765,45 @@ func (r *ProtocolIncus) CopyInstance(source InstanceServer, instance api.Instanc
 		// Quick checks.
 		if args.InstanceOnly {
 			if !r.HasExtension("container_only_migration") {
-				return nil, fmt.Errorf("The target server is missing the required \"container_only_migration\" API extension")
+				return nil, errors.New("The target server is missing the required \"container_only_migration\" API extension")
 			}
 
 			if !source.HasExtension("container_only_migration") {
-				return nil, fmt.Errorf("The source server is missing the required \"container_only_migration\" API extension")
+				return nil, errors.New("The source server is missing the required \"container_only_migration\" API extension")
 			}
 		}
 
 		if slices.Contains([]string{"push", "relay"}, args.Mode) {
 			if !r.HasExtension("container_push") {
-				return nil, fmt.Errorf("The target server is missing the required \"container_push\" API extension")
+				return nil, errors.New("The target server is missing the required \"container_push\" API extension")
 			}
 
 			if !source.HasExtension("container_push") {
-				return nil, fmt.Errorf("The source server is missing the required \"container_push\" API extension")
+				return nil, errors.New("The source server is missing the required \"container_push\" API extension")
 			}
 		}
 
 		if args.Mode == "push" && !source.HasExtension("container_push_target") {
-			return nil, fmt.Errorf("The source server is missing the required \"container_push_target\" API extension")
+			return nil, errors.New("The source server is missing the required \"container_push_target\" API extension")
 		}
 
 		if args.Refresh {
 			if !r.HasExtension("container_incremental_copy") {
-				return nil, fmt.Errorf("The target server is missing the required \"container_incremental_copy\" API extension")
+				return nil, errors.New("The target server is missing the required \"container_incremental_copy\" API extension")
 			}
 
 			if !source.HasExtension("container_incremental_copy") {
-				return nil, fmt.Errorf("The source server is missing the required \"container_incremental_copy\" API extension")
+				return nil, errors.New("The source server is missing the required \"container_incremental_copy\" API extension")
 			}
+		}
+
+		if args.RefreshExcludeOlder && !source.HasExtension("custom_volume_refresh_exclude_older_snapshots") {
+			return nil, errors.New("The source server is missing the required \"custom_volume_refresh_exclude_older_snapshots\" API extension")
 		}
 
 		if args.AllowInconsistent {
 			if !r.HasExtension("instance_allow_inconsistent_copy") {
-				return nil, fmt.Errorf("The source server is missing the required \"instance_allow_inconsistent_copy\" API extension")
+				return nil, errors.New("The source server is missing the required \"instance_allow_inconsistent_copy\" API extension")
 			}
 		}
 
@@ -771,6 +815,7 @@ func (r *ProtocolIncus) CopyInstance(source InstanceServer, instance api.Instanc
 		req.Source.Live = args.Live
 		req.Source.InstanceOnly = args.InstanceOnly
 		req.Source.Refresh = args.Refresh
+		req.Source.RefreshExcludeOlder = args.RefreshExcludeOlder
 		req.Source.AllowInconsistent = args.AllowInconsistent
 	}
 
@@ -793,7 +838,7 @@ func (r *ProtocolIncus) CopyInstance(source InstanceServer, instance api.Instanc
 		// Project handling
 		if destInfo.Project != sourceInfo.Project {
 			if !r.HasExtension("container_copy_project") {
-				return nil, fmt.Errorf("The server is missing the required \"container_copy_project\" API extension")
+				return nil, errors.New("The server is missing the required \"container_copy_project\" API extension")
 			}
 
 			req.Source.Project = sourceInfo.Project
@@ -843,6 +888,7 @@ func (r *ProtocolIncus) CopyInstance(source InstanceServer, instance api.Instanc
 		req.Source.Type = "migration"
 		req.Source.Mode = "push"
 		req.Source.Refresh = args.Refresh
+		req.Source.RefreshExcludeOlder = args.RefreshExcludeOlder
 
 		op, err := r.CreateInstance(req)
 		if err != nil {
@@ -853,7 +899,10 @@ func (r *ProtocolIncus) CopyInstance(source InstanceServer, instance api.Instanc
 
 		targetSecrets := map[string]string{}
 		for k, v := range opAPI.Metadata {
-			targetSecrets[k] = v.(string)
+			val, ok := v.(string)
+			if ok {
+				targetSecrets[k] = val
+			}
 		}
 
 		// Prepare the source request
@@ -863,7 +912,7 @@ func (r *ProtocolIncus) CopyInstance(source InstanceServer, instance api.Instanc
 		target.Certificate = info.Certificate
 		sourceReq.Target = &target
 
-		return r.tryMigrateInstance(source, instance.Name, sourceReq, info.Addresses)
+		return r.tryMigrateInstance(source, instance.Name, sourceReq, info.Addresses, op)
 	}
 
 	// Get source server connection information
@@ -881,7 +930,10 @@ func (r *ProtocolIncus) CopyInstance(source InstanceServer, instance api.Instanc
 
 	sourceSecrets := map[string]string{}
 	for k, v := range opAPI.Metadata {
-		sourceSecrets[k] = v.(string)
+		val, ok := v.(string)
+		if ok {
+			sourceSecrets[k] = val
+		}
 	}
 
 	// Relay mode migration
@@ -901,7 +953,10 @@ func (r *ProtocolIncus) CopyInstance(source InstanceServer, instance api.Instanc
 		// Extract the websockets
 		targetSecrets := map[string]string{}
 		for k, v := range targetOpAPI.Metadata {
-			targetSecrets[k] = v.(string)
+			val, ok := v.(string)
+			if ok {
+				targetSecrets[k] = val
+			}
 		}
 
 		// Launch the relay
@@ -960,7 +1015,7 @@ func (r *ProtocolIncus) RenameInstance(name string, instance api.InstancePost) (
 
 	// Quick check.
 	if instance.Migration {
-		return nil, fmt.Errorf("Can't ask for a migration through RenameInstance")
+		return nil, errors.New("Can't ask for a migration through RenameInstance")
 	}
 
 	// Send the request
@@ -974,9 +1029,9 @@ func (r *ProtocolIncus) RenameInstance(name string, instance api.InstancePost) (
 
 // tryMigrateInstance attempts to migrate a specific instance from a source server to one of the target URLs.
 // The function runs the migration operation asynchronously and returns a RemoteOperation to track the progress and handle any errors.
-func (r *ProtocolIncus) tryMigrateInstance(source InstanceServer, name string, req api.InstancePost, urls []string) (RemoteOperation, error) {
+func (r *ProtocolIncus) tryMigrateInstance(source InstanceServer, name string, req api.InstancePost, urls []string, op Operation) (RemoteOperation, error) {
 	if len(urls) == 0 {
-		return nil, fmt.Errorf("The target server isn't listening on the network")
+		return nil, errors.New("The target server isn't listening on the network")
 	}
 
 	rop := remoteOperation{
@@ -986,6 +1041,9 @@ func (r *ProtocolIncus) tryMigrateInstance(source InstanceServer, name string, r
 	operation := req.Target.Operation
 
 	// Forward targetOp to remote op
+	chConnect := make(chan error, 1)
+	chWait := make(chan error, 1)
+
 	go func() {
 		success := false
 		var errors []remoteOperationResult
@@ -1019,10 +1077,35 @@ func (r *ProtocolIncus) tryMigrateInstance(source InstanceServer, name string, r
 			break
 		}
 
-		if !success {
-			rop.err = remoteOperationError("Failed instance migration", errors)
+		if success {
+			chConnect <- nil
+			close(chConnect)
+		} else {
+			chConnect <- remoteOperationError("Failed instance migration", errors)
+			close(chConnect)
+
+			if op != nil {
+				_ = op.Cancel()
+			}
+		}
+	}()
+
+	if op != nil {
+		go func() {
+			chWait <- op.Wait()
+			close(chWait)
+		}()
+	}
+
+	go func() {
+		var err error
+
+		select {
+		case err = <-chConnect:
+		case err = <-chWait:
 		}
 
+		rop.err = err
 		close(rop.chDone)
 	}()
 
@@ -1038,25 +1121,25 @@ func (r *ProtocolIncus) MigrateInstance(name string, instance api.InstancePost) 
 
 	if instance.InstanceOnly {
 		if !r.HasExtension("container_only_migration") {
-			return nil, fmt.Errorf("The server is missing the required \"container_only_migration\" API extension")
+			return nil, errors.New("The server is missing the required \"container_only_migration\" API extension")
 		}
 	}
 
 	if instance.Pool != "" && !r.HasExtension("instance_pool_move") {
-		return nil, fmt.Errorf("The server is missing the required \"instance_pool_move\" API extension")
+		return nil, errors.New("The server is missing the required \"instance_pool_move\" API extension")
 	}
 
 	if instance.Project != "" && !r.HasExtension("instance_project_move") {
-		return nil, fmt.Errorf("The server is missing the required \"instance_project_move\" API extension")
+		return nil, errors.New("The server is missing the required \"instance_project_move\" API extension")
 	}
 
 	if instance.AllowInconsistent && !r.HasExtension("cluster_migration_inconsistent_copy") {
-		return nil, fmt.Errorf("The server is missing the required \"cluster_migration_inconsistent_copy\" API extension")
+		return nil, errors.New("The server is missing the required \"cluster_migration_inconsistent_copy\" API extension")
 	}
 
 	// Quick check.
 	if !instance.Migration {
-		return nil, fmt.Errorf("Can't ask for a rename through MigrateInstance")
+		return nil, errors.New("Can't ask for a rename through MigrateInstance")
 	}
 
 	// Send the request
@@ -1093,13 +1176,13 @@ func (r *ProtocolIncus) ExecInstance(instanceName string, exec api.InstanceExecP
 
 	if exec.RecordOutput {
 		if !r.HasExtension("container_exec_recording") {
-			return nil, fmt.Errorf("The server is missing the required \"container_exec_recording\" API extension")
+			return nil, errors.New("The server is missing the required \"container_exec_recording\" API extension")
 		}
 	}
 
 	if exec.User > 0 || exec.Group > 0 || exec.Cwd != "" {
 		if !r.HasExtension("container_exec_user_group_cwd") {
-			return nil, fmt.Errorf("The server is missing the required \"container_exec_user_group_cwd\" API extension")
+			return nil, errors.New("The server is missing the required \"container_exec_user_group_cwd\" API extension")
 		}
 	}
 
@@ -1131,9 +1214,14 @@ func (r *ProtocolIncus) ExecInstance(instanceName string, exec api.InstanceExecP
 
 	value, ok := opAPI.Metadata["fds"]
 	if ok {
-		values := value.(map[string]any)
-		for k, v := range values {
-			fds[k] = v.(string)
+		values, ok := value.(map[string]any)
+		if ok {
+			for k, v := range values {
+				val, ok := v.(string)
+				if ok {
+					fds[k] = val
+				}
+			}
 		}
 	}
 
@@ -1148,7 +1236,10 @@ func (r *ProtocolIncus) ExecInstance(instanceName string, exec api.InstanceExecP
 		outputs, ok := opAPI.Metadata["output"].(map[string]any)
 		if ok {
 			for k, v := range outputs {
-				outputFiles[k] = v.(string)
+				val, ok := v.(string)
+				if ok {
+					outputFiles[k] = val
+				}
 			}
 		}
 
@@ -1432,19 +1523,19 @@ func (r *ProtocolIncus) GetInstanceFile(instanceName string, filePath string) (i
 func (r *ProtocolIncus) CreateInstanceFile(instanceName string, filePath string, args InstanceFileArgs) error {
 	if args.Type == "directory" {
 		if !r.HasExtension("directory_manipulation") {
-			return fmt.Errorf("The server is missing the required \"directory_manipulation\" API extension")
+			return errors.New("The server is missing the required \"directory_manipulation\" API extension")
 		}
 	}
 
 	if args.Type == "symlink" {
 		if !r.HasExtension("file_symlinks") {
-			return fmt.Errorf("The server is missing the required \"file_symlinks\" API extension")
+			return errors.New("The server is missing the required \"file_symlinks\" API extension")
 		}
 	}
 
 	if args.WriteMode == "append" {
 		if !r.HasExtension("file_append") {
-			return fmt.Errorf("The server is missing the required \"file_append\" API extension")
+			return errors.New("The server is missing the required \"file_append\" API extension")
 		}
 	}
 
@@ -1470,6 +1561,15 @@ func (r *ProtocolIncus) CreateInstanceFile(instanceName string, filePath string,
 	req, err := http.NewRequest("POST", requestURL, args.Content)
 	if err != nil {
 		return err
+	}
+
+	req.GetBody = func() (io.ReadCloser, error) {
+		_, err := args.Content.Seek(0, 0)
+		if err != nil {
+			return nil, err
+		}
+
+		return io.NopCloser(args.Content), nil
 	}
 
 	// Set the various headers
@@ -1511,7 +1611,7 @@ func (r *ProtocolIncus) CreateInstanceFile(instanceName string, filePath string,
 // DeleteInstanceFile deletes a file in the instance.
 func (r *ProtocolIncus) DeleteInstanceFile(instanceName string, filePath string) error {
 	if !r.HasExtension("file_delete") {
-		return fmt.Errorf("The server is missing the required \"file_delete\" API extension")
+		return errors.New("The server is missing the required \"file_delete\" API extension")
 	}
 
 	var requestURL string
@@ -1604,7 +1704,7 @@ func (r *ProtocolIncus) rawSFTPConn(apiURL *url.URL) (net.Conn, error) {
 	}
 
 	if resp.Header.Get("Upgrade") != "sftp" {
-		return nil, fmt.Errorf("Missing or unexpected Upgrade header in response")
+		return nil, errors.New("Missing or unexpected Upgrade header in response")
 	}
 
 	return conn, err
@@ -1628,7 +1728,7 @@ func (r *ProtocolIncus) GetInstanceFileSFTP(instanceName string) (*sftp.Client, 
 	}
 
 	// Get a SFTP client.
-	client, err := sftp.NewClientPipe(conn, conn)
+	client, err := sftp.NewClientPipe(conn, conn, sftp.MaxPacketUnchecked(128*1024))
 	if err != nil {
 		_ = conn.Close()
 		return nil, err
@@ -1707,7 +1807,7 @@ func (r *ProtocolIncus) CreateInstanceSnapshot(instanceName string, snapshot api
 
 	// Validate the request
 	if snapshot.ExpiresAt != nil && !r.HasExtension("snapshot_expiry_creation") {
-		return nil, fmt.Errorf("The server is missing the required \"snapshot_expiry_creation\" API extension")
+		return nil, errors.New("The server is missing the required \"snapshot_expiry_creation\" API extension")
 	}
 
 	// Send the request
@@ -1740,10 +1840,10 @@ func (r *ProtocolIncus) CopyInstanceSnapshot(source InstanceServer, instanceName
 
 	if snapshot.Stateful && args.Live {
 		if !r.HasExtension("container_snapshot_stateful_migration") {
-			return nil, fmt.Errorf("The server is missing the required \"container_snapshot_stateful_migration\" API extension")
+			return nil, errors.New("The server is missing the required \"container_snapshot_stateful_migration\" API extension")
 		}
 
-		req.InstancePut.Stateful = snapshot.Stateful
+		req.Stateful = snapshot.Stateful
 		req.Source.Live = false // Snapshots are never running and so we don't need live migration.
 	}
 
@@ -1754,16 +1854,16 @@ func (r *ProtocolIncus) CopyInstanceSnapshot(source InstanceServer, instanceName
 		// Quick checks.
 		if slices.Contains([]string{"push", "relay"}, args.Mode) {
 			if !r.HasExtension("container_push") {
-				return nil, fmt.Errorf("The target server is missing the required \"container_push\" API extension")
+				return nil, errors.New("The target server is missing the required \"container_push\" API extension")
 			}
 
 			if !source.HasExtension("container_push") {
-				return nil, fmt.Errorf("The source server is missing the required \"container_push\" API extension")
+				return nil, errors.New("The source server is missing the required \"container_push\" API extension")
 			}
 		}
 
 		if args.Mode == "push" && !source.HasExtension("container_push_target") {
-			return nil, fmt.Errorf("The source server is missing the required \"container_push_target\" API extension")
+			return nil, errors.New("The source server is missing the required \"container_push_target\" API extension")
 		}
 
 		// Allow overriding the target name
@@ -1792,7 +1892,7 @@ func (r *ProtocolIncus) CopyInstanceSnapshot(source InstanceServer, instanceName
 		// Project handling
 		if destInfo.Project != sourceInfo.Project {
 			if !r.HasExtension("container_copy_project") {
-				return nil, fmt.Errorf("The server is missing the required \"container_copy_project\" API extension")
+				return nil, errors.New("The server is missing the required \"container_copy_project\" API extension")
 			}
 
 			req.Source.Project = sourceInfo.Project
@@ -1863,7 +1963,10 @@ func (r *ProtocolIncus) CopyInstanceSnapshot(source InstanceServer, instanceName
 
 		targetSecrets := map[string]string{}
 		for k, v := range opAPI.Metadata {
-			targetSecrets[k] = v.(string)
+			val, ok := v.(string)
+			if ok {
+				targetSecrets[k] = val
+			}
 		}
 
 		// Prepare the source request
@@ -1891,7 +1994,10 @@ func (r *ProtocolIncus) CopyInstanceSnapshot(source InstanceServer, instanceName
 
 	sourceSecrets := map[string]string{}
 	for k, v := range opAPI.Metadata {
-		sourceSecrets[k] = v.(string)
+		val, ok := v.(string)
+		if ok {
+			sourceSecrets[k] = val
+		}
 	}
 
 	// Relay mode migration
@@ -1911,7 +2017,10 @@ func (r *ProtocolIncus) CopyInstanceSnapshot(source InstanceServer, instanceName
 		// Extract the websockets
 		targetSecrets := map[string]string{}
 		for k, v := range targetOpAPI.Metadata {
-			targetSecrets[k] = v.(string)
+			val, ok := v.(string)
+			if ok {
+				targetSecrets[k] = val
+			}
 		}
 
 		// Launch the relay
@@ -1954,7 +2063,7 @@ func (r *ProtocolIncus) RenameInstanceSnapshot(instanceName string, name string,
 
 	// Quick check.
 	if instance.Migration {
-		return nil, fmt.Errorf("Can't ask for a migration through RenameInstanceSnapshot")
+		return nil, errors.New("Can't ask for a migration through RenameInstanceSnapshot")
 	}
 
 	// Send the request
@@ -1968,7 +2077,7 @@ func (r *ProtocolIncus) RenameInstanceSnapshot(instanceName string, name string,
 
 func (r *ProtocolIncus) tryMigrateInstanceSnapshot(source InstanceServer, instanceName string, name string, req api.InstanceSnapshotPost, urls []string) (RemoteOperation, error) {
 	if len(urls) == 0 {
-		return nil, fmt.Errorf("The target server isn't listening on the network")
+		return nil, errors.New("The target server isn't listening on the network")
 	}
 
 	rop := remoteOperation{
@@ -2030,7 +2139,7 @@ func (r *ProtocolIncus) MigrateInstanceSnapshot(instanceName string, name string
 
 	// Quick check.
 	if !instance.Migration {
-		return nil, fmt.Errorf("Can't ask for a rename through MigrateInstanceSnapshot")
+		return nil, errors.New("Can't ask for a rename through MigrateInstanceSnapshot")
 	}
 
 	// Send the request
@@ -2066,7 +2175,7 @@ func (r *ProtocolIncus) UpdateInstanceSnapshot(instanceName string, name string,
 	}
 
 	if !r.HasExtension("snapshot_expiry") {
-		return nil, fmt.Errorf("The server is missing the required \"snapshot_expiry\" API extension")
+		return nil, errors.New("The server is missing the required \"snapshot_expiry\" API extension")
 	}
 
 	// Send the request
@@ -2125,7 +2234,7 @@ func (r *ProtocolIncus) GetInstanceAccess(name string) (api.Access, error) {
 	access := api.Access{}
 
 	if !r.HasExtension("instance_access") {
-		return nil, fmt.Errorf("The server is missing the required \"instance_access\" API extension")
+		return nil, errors.New("The server is missing the required \"instance_access\" API extension")
 	}
 
 	// Fetch the raw value
@@ -2166,14 +2275,14 @@ func (r *ProtocolIncus) GetInstanceLogfile(name string, filename string) (io.Rea
 	}
 
 	// Prepare the HTTP request
-	url := fmt.Sprintf("%s/1.0%s/%s/logs/%s", r.httpBaseURL.String(), path, url.PathEscape(name), url.PathEscape(filename))
+	uri := fmt.Sprintf("%s/1.0%s/%s/logs/%s", r.httpBaseURL.String(), path, url.PathEscape(name), url.PathEscape(filename))
 
-	url, err = r.setQueryAttributes(url)
+	uri, err = r.setQueryAttributes(uri)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", uri, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -2226,14 +2335,14 @@ func (r *ProtocolIncus) getInstanceExecOutputLogFile(name string, filename strin
 	}
 
 	// Prepare the HTTP request
-	url := fmt.Sprintf("%s/1.0%s/%s/logs/exec-output/%s", r.httpBaseURL.String(), path, url.PathEscape(name), url.PathEscape(filename))
+	uri := fmt.Sprintf("%s/1.0%s/%s/logs/exec-output/%s", r.httpBaseURL.String(), path, url.PathEscape(name), url.PathEscape(filename))
 
-	url, err = r.setQueryAttributes(url)
+	uri, err = r.setQueryAttributes(uri)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", uri, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -2284,13 +2393,13 @@ func (r *ProtocolIncus) GetInstanceMetadata(name string) (*api.ImageMetadata, st
 	}
 
 	if !r.HasExtension("container_edit_metadata") {
-		return nil, "", fmt.Errorf("The server is missing the required \"container_edit_metadata\" API extension")
+		return nil, "", errors.New("The server is missing the required \"container_edit_metadata\" API extension")
 	}
 
 	metadata := api.ImageMetadata{}
 
-	url := fmt.Sprintf("%s/%s/metadata", path, url.PathEscape(name))
-	etag, err := r.queryStruct("GET", url, nil, "", &metadata)
+	uri := fmt.Sprintf("%s/%s/metadata", path, url.PathEscape(name))
+	etag, err := r.queryStruct("GET", uri, nil, "", &metadata)
 	if err != nil {
 		return nil, "", err
 	}
@@ -2306,11 +2415,11 @@ func (r *ProtocolIncus) UpdateInstanceMetadata(name string, metadata api.ImageMe
 	}
 
 	if !r.HasExtension("container_edit_metadata") {
-		return fmt.Errorf("The server is missing the required \"container_edit_metadata\" API extension")
+		return errors.New("The server is missing the required \"container_edit_metadata\" API extension")
 	}
 
-	url := fmt.Sprintf("%s/%s/metadata", path, url.PathEscape(name))
-	_, _, err = r.query("PUT", url, metadata, ETag)
+	uri := fmt.Sprintf("%s/%s/metadata", path, url.PathEscape(name))
+	_, _, err = r.query("PUT", uri, metadata, ETag)
 	if err != nil {
 		return err
 	}
@@ -2326,13 +2435,13 @@ func (r *ProtocolIncus) GetInstanceTemplateFiles(instanceName string) ([]string,
 	}
 
 	if !r.HasExtension("container_edit_metadata") {
-		return nil, fmt.Errorf("The server is missing the required \"container_edit_metadata\" API extension")
+		return nil, errors.New("The server is missing the required \"container_edit_metadata\" API extension")
 	}
 
 	templates := []string{}
 
-	url := fmt.Sprintf("%s/%s/metadata/templates", path, url.PathEscape(instanceName))
-	_, err = r.queryStruct("GET", url, nil, "", &templates)
+	uri := fmt.Sprintf("%s/%s/metadata/templates", path, url.PathEscape(instanceName))
+	_, err = r.queryStruct("GET", uri, nil, "", &templates)
 	if err != nil {
 		return nil, err
 	}
@@ -2348,17 +2457,17 @@ func (r *ProtocolIncus) GetInstanceTemplateFile(instanceName string, templateNam
 	}
 
 	if !r.HasExtension("container_edit_metadata") {
-		return nil, fmt.Errorf("The server is missing the required \"container_edit_metadata\" API extension")
+		return nil, errors.New("The server is missing the required \"container_edit_metadata\" API extension")
 	}
 
-	url := fmt.Sprintf("%s/1.0%s/%s/metadata/templates?path=%s", r.httpBaseURL.String(), path, url.PathEscape(instanceName), url.QueryEscape(templateName))
+	uri := fmt.Sprintf("%s/1.0%s/%s/metadata/templates?path=%s", r.httpBaseURL.String(), path, url.PathEscape(instanceName), url.QueryEscape(templateName))
 
-	url, err = r.setQueryAttributes(url)
+	uri, err = r.setQueryAttributes(uri)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", uri, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -2388,19 +2497,28 @@ func (r *ProtocolIncus) CreateInstanceTemplateFile(instanceName string, template
 	}
 
 	if !r.HasExtension("container_edit_metadata") {
-		return fmt.Errorf("The server is missing the required \"container_edit_metadata\" API extension")
+		return errors.New("The server is missing the required \"container_edit_metadata\" API extension")
 	}
 
-	url := fmt.Sprintf("%s/1.0%s/%s/metadata/templates?path=%s", r.httpBaseURL.String(), path, url.PathEscape(instanceName), url.QueryEscape(templateName))
+	uri := fmt.Sprintf("%s/1.0%s/%s/metadata/templates?path=%s", r.httpBaseURL.String(), path, url.PathEscape(instanceName), url.QueryEscape(templateName))
 
-	url, err = r.setQueryAttributes(url)
+	uri, err = r.setQueryAttributes(uri)
 	if err != nil {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", url, content)
+	req, err := http.NewRequest("POST", uri, content)
 	if err != nil {
 		return err
+	}
+
+	req.GetBody = func() (io.ReadCloser, error) {
+		_, err := content.Seek(0, 0)
+		if err != nil {
+			return nil, err
+		}
+
+		return io.NopCloser(content), nil
 	}
 
 	req.Header.Set("Content-Type", "application/octet-stream")
@@ -2425,7 +2543,7 @@ func (r *ProtocolIncus) DeleteInstanceTemplateFile(name string, templateName str
 	}
 
 	if !r.HasExtension("container_edit_metadata") {
-		return fmt.Errorf("The server is missing the required \"container_edit_metadata\" API extension")
+		return errors.New("The server is missing the required \"container_edit_metadata\" API extension")
 	}
 
 	_, _, err = r.query("DELETE", fmt.Sprintf("%s/%s/metadata/templates?path=%s", path, url.PathEscape(name), url.QueryEscape(templateName)), nil, "")
@@ -2440,7 +2558,7 @@ func (r *ProtocolIncus) ConsoleInstance(instanceName string, console api.Instanc
 	}
 
 	if !r.HasExtension("console") {
-		return nil, fmt.Errorf("The server is missing the required \"console\" API extension")
+		return nil, errors.New("The server is missing the required \"console\" API extension")
 	}
 
 	if console.Type == "" {
@@ -2448,7 +2566,11 @@ func (r *ProtocolIncus) ConsoleInstance(instanceName string, console api.Instanc
 	}
 
 	if console.Type == "vga" && !r.HasExtension("console_vga_type") {
-		return nil, fmt.Errorf("The server is missing the required \"console_vga_type\" API extension")
+		return nil, errors.New("The server is missing the required \"console_vga_type\" API extension")
+	}
+
+	if console.Force && !r.HasExtension("console_force") {
+		return nil, errors.New(`The server is missing the required "console_force" API extension`)
 	}
 
 	// Send the request
@@ -2460,11 +2582,11 @@ func (r *ProtocolIncus) ConsoleInstance(instanceName string, console api.Instanc
 	opAPI := op.Get()
 
 	if args == nil || args.Terminal == nil {
-		return nil, fmt.Errorf("A terminal must be set")
+		return nil, errors.New("A terminal must be set")
 	}
 
 	if args.Control == nil {
-		return nil, fmt.Errorf("A control channel must be set")
+		return nil, errors.New("A control channel must be set")
 	}
 
 	// Parse the fds
@@ -2472,16 +2594,21 @@ func (r *ProtocolIncus) ConsoleInstance(instanceName string, console api.Instanc
 
 	value, ok := opAPI.Metadata["fds"]
 	if ok {
-		values := value.(map[string]any)
-		for k, v := range values {
-			fds[k] = v.(string)
+		values, ok := value.(map[string]any)
+		if ok {
+			for k, v := range values {
+				val, ok := v.(string)
+				if ok {
+					fds[k] = val
+				}
+			}
 		}
 	}
 
 	var controlConn *websocket.Conn
 	// Call the control handler with a connection to the control socket
 	if fds[api.SecretNameControl] == "" {
-		return nil, fmt.Errorf("Did not receive a file descriptor for the control channel")
+		return nil, errors.New("Did not receive a file descriptor for the control channel")
 	}
 
 	controlConn, err = r.GetOperationWebsocket(opAPI.ID, fds[api.SecretNameControl])
@@ -2528,7 +2655,7 @@ func (r *ProtocolIncus) ConsoleInstanceDynamic(instanceName string, console api.
 	}
 
 	if !r.HasExtension("console") {
-		return nil, nil, fmt.Errorf("The server is missing the required \"console\" API extension")
+		return nil, nil, errors.New("The server is missing the required \"console\" API extension")
 	}
 
 	if console.Type == "" {
@@ -2536,7 +2663,11 @@ func (r *ProtocolIncus) ConsoleInstanceDynamic(instanceName string, console api.
 	}
 
 	if console.Type == "vga" && !r.HasExtension("console_vga_type") {
-		return nil, nil, fmt.Errorf("The server is missing the required \"console_vga_type\" API extension")
+		return nil, nil, errors.New("The server is missing the required \"console_vga_type\" API extension")
+	}
+
+	if console.Force && !r.HasExtension("console_force") {
+		return nil, nil, errors.New(`The server is missing the required "console_force" API extension`)
 	}
 
 	// Send the request.
@@ -2548,11 +2679,11 @@ func (r *ProtocolIncus) ConsoleInstanceDynamic(instanceName string, console api.
 	opAPI := op.Get()
 
 	if args == nil {
-		return nil, nil, fmt.Errorf("No arguments provided")
+		return nil, nil, errors.New("No arguments provided")
 	}
 
 	if args.Control == nil {
-		return nil, nil, fmt.Errorf("A control channel must be set")
+		return nil, nil, errors.New("A control channel must be set")
 	}
 
 	// Parse the fds.
@@ -2560,15 +2691,20 @@ func (r *ProtocolIncus) ConsoleInstanceDynamic(instanceName string, console api.
 
 	value, ok := opAPI.Metadata["fds"]
 	if ok {
-		values := value.(map[string]any)
-		for k, v := range values {
-			fds[k] = v.(string)
+		values, ok := value.(map[string]any)
+		if ok {
+			for k, v := range values {
+				val, ok := v.(string)
+				if ok {
+					fds[k] = val
+				}
+			}
 		}
 	}
 
 	// Call the control handler with a connection to the control socket.
 	if fds[api.SecretNameControl] == "" {
-		return nil, nil, fmt.Errorf("Did not receive a file descriptor for the control channel")
+		return nil, nil, errors.New("Did not receive a file descriptor for the control channel")
 	}
 
 	controlConn, err := r.GetOperationWebsocket(opAPI.ID, fds[api.SecretNameControl])
@@ -2608,25 +2744,25 @@ func (r *ProtocolIncus) ConsoleInstanceDynamic(instanceName string, console api.
 // GetInstanceConsoleLog requests that Incus attaches to the console device of a instance.
 //
 // Note that it's the caller's responsibility to close the returned ReadCloser.
-func (r *ProtocolIncus) GetInstanceConsoleLog(instanceName string, args *InstanceConsoleLogArgs) (io.ReadCloser, error) {
+func (r *ProtocolIncus) GetInstanceConsoleLog(instanceName string, _ *InstanceConsoleLogArgs) (io.ReadCloser, error) {
 	path, _, err := r.instanceTypeToPath(api.InstanceTypeAny)
 	if err != nil {
 		return nil, err
 	}
 
 	if !r.HasExtension("console") {
-		return nil, fmt.Errorf("The server is missing the required \"console\" API extension")
+		return nil, errors.New("The server is missing the required \"console\" API extension")
 	}
 
 	// Prepare the HTTP request
-	url := fmt.Sprintf("%s/1.0%s/%s/console", r.httpBaseURL.String(), path, url.PathEscape(instanceName))
+	uri := fmt.Sprintf("%s/1.0%s/%s/console", r.httpBaseURL.String(), path, url.PathEscape(instanceName))
 
-	url, err = r.setQueryAttributes(url)
+	uri, err = r.setQueryAttributes(uri)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", uri, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -2649,14 +2785,14 @@ func (r *ProtocolIncus) GetInstanceConsoleLog(instanceName string, args *Instanc
 }
 
 // DeleteInstanceConsoleLog deletes the requested instance's console log.
-func (r *ProtocolIncus) DeleteInstanceConsoleLog(instanceName string, args *InstanceConsoleLogArgs) error {
+func (r *ProtocolIncus) DeleteInstanceConsoleLog(instanceName string, _ *InstanceConsoleLogArgs) error {
 	path, _, err := r.instanceTypeToPath(api.InstanceTypeAny)
 	if err != nil {
 		return err
 	}
 
 	if !r.HasExtension("console") {
-		return fmt.Errorf("The server is missing the required \"console\" API extension")
+		return errors.New("The server is missing the required \"console\" API extension")
 	}
 
 	// Send the request
@@ -2671,7 +2807,7 @@ func (r *ProtocolIncus) DeleteInstanceConsoleLog(instanceName string, args *Inst
 // GetInstanceBackupNames returns a list of backup names for the instance.
 func (r *ProtocolIncus) GetInstanceBackupNames(instanceName string) ([]string, error) {
 	if !r.HasExtension("container_backup") {
-		return nil, fmt.Errorf("The server is missing the required \"container_backup\" API extension")
+		return nil, errors.New("The server is missing the required \"container_backup\" API extension")
 	}
 
 	path, _, err := r.instanceTypeToPath(api.InstanceTypeAny)
@@ -2699,7 +2835,7 @@ func (r *ProtocolIncus) GetInstanceBackups(instanceName string) ([]api.InstanceB
 	}
 
 	if !r.HasExtension("container_backup") {
-		return nil, fmt.Errorf("The server is missing the required \"container_backup\" API extension")
+		return nil, errors.New("The server is missing the required \"container_backup\" API extension")
 	}
 
 	// Fetch the raw value
@@ -2721,7 +2857,7 @@ func (r *ProtocolIncus) GetInstanceBackup(instanceName string, name string) (*ap
 	}
 
 	if !r.HasExtension("container_backup") {
-		return nil, "", fmt.Errorf("The server is missing the required \"container_backup\" API extension")
+		return nil, "", errors.New("The server is missing the required \"container_backup\" API extension")
 	}
 
 	// Fetch the raw value
@@ -2742,7 +2878,7 @@ func (r *ProtocolIncus) CreateInstanceBackup(instanceName string, backup api.Ins
 	}
 
 	if !r.HasExtension("container_backup") {
-		return nil, fmt.Errorf("The server is missing the required \"container_backup\" API extension")
+		return nil, errors.New("The server is missing the required \"container_backup\" API extension")
 	}
 
 	// Send the request
@@ -2762,7 +2898,7 @@ func (r *ProtocolIncus) RenameInstanceBackup(instanceName string, name string, b
 	}
 
 	if !r.HasExtension("container_backup") {
-		return nil, fmt.Errorf("The server is missing the required \"container_backup\" API extension")
+		return nil, errors.New("The server is missing the required \"container_backup\" API extension")
 	}
 
 	// Send the request
@@ -2782,7 +2918,7 @@ func (r *ProtocolIncus) DeleteInstanceBackup(instanceName string, name string) (
 	}
 
 	if !r.HasExtension("container_backup") {
-		return nil, fmt.Errorf("The server is missing the required \"container_backup\" API extension")
+		return nil, errors.New("The server is missing the required \"container_backup\" API extension")
 	}
 
 	// Send the request
@@ -2802,7 +2938,7 @@ func (r *ProtocolIncus) GetInstanceBackupFile(instanceName string, name string, 
 	}
 
 	if !r.HasExtension("container_backup") {
-		return nil, fmt.Errorf("The server is missing the required \"container_backup\" API extension")
+		return nil, errors.New("The server is missing the required \"container_backup\" API extension")
 	}
 
 	// Build the URL
@@ -2872,7 +3008,7 @@ func (r *ProtocolIncus) proxyMigration(targetOp *operation, targetSecrets map[st
 	}
 
 	if targetSecrets[api.SecretNameControl] == "" {
-		return fmt.Errorf("Migration target didn't setup the required \"control\" socket")
+		return errors.New("Migration target didn't setup the required \"control\" socket")
 	}
 
 	// Struct used to hold everything together
@@ -2945,4 +3081,43 @@ func (r *ProtocolIncus) proxyMigration(targetOp *operation, targetSecrets map[st
 	}()
 
 	return nil
+}
+
+// GetInstanceDebugMemory retrieves memory debug information for a given instance and saves it to the specified file path.
+func (r *ProtocolIncus) GetInstanceDebugMemory(name string, format string) (io.ReadCloser, error) {
+	path, v, err := r.instanceTypeToPath(api.InstanceTypeVM)
+	if err != nil {
+		return nil, err
+	}
+
+	v.Set("format", format)
+
+	// Prepare the HTTP request
+	requestURL := fmt.Sprintf("%s/1.0%s/%s/debug/memory?%s", r.httpBaseURL.String(), path, url.PathEscape(name), v.Encode())
+
+	requestURL, err = r.setQueryAttributes(requestURL)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", requestURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Send the request
+	resp, err := r.DoHTTP(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check the return value for a cleaner error
+	if resp.StatusCode != http.StatusOK {
+		_, _, err := incusParseResponse(resp)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return resp.Body, nil
 }

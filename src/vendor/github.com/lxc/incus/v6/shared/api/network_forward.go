@@ -30,6 +30,12 @@ type NetworkForwardPort struct {
 	// TargetAddress to forward ListenPorts to
 	// Example: 198.51.100.2
 	TargetAddress string `json:"target_address" yaml:"target_address"`
+
+	// SNAT controls whether to apply a matching SNAT rule to new outgoing traffic from the target
+	// Example: false
+	//
+	// API extension: network_forward_snat
+	SNAT bool `json:"snat" yaml:"snat"`
 }
 
 // Normalise normalises the fields in the rule so that they are comparable with ones stored.
@@ -95,7 +101,7 @@ type NetworkForwardPut struct {
 
 	// Forward configuration map (refer to doc/network-forwards.md)
 	// Example: {"user.mykey": "foo"}
-	Config map[string]string `json:"config" yaml:"config"`
+	Config ConfigMap `json:"config" yaml:"config"`
 
 	// Port forwards (optional)
 	Ports []NetworkForwardPort `json:"ports" yaml:"ports"`

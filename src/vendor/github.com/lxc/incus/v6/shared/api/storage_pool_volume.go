@@ -96,6 +96,24 @@ type StorageVolumePostTarget struct {
 	Websockets map[string]string `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 }
 
+// StorageVolumeFull is a combination of StorageVolume, StorageVolumeBackup, StorageVolumeSnapshot and StorageVolumeState.
+//
+// swagger:model
+//
+// API extension: storage_volume_full.
+type StorageVolumeFull struct {
+	StorageVolume `yaml:",inline"`
+
+	// List of backups.
+	Backups []StorageVolumeBackup `json:"backups" yaml:"backups"`
+
+	// List of snapshots.
+	Snapshots []StorageVolumeSnapshot `json:"snapshots" yaml:"snapshots"`
+
+	// State.
+	State *StorageVolumeState `json:"state" yaml:"state"`
+}
+
 // StorageVolume represents the fields of a storage volume.
 //
 // swagger:model
@@ -162,7 +180,7 @@ func (v *StorageVolume) URL(apiVersion string, poolName string) *URL {
 type StorageVolumePut struct {
 	// Storage volume configuration map (refer to doc/storage.md)
 	// Example: {"zfs.remove_snapshots": "true", "size": "50GiB"}
-	Config map[string]string `json:"config" yaml:"config"`
+	Config ConfigMap `json:"config" yaml:"config"`
 
 	// Description of the storage volume
 	// Example: My custom volume
@@ -231,6 +249,12 @@ type StorageVolumeSource struct {
 	// API extension: custom_volume_refresh
 	Refresh bool `json:"refresh" yaml:"refresh"`
 
+	// Whether to exclude source snapshots earlier than latest target snapshot
+	// Example: false
+	//
+	// API extension: custom_volume_refresh_exclude_older_snapshots
+	RefreshExcludeOlder bool `json:"refresh_exclude_older" yaml:"refresh_exclude_older"`
+
 	// Source project name
 	// Example: foo
 	//
@@ -245,6 +269,6 @@ type StorageVolumeSource struct {
 }
 
 // Writable converts a full StorageVolume struct into a StorageVolumePut struct (filters read-only fields).
-func (storageVolume *StorageVolume) Writable() StorageVolumePut {
-	return storageVolume.StorageVolumePut
+func (v *StorageVolume) Writable() StorageVolumePut {
+	return v.StorageVolumePut
 }

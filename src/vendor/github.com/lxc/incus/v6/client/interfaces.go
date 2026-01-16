@@ -49,6 +49,7 @@ type ImageServer interface {
 	// Image handling functions
 	GetImages() (images []api.Image, err error)
 	GetImagesAllProjects() (images []api.Image, err error)
+	GetImagesAllProjectsWithFilter(filters []string) (images []api.Image, err error)
 	GetImageFingerprints() (fingerprints []string, err error)
 	GetImagesWithFilter(filters []string) (images []api.Image, err error)
 
@@ -88,6 +89,7 @@ type InstanceServer interface {
 	// Certificate functions
 	GetCertificateFingerprints() (fingerprints []string, err error)
 	GetCertificates() (certificates []api.Certificate, err error)
+	GetCertificatesWithFilter(filters []string) ([]api.Certificate, error)
 	GetCertificate(fingerprint string) (certificate *api.Certificate, ETag string, err error)
 	CreateCertificate(certificate api.CertificatesPost) (err error)
 	UpdateCertificate(fingerprint string, certificate api.CertificatePut, ETag string) (err error)
@@ -168,9 +170,13 @@ type InstanceServer interface {
 	CreateInstanceTemplateFile(instanceName string, templateName string, content io.ReadSeeker) (err error)
 	DeleteInstanceTemplateFile(name string, templateName string) (err error)
 
+	GetInstanceDebugMemory(name string, format string) (rc io.ReadCloser, err error)
+
 	// Event handling functions
 	GetEvents() (listener *EventListener, err error)
+	GetEventsByType(eventTypes []string) (listener *EventListener, err error)
 	GetEventsAllProjects() (listener *EventListener, err error)
+	GetEventsAllProjectsByType(eventTypes []string) (listener *EventListener, err error)
 	SendEvent(event api.Event) error
 
 	// Image functions
@@ -191,7 +197,9 @@ type InstanceServer interface {
 	// Network functions ("network" API extension)
 	GetNetworkNames() (names []string, err error)
 	GetNetworks() (networks []api.Network, err error)
+	GetNetworksWithFilter(filters []string) (networks []api.Network, err error)
 	GetNetworksAllProjects() (networks []api.Network, err error)
+	GetNetworksAllProjectsWithFilter(filters []string) (networks []api.Network, err error)
 	GetNetwork(name string) (network *api.Network, ETag string, err error)
 	GetNetworkLeases(name string) (leases []api.NetworkLease, err error)
 	GetNetworkState(name string) (state *api.NetworkState, err error)
@@ -215,6 +223,7 @@ type InstanceServer interface {
 	CreateNetworkLoadBalancer(networkName string, forward api.NetworkLoadBalancersPost) error
 	UpdateNetworkLoadBalancer(networkName string, listenAddress string, forward api.NetworkLoadBalancerPut, ETag string) (err error)
 	DeleteNetworkLoadBalancer(networkName string, listenAddress string) (err error)
+	GetNetworkLoadBalancerState(networkName string, listenAddress string) (lbState *api.NetworkLoadBalancerState, err error)
 
 	// Network peer functions ("network_peer" API extension)
 	GetNetworkPeerNames(networkName string) ([]string, error)
@@ -234,6 +243,16 @@ type InstanceServer interface {
 	UpdateNetworkACL(name string, acl api.NetworkACLPut, ETag string) (err error)
 	RenameNetworkACL(name string, acl api.NetworkACLPost) (err error)
 	DeleteNetworkACL(name string) (err error)
+
+	// Network address set functions ("network_address_set" API extension)
+	GetNetworkAddressSetNames() (names []string, err error)
+	GetNetworkAddressSets() (AddressSets []api.NetworkAddressSet, err error)
+	GetNetworkAddressSetsAllProjects() (AddressSets []api.NetworkAddressSet, err error)
+	GetNetworkAddressSet(name string) (AddressSet *api.NetworkAddressSet, ETag string, err error)
+	CreateNetworkAddressSet(AddressSet api.NetworkAddressSetsPost) (err error)
+	UpdateNetworkAddressSet(name string, AddressSet api.NetworkAddressSetPut, ETag string) (err error)
+	RenameNetworkAddressSet(name string, AddressSet api.NetworkAddressSetPost) (err error)
+	DeleteNetworkAddressSet(name string) (err error)
 
 	// Network allocations functions ("network_allocations" API extension)
 	GetNetworkAllocations() (allocations []api.NetworkAllocations, err error)
@@ -276,8 +295,10 @@ type InstanceServer interface {
 
 	// Profile functions
 	GetProfilesAllProjects() (profiles []api.Profile, err error)
+	GetProfilesAllProjectsWithFilter(filters []string) ([]api.Profile, error)
 	GetProfileNames() (names []string, err error)
 	GetProfiles() (profiles []api.Profile, err error)
+	GetProfilesWithFilter(filters []string) ([]api.Profile, error)
 	GetProfile(name string) (profile *api.Profile, ETag string, err error)
 	CreateProfile(profile api.ProfilesPost) (err error)
 	UpdateProfile(name string, profile api.ProfilePut, ETag string) (err error)
@@ -287,6 +308,7 @@ type InstanceServer interface {
 	// Project functions
 	GetProjectNames() (names []string, err error)
 	GetProjects() (projects []api.Project, err error)
+	GetProjectsWithFilter(filters []string) (projects []api.Project, err error)
 	GetProject(name string) (project *api.Project, ETag string, err error)
 	GetProjectState(name string) (project *api.ProjectState, err error)
 	GetProjectAccess(name string) (access api.Access, err error)
@@ -299,6 +321,7 @@ type InstanceServer interface {
 	// Storage pool functions ("storage" API extension)
 	GetStoragePoolNames() (names []string, err error)
 	GetStoragePools() (pools []api.StoragePool, err error)
+	GetStoragePoolsWithFilter(filters []string) ([]api.StoragePool, error)
 	GetStoragePool(name string) (pool *api.StoragePool, ETag string, err error)
 	GetStoragePoolResources(name string) (resources *api.ResourcesStoragePool, err error)
 	CreateStoragePool(pool api.StoragePoolsPost) (err error)
@@ -308,8 +331,15 @@ type InstanceServer interface {
 	// Storage bucket functions ("storage_buckets" API extension)
 	GetStoragePoolBucketNames(poolName string) ([]string, error)
 	GetStoragePoolBucketsAllProjects(poolName string) ([]api.StorageBucket, error)
+	GetStoragePoolBucketsWithFilterAllProjects(poolName string, filters []string) (bucket []api.StorageBucket, err error)
 	GetStoragePoolBuckets(poolName string) ([]api.StorageBucket, error)
+	GetStoragePoolBucketsWithFilter(poolName string, filters []string) (bucket []api.StorageBucket, err error)
+	GetStoragePoolBucketsFullAllProjects(poolName string) ([]api.StorageBucketFull, error)
+	GetStoragePoolBucketsFullWithFilterAllProjects(poolName string, filters []string) (bucket []api.StorageBucketFull, err error)
+	GetStoragePoolBucketsFull(poolName string) ([]api.StorageBucketFull, error)
+	GetStoragePoolBucketsFullWithFilter(poolName string, filters []string) (bucket []api.StorageBucketFull, err error)
 	GetStoragePoolBucket(poolName string, bucketName string) (bucket *api.StorageBucket, ETag string, err error)
+	GetStoragePoolBucketFull(poolName string, bucketName string) (bucket *api.StorageBucketFull, ETag string, err error)
 	CreateStoragePoolBucket(poolName string, bucket api.StorageBucketsPost) (*api.StorageBucketKey, error)
 	UpdateStoragePoolBucket(poolName string, bucketName string, bucket api.StorageBucketPut, ETag string) (err error)
 	DeleteStoragePoolBucket(poolName string, bucketName string) (err error)
@@ -333,7 +363,12 @@ type InstanceServer interface {
 	GetStoragePoolVolumesAllProjects(pool string) (volumes []api.StorageVolume, err error)
 	GetStoragePoolVolumesWithFilter(pool string, filters []string) (volumes []api.StorageVolume, err error)
 	GetStoragePoolVolumesWithFilterAllProjects(pool string, filters []string) (volumes []api.StorageVolume, err error)
+	GetStoragePoolVolumesFull(pool string) (volumes []api.StorageVolumeFull, err error)
+	GetStoragePoolVolumesFullAllProjects(pool string) (volumes []api.StorageVolumeFull, err error)
+	GetStoragePoolVolumesFullWithFilter(pool string, filters []string) (volumes []api.StorageVolumeFull, err error)
+	GetStoragePoolVolumesFullWithFilterAllProjects(pool string, filters []string) (volumes []api.StorageVolumeFull, err error)
 	GetStoragePoolVolume(pool string, volType string, name string) (volume *api.StorageVolume, ETag string, err error)
+	GetStoragePoolVolumeFull(pool string, volType string, name string) (volume *api.StorageVolumeFull, ETag string, err error)
 	GetStoragePoolVolumeState(pool string, volType string, name string) (state *api.StorageVolumeState, err error)
 	CreateStoragePoolVolume(pool string, volume api.StorageVolumesPost) (err error)
 	UpdateStoragePoolVolume(pool string, volType string, name string, volume api.StorageVolumePut, ETag string) (err error)
@@ -353,24 +388,36 @@ type InstanceServer interface {
 	UpdateStoragePoolVolumeSnapshot(pool string, volumeType string, volumeName string, snapshotName string, volume api.StorageVolumeSnapshotPut, ETag string) (err error)
 
 	// Storage volume backup functions ("custom_volume_backup" API extension)
-	GetStoragePoolVolumeBackupNames(pool string, volName string) (names []string, err error)
-	GetStoragePoolVolumeBackups(pool string, volName string) (backups []api.StoragePoolVolumeBackup, err error)
-	GetStoragePoolVolumeBackup(pool string, volName string, name string) (backup *api.StoragePoolVolumeBackup, ETag string, err error)
-	CreateStoragePoolVolumeBackup(pool string, volName string, backup api.StoragePoolVolumeBackupsPost) (op Operation, err error)
-	RenameStoragePoolVolumeBackup(pool string, volName string, name string, backup api.StoragePoolVolumeBackupPost) (op Operation, err error)
-	DeleteStoragePoolVolumeBackup(pool string, volName string, name string) (op Operation, err error)
-	GetStoragePoolVolumeBackupFile(pool string, volName string, name string, req *BackupFileRequest) (resp *BackupFileResponse, err error)
-	CreateStoragePoolVolumeFromBackup(pool string, args StoragePoolVolumeBackupArgs) (op Operation, err error)
+	GetStorageVolumeBackupNames(pool string, volName string) (names []string, err error)
+	GetStorageVolumeBackups(pool string, volName string) (backups []api.StorageVolumeBackup, err error)
+	GetStorageVolumeBackup(pool string, volName string, name string) (backup *api.StorageVolumeBackup, ETag string, err error)
+	CreateStorageVolumeBackup(pool string, volName string, backup api.StorageVolumeBackupsPost) (op Operation, err error)
+	RenameStorageVolumeBackup(pool string, volName string, name string, backup api.StorageVolumeBackupPost) (op Operation, err error)
+	DeleteStorageVolumeBackup(pool string, volName string, name string) (op Operation, err error)
+	GetStorageVolumeBackupFile(pool string, volName string, name string, req *BackupFileRequest) (resp *BackupFileResponse, err error)
+	CreateStoragePoolVolumeFromBackup(pool string, args StorageVolumeBackupArgs) (op Operation, err error)
 
 	// Storage volume ISO import function ("custom_volume_iso" API extension)
-	CreateStoragePoolVolumeFromISO(pool string, args StoragePoolVolumeBackupArgs) (op Operation, err error)
+	CreateStoragePoolVolumeFromISO(pool string, args StorageVolumeBackupArgs) (op Operation, err error)
+	CreateStoragePoolVolumeFromMigration(pool string, volume api.StorageVolumesPost) (op Operation, err error)
+
+	// Storage volume file manipulations functions ("file_storage_volume" API extension)
+	GetStorageVolumeFile(pool string, volumeType string, volumeName string, filePath string) (content io.ReadCloser, resp *InstanceFileResponse, err error)
+	CreateStorageVolumeFile(pool string, volumeType string, volumeName string, filePath string, args InstanceFileArgs) (err error)
+	DeleteStorageVolumeFile(pool string, volumeType string, volumeName string, filePath string) (err error)
+
+	// Storage volume SFTP functions ("custom_volume_sftp" API extension)
+	GetStoragePoolVolumeFileSFTPConn(pool string, volType string, volName string) (net.Conn, error)
+	GetStoragePoolVolumeFileSFTP(pool string, volType string, volName string) (*sftp.Client, error)
 
 	// Cluster functions ("cluster" API extensions)
 	GetCluster() (cluster *api.Cluster, ETag string, err error)
 	UpdateCluster(cluster api.ClusterPut, ETag string) (op Operation, err error)
 	DeleteClusterMember(name string, force bool) (err error)
+	DeletePendingClusterMember(name string, force bool) (err error)
 	GetClusterMemberNames() (names []string, err error)
 	GetClusterMembers() (members []api.ClusterMember, err error)
+	GetClusterMembersWithFilter(filters []string) ([]api.ClusterMember, error)
 	GetClusterMember(name string) (member *api.ClusterMember, ETag string, err error)
 	UpdateClusterMember(name string, member api.ClusterMemberPut, ETag string) (err error)
 	RenameClusterMember(name string, member api.ClusterMemberPost) (err error)
@@ -521,6 +568,9 @@ type StoragePoolVolumeCopyArgs struct {
 
 	// API extension: custom_volume_refresh
 	Refresh bool
+
+	// API extension: custom_volume_refresh_exclude_older_snapshots
+	RefreshExcludeOlder bool
 }
 
 // The StoragePoolVolumeMoveArgs struct is used to pass additional options
@@ -532,9 +582,9 @@ type StoragePoolVolumeMoveArgs struct {
 	Project string
 }
 
-// The StoragePoolVolumeBackupArgs struct is used when creating a storage volume from a backup.
+// The StorageVolumeBackupArgs struct is used when creating a storage volume from a backup.
 // API extension: custom_volume_backup.
-type StoragePoolVolumeBackupArgs struct {
+type StorageVolumeBackupArgs struct {
 	// The backup file
 	BackupFile io.Reader
 
@@ -552,6 +602,12 @@ type InstanceBackupArgs struct {
 
 	// Name to import backup as
 	Name string
+
+	// Config overrides.
+	Config []string
+
+	// Device overrides.
+	Devices []string
 }
 
 // The InstanceCopyArgs struct is used to pass additional options during instance copy.
@@ -571,6 +627,9 @@ type InstanceCopyArgs struct {
 	// API extension: container_incremental_copy
 	// Perform an incremental copy
 	Refresh bool
+
+	// API extension: custom_volume_refresh_exclude_older_snapshots
+	RefreshExcludeOlder bool
 
 	// API extension: instance_allow_inconsistent_copy
 	AllowInconsistent bool
@@ -604,8 +663,7 @@ type InstanceConsoleArgs struct {
 
 // The InstanceConsoleLogArgs struct is used to pass additional options during a
 // instance console log request.
-type InstanceConsoleLogArgs struct {
-}
+type InstanceConsoleLogArgs struct{}
 
 // The InstanceExecArgs struct is used to pass additional options during instance exec.
 type InstanceExecArgs struct {

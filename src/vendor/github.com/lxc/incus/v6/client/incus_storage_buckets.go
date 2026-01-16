@@ -1,6 +1,7 @@
 package incus
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -50,16 +51,146 @@ func (r *ProtocolIncus) GetStoragePoolBuckets(poolName string) ([]api.StorageBuc
 	return buckets, nil
 }
 
+// GetStoragePoolBucketsWithFilter returns a filtered list of storage buckets for the provided pool.
+func (r *ProtocolIncus) GetStoragePoolBucketsWithFilter(poolName string, filters []string) ([]api.StorageBucket, error) {
+	err := r.CheckExtension("storage_buckets")
+	if err != nil {
+		return nil, err
+	}
+
+	buckets := []api.StorageBucket{}
+
+	// Fetch the raw value
+	u := api.NewURL().Path("storage-pools", poolName, "buckets").
+		WithQuery("recursion", "1").
+		WithQuery("filter", parseFilters(filters))
+
+	_, err = r.queryStruct("GET", u.String(), nil, "", &buckets)
+	if err != nil {
+		return nil, err
+	}
+
+	return buckets, nil
+}
+
 // GetStoragePoolBucketsAllProjects gets all storage pool buckets across all projects.
 func (r *ProtocolIncus) GetStoragePoolBucketsAllProjects(poolName string) ([]api.StorageBucket, error) {
 	err := r.CheckExtension("storage_buckets_all_projects")
 	if err != nil {
-		return nil, fmt.Errorf(`The server is missing the required "storage_buckets_all_projects" API extension`)
+		return nil, errors.New(`The server is missing the required "storage_buckets_all_projects" API extension`)
 	}
 
 	buckets := []api.StorageBucket{}
 
 	u := api.NewURL().Path("storage-pools", poolName, "buckets").WithQuery("recursion", "1").WithQuery("all-projects", "true")
+	_, err = r.queryStruct("GET", u.String(), nil, "", &buckets)
+	if err != nil {
+		return nil, err
+	}
+
+	return buckets, nil
+}
+
+// GetStoragePoolBucketsWithFilterAllProjects gets a filtered list of storage pool buckets across all projects.
+func (r *ProtocolIncus) GetStoragePoolBucketsWithFilterAllProjects(poolName string, filters []string) ([]api.StorageBucket, error) {
+	err := r.CheckExtension("storage_buckets")
+	if err != nil {
+		return nil, err
+	}
+
+	err = r.CheckExtension("storage_buckets_all_projects")
+	if err != nil {
+		return nil, errors.New(`The server is missing the required "storage_buckets_all_projects" API extension`)
+	}
+
+	buckets := []api.StorageBucket{}
+
+	u := api.NewURL().Path("storage-pools", poolName, "buckets").
+		WithQuery("recursion", "1").
+		WithQuery("filter", parseFilters(filters)).
+		WithQuery("all-projects", "true")
+
+	_, err = r.queryStruct("GET", u.String(), nil, "", &buckets)
+	if err != nil {
+		return nil, err
+	}
+
+	return buckets, nil
+}
+
+// GetStoragePoolBucketsFull returns a list of storage buckets for the provided pool (full struct).
+func (r *ProtocolIncus) GetStoragePoolBucketsFull(poolName string) ([]api.StorageBucketFull, error) {
+	err := r.CheckExtension("storage_bucket_full")
+	if err != nil {
+		return nil, err
+	}
+
+	buckets := []api.StorageBucketFull{}
+
+	// Fetch the raw value.
+	u := api.NewURL().Path("storage-pools", poolName, "buckets").WithQuery("recursion", "2")
+	_, err = r.queryStruct("GET", u.String(), nil, "", &buckets)
+	if err != nil {
+		return nil, err
+	}
+
+	return buckets, nil
+}
+
+// GetStoragePoolBucketsFullWithFilter returns a filtered list of storage buckets for the provided pool (full struct).
+func (r *ProtocolIncus) GetStoragePoolBucketsFullWithFilter(poolName string, filters []string) ([]api.StorageBucketFull, error) {
+	err := r.CheckExtension("storage_bucket_full")
+	if err != nil {
+		return nil, err
+	}
+
+	buckets := []api.StorageBucketFull{}
+
+	// Fetch the raw value
+	u := api.NewURL().Path("storage-pools", poolName, "buckets").
+		WithQuery("recursion", "2").
+		WithQuery("filter", parseFilters(filters))
+
+	_, err = r.queryStruct("GET", u.String(), nil, "", &buckets)
+	if err != nil {
+		return nil, err
+	}
+
+	return buckets, nil
+}
+
+// GetStoragePoolBucketsFullAllProjects gets all storage pool buckets across all projects (full struct).
+func (r *ProtocolIncus) GetStoragePoolBucketsFullAllProjects(poolName string) ([]api.StorageBucketFull, error) {
+	err := r.CheckExtension("storage_bucket_full")
+	if err != nil {
+		return nil, errors.New(`The server is missing the required "storage_bucket_full" API extension`)
+	}
+
+	buckets := []api.StorageBucketFull{}
+
+	u := api.NewURL().Path("storage-pools", poolName, "buckets").WithQuery("recursion", "2").WithQuery("all-projects", "true")
+	_, err = r.queryStruct("GET", u.String(), nil, "", &buckets)
+	if err != nil {
+		return nil, err
+	}
+
+	return buckets, nil
+}
+
+// GetStoragePoolBucketsFullWithFilterAllProjects gets a filtered list of storage pool buckets across all projects (full struct).
+func (r *ProtocolIncus) GetStoragePoolBucketsFullWithFilterAllProjects(poolName string, filters []string) ([]api.StorageBucketFull, error) {
+	err := r.CheckExtension("storage_bucket_full")
+	if err != nil {
+		return nil, err
+	}
+
+	buckets := []api.StorageBucketFull{}
+
+	u := api.NewURL().Path("storage-pools", poolName, "buckets").
+		WithQuery("recursion", "2").
+		WithQuery("filter", parseFilters(filters)).
+		WithQuery("all-projects", "true")
+
 	_, err = r.queryStruct("GET", u.String(), nil, "", &buckets)
 	if err != nil {
 		return nil, err
@@ -79,6 +210,25 @@ func (r *ProtocolIncus) GetStoragePoolBucket(poolName string, bucketName string)
 
 	// Fetch the raw value.
 	u := api.NewURL().Path("storage-pools", poolName, "buckets", bucketName)
+	etag, err := r.queryStruct("GET", u.String(), nil, "", &bucket)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return &bucket, etag, nil
+}
+
+// GetStoragePoolBucketFull returns a full storage bucket entry for the provided pool and bucket name.
+func (r *ProtocolIncus) GetStoragePoolBucketFull(poolName string, bucketName string) (*api.StorageBucketFull, string, error) {
+	err := r.CheckExtension("storage_bucket_full")
+	if err != nil {
+		return nil, "", err
+	}
+
+	bucket := api.StorageBucketFull{}
+
+	// Fetch the raw value.
+	u := api.NewURL().Path("storage-pools", poolName, "buckets", bucketName).WithQuery("recursion", "1")
 	etag, err := r.queryStruct("GET", u.String(), nil, "", &bucket)
 	if err != nil {
 		return nil, "", err
@@ -358,7 +508,7 @@ func (r *ProtocolIncus) GetStoragePoolBucketBackupFile(pool string, bucketName s
 // CreateStoragePoolBucketFromBackup creates a new storage bucket from a backup.
 func (r *ProtocolIncus) CreateStoragePoolBucketFromBackup(pool string, args StoragePoolBucketBackupArgs) (Operation, error) {
 	if !r.HasExtension("storage_bucket_backup") {
-		return nil, fmt.Errorf(`The server is missing the required "custom_volume_backup" API extension`)
+		return nil, errors.New(`The server is missing the required "custom_volume_backup" API extension`)
 	}
 
 	path := fmt.Sprintf("/storage-pools/%s/buckets", url.PathEscape(pool))

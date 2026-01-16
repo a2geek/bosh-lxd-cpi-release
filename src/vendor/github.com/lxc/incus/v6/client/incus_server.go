@@ -1,6 +1,7 @@
 package incus
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/lxc/incus/v6/shared/api"
 	localtls "github.com/lxc/incus/v6/shared/tls"
+	"github.com/lxc/incus/v6/shared/util"
 )
 
 // Server handling functions
@@ -84,7 +86,7 @@ func (r *ProtocolIncus) IsClustered() bool {
 // GetServerResources returns the resources available to a given Incus server.
 func (r *ProtocolIncus) GetServerResources() (*api.Resources, error) {
 	if !r.HasExtension("resources") {
-		return nil, fmt.Errorf("The server is missing the required \"resources\" API extension")
+		return nil, errors.New("The server is missing the required \"resources\" API extension")
 	}
 
 	resources := api.Resources{}
@@ -116,6 +118,7 @@ func (r *ProtocolIncus) UseProject(name string) InstanceServer {
 		project:              name,
 		eventConns:           make(map[string]*websocket.Conn),  // New project specific listener conns.
 		eventListeners:       make(map[string][]*EventListener), // New project specific listeners.
+		skipEvents:           r.skipEvents,
 		oidcClient:           r.oidcClient,
 	}
 }
@@ -139,6 +142,7 @@ func (r *ProtocolIncus) UseTarget(name string) InstanceServer {
 		project:              r.project,
 		eventConns:           make(map[string]*websocket.Conn),  // New target specific listener conns.
 		eventListeners:       make(map[string][]*EventListener), // New target specific listeners.
+		skipEvents:           r.skipEvents,
 		oidcClient:           r.oidcClient,
 		clusterTarget:        name,
 	}
@@ -153,7 +157,7 @@ func (r *ProtocolIncus) IsAgent() bool {
 func (r *ProtocolIncus) GetMetrics() (string, error) {
 	// Check that the server supports it.
 	if !r.HasExtension("metrics") {
-		return "", fmt.Errorf("The server is missing the required \"metrics\" API extension")
+		return "", errors.New("The server is missing the required \"metrics\" API extension")
 	}
 
 	// Prepare the request.
@@ -191,7 +195,7 @@ func (r *ProtocolIncus) GetMetrics() (string, error) {
 // ApplyServerPreseed configures a target Incus server with the provided server and cluster configuration.
 func (r *ProtocolIncus) ApplyServerPreseed(config api.InitPreseed) error {
 	// Apply server configuration.
-	if config.Server.Config != nil && len(config.Server.Config) > 0 {
+	if len(config.Server.Config) > 0 {
 		// Get current config.
 		server, etag, err := r.GetServer()
 		if err != nil {
@@ -210,7 +214,7 @@ func (r *ProtocolIncus) ApplyServerPreseed(config api.InitPreseed) error {
 	}
 
 	// Apply storage configuration.
-	if config.Server.StoragePools != nil && len(config.Server.StoragePools) > 0 {
+	if len(config.Server.StoragePools) > 0 {
 		// Get the list of storagePools.
 		storagePoolNames, err := r.GetStoragePoolNames()
 		if err != nil {
@@ -312,7 +316,7 @@ func (r *ProtocolIncus) ApplyServerPreseed(config api.InitPreseed) error {
 	// Apply networks in the default project before other projects config applied (so that if the projects
 	// depend on a network in the default project they can have their config applied successfully).
 	for i := range config.Server.Networks {
-		// Populate default project if not specified for backwards compatbility with earlier
+		// Populate default project if not specified for backwards compatibility with earlier
 		// preseed dump files.
 		if config.Server.Networks[i].Project == "" {
 			config.Server.Networks[i].Project = api.ProjectDefaultName
@@ -329,7 +333,7 @@ func (r *ProtocolIncus) ApplyServerPreseed(config api.InitPreseed) error {
 	}
 
 	// Apply project configuration.
-	if config.Server.Projects != nil && len(config.Server.Projects) > 0 {
+	if len(config.Server.Projects) > 0 {
 		// Get the list of projects.
 		projectNames, err := r.GetProjectNames()
 		if err != nil {
@@ -405,82 +409,143 @@ func (r *ProtocolIncus) ApplyServerPreseed(config api.InitPreseed) error {
 		}
 	}
 
-	// Apply profile configuration.
-	if config.Server.Profiles != nil && len(config.Server.Profiles) > 0 {
-		// Get the list of profiles.
-		profileNames, err := r.GetProfileNames()
-		if err != nil {
-			return fmt.Errorf("Failed to retrieve list of profiles: %w", err)
-		}
+	// Apply storage volumes configuration.
+	applyStorageVolume := func(storageVolume api.InitStorageVolumesProjectPost) error {
+		// Get the current storageVolume.
+		currentStorageVolume, etag, err := r.UseProject(storageVolume.Project).GetStoragePoolVolume(storageVolume.Pool, storageVolume.Type, storageVolume.Name)
 
-		// Profile creator.
-		createProfile := func(profile api.ProfilesPost) error {
-			// Create the profile if doesn't exist.
-			err := r.CreateProfile(profile)
+		if err != nil {
+			// Create the storage volume if it doesn't exist.
+			err := r.UseProject(storageVolume.Project).CreateStoragePoolVolume(storageVolume.Pool, storageVolume.StorageVolumesPost)
 			if err != nil {
-				return fmt.Errorf("Failed to create profile %q: %w", profile.Name, err)
+				return fmt.Errorf("Failed to create storage volume %q in project %q on pool %q: %w", storageVolume.Name, storageVolume.Project, storageVolume.Pool, err)
+			}
+		} else {
+			// Quick check.
+			if currentStorageVolume.Type != storageVolume.Type {
+				return fmt.Errorf("Storage volume %q in project %q is of type %q instead of %q", currentStorageVolume.Name, storageVolume.Project, currentStorageVolume.Type, storageVolume.Type)
 			}
 
-			return nil
-		}
-
-		// Profile updater.
-		updateProfile := func(target api.ProfilesPost) error {
-			// Get the current profile.
-			profile, etag, err := r.GetProfile(target.Name)
+			// Prepare the update.
+			newStorageVolume := api.StorageVolumePut{}
+			err = util.DeepCopy(currentStorageVolume.Writable(), &newStorageVolume)
 			if err != nil {
-				return fmt.Errorf("Failed to retrieve current profile %q: %w", target.Name, err)
+				return fmt.Errorf("Failed to copy configuration of storage volume %q in project %q: %w", storageVolume.Name, storageVolume.Project, err)
 			}
 
 			// Description override.
-			if target.Description != "" {
-				profile.Description = target.Description
+			if storageVolume.Description != "" {
+				newStorageVolume.Description = storageVolume.Description
 			}
 
 			// Config overrides.
-			for k, v := range target.Config {
-				profile.Config[k] = fmt.Sprintf("%v", v)
-			}
-
-			// Device overrides.
-			for k, v := range target.Devices {
-				// New device.
-				_, ok := profile.Devices[k]
-				if !ok {
-					profile.Devices[k] = v
-					continue
-				}
-
-				// Existing device.
-				for configKey, configValue := range v {
-					profile.Devices[k][configKey] = fmt.Sprintf("%v", configValue)
-				}
+			for k, v := range storageVolume.Config {
+				newStorageVolume.Config[k] = fmt.Sprintf("%v", v)
 			}
 
 			// Apply it.
-			err = r.UpdateProfile(target.Name, profile.Writable(), etag)
+			err = r.UseProject(storageVolume.Project).UpdateStoragePoolVolume(storageVolume.Pool, storageVolume.Type, currentStorageVolume.Name, newStorageVolume, etag)
 			if err != nil {
-				return fmt.Errorf("Failed to update profile %q: %w", target.Name, err)
+				return fmt.Errorf("Failed to update storage volume %q in project %q: %w", storageVolume.Name, storageVolume.Project, err)
+			}
+		}
+
+		return nil
+	}
+
+	// Apply storage volumes in the default project before other projects config.
+	for i := range config.Server.StorageVolumes {
+		// Populate default project if not specified.
+		if config.Server.StorageVolumes[i].Project == "" {
+			config.Server.StorageVolumes[i].Project = api.ProjectDefaultName
+		}
+
+		// Populate default type if not specified.
+		if config.Server.StorageVolumes[i].Type == "" {
+			config.Server.StorageVolumes[i].Type = "custom"
+		}
+
+		err := applyStorageVolume(config.Server.StorageVolumes[i])
+		if err != nil {
+			return err
+		}
+	}
+
+	// Apply profile configuration.
+	if len(config.Server.Profiles) > 0 {
+		// Apply profile configuration.
+		applyProfile := func(profile api.InitProfileProjectPost) error {
+			// Get the current profile.
+			currentProfile, etag, err := r.UseProject(profile.Project).GetProfile(profile.Name)
+
+			if err != nil {
+				// // Create the profile if it doesn't exist.
+				err := r.UseProject(profile.Project).CreateProfile(profile.ProfilesPost)
+				if err != nil {
+					return fmt.Errorf("Failed to create profile %q in project %q: %w", profile.Name, profile.Project, err)
+				}
+			} else {
+				// Prepare the update.
+				updatedProfile := api.ProfilePut{}
+
+				err = util.DeepCopy(currentProfile.Writable(), &updatedProfile)
+				if err != nil {
+					return fmt.Errorf("Failed to copy configuration of profile %q in project %q: %w", profile.Name, profile.Project, err)
+				}
+
+				// Description override.
+				if profile.Description != "" {
+					updatedProfile.Description = profile.Description
+				}
+
+				// Config overrides.
+				for k, v := range profile.Config {
+					updatedProfile.Config[k] = fmt.Sprintf("%v", v)
+				}
+
+				// Device overrides.
+				for k, v := range profile.Devices {
+					// New device.
+					_, ok := updatedProfile.Devices[k]
+					if !ok {
+						updatedProfile.Devices[k] = v
+						continue
+					}
+
+					// Existing device.
+					for configKey, configValue := range v {
+						updatedProfile.Devices[k][configKey] = fmt.Sprintf("%v", configValue)
+					}
+				}
+
+				// Apply it.
+				err = r.UseProject(profile.Project).UpdateProfile(profile.Name, updatedProfile, etag)
+				if err != nil {
+					return fmt.Errorf("Failed to update profile %q in project %q: %w", profile.Name, profile.Project, err)
+				}
 			}
 
 			return nil
 		}
 
 		for _, profile := range config.Server.Profiles {
-			// New profile.
-			if !slices.Contains(profileNames, profile.Name) {
-				err := createProfile(profile)
-				if err != nil {
-					return err
-				}
-
-				continue
+			if profile.Project == "" {
+				profile.Project = api.ProjectDefaultName
 			}
 
-			// Existing profile.
-			err := updateProfile(profile)
+			err := applyProfile(profile)
 			if err != nil {
 				return err
+			}
+		}
+	}
+
+	// Apply certificate configuration.
+	if len(config.Server.Certificates) > 0 {
+		for _, certificate := range config.Server.Certificates {
+			err := r.CreateCertificate(certificate)
+			if err != nil {
+				return fmt.Errorf("Failed to create certificate %q: %w", certificate.Name, err)
 			}
 		}
 	}
@@ -504,6 +569,34 @@ func (r *ProtocolIncus) ApplyServerPreseed(config api.InitPreseed) error {
 			err = op.Wait()
 			if err != nil {
 				return fmt.Errorf("Failed to configure cluster: %w", err)
+			}
+		}
+	}
+
+	// Apply cluster group configurations.
+	if len(config.Server.ClusterGroups) > 0 {
+		for _, clusterGroup := range config.Server.ClusterGroups {
+			// Check if it already exists.
+			existing, etag, err := r.GetClusterGroup(clusterGroup.Name)
+			if err == nil && existing != nil {
+				// Keep existing members if none specified (set of empty slice to empty).
+				if clusterGroup.Members == nil {
+					clusterGroup.Members = existing.Members
+				}
+
+				// Update the existing group.
+				err = r.UpdateClusterGroup(clusterGroup.Name, clusterGroup.ClusterGroupPut, etag)
+				if err != nil {
+					return fmt.Errorf("Failed to update cluster group")
+				}
+
+				continue
+			}
+
+			// Create the new group.
+			err = r.CreateClusterGroup(clusterGroup)
+			if err != nil {
+				return fmt.Errorf("Failed to create cluster group")
 			}
 		}
 	}

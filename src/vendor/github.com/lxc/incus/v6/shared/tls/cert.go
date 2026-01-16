@@ -17,6 +17,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -84,7 +85,7 @@ func KeyPairAndCA(dir, prefix string, kind CertKind, addHosts bool) (*CertInfo, 
 
 		pemData, _ := pem.Decode(data)
 		if pemData == nil {
-			return nil, fmt.Errorf("Invalid revocation list")
+			return nil, errors.New("Invalid revocation list")
 		}
 
 		crl, err = x509.ParseRevocationList(pemData.Bytes)
@@ -198,37 +199,6 @@ const (
 	CertServer
 )
 
-// TestingKeyPair returns CertInfo object initialized with a test keypair. It's
-// meant to be used only by tests.
-func TestingKeyPair() *CertInfo {
-	keypair, err := tls.X509KeyPair(testCertPEMBlock, testKeyPEMBlock)
-	if err != nil {
-		panic(fmt.Sprintf("invalid X509 keypair material: %v", err))
-	}
-
-	cert := &CertInfo{
-		keypair: keypair,
-	}
-
-	return cert
-}
-
-// TestingAltKeyPair returns CertInfo object initialized with a test keypair
-// which differs from the one returned by TestCertInfo. It's meant to be used
-// only by tests.
-func TestingAltKeyPair() *CertInfo {
-	keypair, err := tls.X509KeyPair(testAltCertPEMBlock, testAltKeyPEMBlock)
-	if err != nil {
-		panic(fmt.Sprintf("invalid X509 keypair material: %v", err))
-	}
-
-	cert := &CertInfo{
-		keypair: keypair,
-	}
-
-	return cert
-}
-
 /*
  * Generate a list of names for which the certificate will be valid.
  * This will include the hostname and ip address.
@@ -264,13 +234,13 @@ func FindOrGenCert(certf string, keyf string, certtype bool, addHosts bool) erro
 func GenCert(certf string, keyf string, certtype bool, addHosts bool) error {
 	/* Create the basenames if needed */
 	dir := filepath.Dir(certf)
-	err := os.MkdirAll(dir, 0750)
+	err := os.MkdirAll(dir, 0o750)
 	if err != nil {
 		return err
 	}
 
 	dir = filepath.Dir(keyf)
-	err = os.MkdirAll(dir, 0750)
+	err = os.MkdirAll(dir, 0o750)
 	if err != nil {
 		return err
 	}
@@ -295,7 +265,7 @@ func GenCert(certf string, keyf string, certtype bool, addHosts bool) error {
 		return fmt.Errorf("Failed to close cert file: %w", err)
 	}
 
-	keyOut, err := os.OpenFile(keyf, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	keyOut, err := os.OpenFile(keyf, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return fmt.Errorf("Failed to open %s for writing: %w", keyf, err)
 	}
@@ -401,6 +371,7 @@ func GenerateMemCert(client bool, addHosts bool) ([]byte, []byte, error) {
 	return cert, key, nil
 }
 
+// ReadCert reads a PEM encoded certificate.
 func ReadCert(fpath string) (*x509.Certificate, error) {
 	cf, err := os.ReadFile(fpath)
 	if err != nil {
@@ -409,20 +380,22 @@ func ReadCert(fpath string) (*x509.Certificate, error) {
 
 	certBlock, _ := pem.Decode(cf)
 	if certBlock == nil {
-		return nil, fmt.Errorf("Invalid certificate file")
+		return nil, errors.New("Invalid certificate file")
 	}
 
 	return x509.ParseCertificate(certBlock.Bytes)
 }
 
+// CertFingerprint returns the SHA256 fingerprint string of an x509 certificate.
 func CertFingerprint(cert *x509.Certificate) string {
 	return fmt.Sprintf("%x", sha256.Sum256(cert.Raw))
 }
 
+// CertFingerprintStr returns the SHA256 fingerprint of a PEM encoded certificate.
 func CertFingerprintStr(c string) (string, error) {
 	pemCertificate, _ := pem.Decode([]byte(c))
 	if pemCertificate == nil {
-		return "", fmt.Errorf("invalid certificate")
+		return "", errors.New("invalid certificate")
 	}
 
 	cert, err := x509.ParseCertificate(pemCertificate.Bytes)
@@ -433,6 +406,7 @@ func CertFingerprintStr(c string) (string, error) {
 	return CertFingerprint(cert), nil
 }
 
+// GetRemoteCertificate gets the x509 certificate from a remote HTTPS server.
 func GetRemoteCertificate(address string, useragent string) (*x509.Certificate, error) {
 	// Setup a permissive TLS config
 	tlsConfig, err := GetTLSConfig(nil)
@@ -469,7 +443,7 @@ func GetRemoteCertificate(address string, useragent string) (*x509.Certificate, 
 
 	// Retrieve the certificate
 	if resp.TLS == nil || len(resp.TLS.PeerCertificates) == 0 {
-		return nil, fmt.Errorf("Unable to read remote TLS certificate")
+		return nil, errors.New("Unable to read remote TLS certificate")
 	}
 
 	return resp.TLS.PeerCertificates[0], nil
@@ -489,19 +463,19 @@ func CertificateTokenDecode(input string) (*api.CertificateAddToken, error) {
 	}
 
 	if j.ClientName == "" {
-		return nil, fmt.Errorf("No client name in certificate add token")
+		return nil, errors.New("No client name in certificate add token")
 	}
 
 	if len(j.Addresses) < 1 {
-		return nil, fmt.Errorf("No server addresses in certificate add token")
+		return nil, errors.New("No server addresses in certificate add token")
 	}
 
 	if j.Secret == "" {
-		return nil, fmt.Errorf("No secret in certificate add token")
+		return nil, errors.New("No secret in certificate add token")
 	}
 
 	if j.Fingerprint == "" {
-		return nil, fmt.Errorf("No certificate fingerprint in certificate add token")
+		return nil, errors.New("No certificate fingerprint in certificate add token")
 	}
 
 	return &j, nil
@@ -512,7 +486,7 @@ func CertificateTokenDecode(input string) (*api.CertificateAddToken, error) {
 func GenerateTrustCertificate(cert *CertInfo, name string) (*api.Certificate, error) {
 	block, _ := pem.Decode(cert.PublicKey())
 	if block == nil {
-		return nil, fmt.Errorf("Failed to decode certificate")
+		return nil, errors.New("Failed to decode certificate")
 	}
 
 	fingerprint, err := CertFingerprintStr(string(cert.PublicKey()))
@@ -532,51 +506,3 @@ func GenerateTrustCertificate(cert *CertInfo, name string) (*api.Certificate, er
 
 	return &apiCert, nil
 }
-
-var testCertPEMBlock = []byte(`
------BEGIN CERTIFICATE-----
-MIIBzjCCAVSgAwIBAgIUJAEAVl1oOU+OQxj5aUrRdJDwuWEwCgYIKoZIzj0EAwMw
-EzERMA8GA1UEAwwIYWx0LnRlc3QwHhcNMjIwNDEzMDQyMjA0WhcNMzIwNDEwMDQy
-MjA0WjATMREwDwYDVQQDDAhhbHQudGVzdDB2MBAGByqGSM49AgEGBSuBBAAiA2IA
-BGAmiHj98SXz0ZW1AxheW+zkFyPz5ZrZoZDY7NezGQpoH4KZ1x08X1jw67wv+M0c
-W+yd2BThOcvItBO+HokJ03lgL6cgDojcmEEfZntgmGHjG7USqh48TrQtmt/uSJsD
-4qNpMGcwHQYDVR0OBBYEFPOsHk3ewn4abmyzLgOXs3Bg8Dq9MB8GA1UdIwQYMBaA
-FPOsHk3ewn4abmyzLgOXs3Bg8Dq9MA8GA1UdEwEB/wQFMAMBAf8wFAYDVR0RBA0w
-C4IJbG9jYWxob3N0MAoGCCqGSM49BAMDA2gAMGUCMCKR+gWwN9VWXct8tDxCvlA6
-+JP7iQPnLetiSLpyN4HEVQYP+EQhDJIJIy6+CwlUCQIxANQXfaTTrcVuhAb9dwVI
-9bcu4cRGLEtbbNuOW/y+q7mXG0LtE/frDv/QrNpKhnnOzA==
------END CERTIFICATE-----
-`)
-
-var testKeyPEMBlock = []byte(`
------BEGIN PRIVATE KEY-----
-MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDBzlLjHjIxc5XHm95zB
-p8cnUtHQcmdBy2Ekv+bbiaS/8M8Twp7Jvi47SruAY5gESK2hZANiAARgJoh4/fEl
-89GVtQMYXlvs5Bcj8+Wa2aGQ2OzXsxkKaB+CmdcdPF9Y8Ou8L/jNHFvsndgU4TnL
-yLQTvh6JCdN5YC+nIA6I3JhBH2Z7YJhh4xu1EqoePE60LZrf7kibA+I=
------END PRIVATE KEY-----
-`)
-
-var testAltCertPEMBlock = []byte(`
------BEGIN CERTIFICATE-----
-MIIBzjCCAVSgAwIBAgIUK41+7aTdYLu3x3vGoDOqat10TmQwCgYIKoZIzj0EAwMw
-EzERMA8GA1UEAwwIYWx0LnRlc3QwHhcNMjIwNDEzMDQyMzM0WhcNMzIwNDEwMDQy
-MzM0WjATMREwDwYDVQQDDAhhbHQudGVzdDB2MBAGByqGSM49AgEGBSuBBAAiA2IA
-BAHv2a3obPHcQVDQouW/A/M/l2xHUFINWvCIhA5gWCtj9RLWKD6veBR133qSr9w0
-/DT96ZoTw7kJu/BQQFlRafmfMRTZcvXHLoPMoihBEkDqTGl2qwEQea/0MPi3thwJ
-wqNpMGcwHQYDVR0OBBYEFKoF8yXx9lgBTQvZL2M8YqV4c4c5MB8GA1UdIwQYMBaA
-FKoF8yXx9lgBTQvZL2M8YqV4c4c5MA8GA1UdEwEB/wQFMAMBAf8wFAYDVR0RBA0w
-C4IJbG9jYWxob3N0MAoGCCqGSM49BAMDA2gAMGUCMQCcpYeYWmIL7QdUCGGRT8gt
-YhQSciGzXlyncToAJ+A91dXGbGYvqfIti7R00sR+8cwCMAxglHP7iFzWrzn1M/Z9
-H5bVDjnWZvsgEblThausOYxWxzxD+5dT5rItoVZOJhfPLw==
------END CERTIFICATE-----
-`)
-
-var testAltKeyPEMBlock = []byte(`
------BEGIN PRIVATE KEY-----
-MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDC3/Fv+SmNLfBy2AuUD
-O3zHq1GMLvVfk3JkDIqqbKPJeEa2rS44bemExc8v85wVYTmhZANiAAQB79mt6Gzx
-3EFQ0KLlvwPzP5dsR1BSDVrwiIQOYFgrY/US1ig+r3gUdd96kq/cNPw0/emaE8O5
-CbvwUEBZUWn5nzEU2XL1xy6DzKIoQRJA6kxpdqsBEHmv9DD4t7YcCcI=
------END PRIVATE KEY-----
-`)

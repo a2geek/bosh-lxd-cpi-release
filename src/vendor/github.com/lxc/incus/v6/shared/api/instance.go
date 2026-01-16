@@ -114,13 +114,13 @@ type InstancePost struct {
 	// Example: {"security.nesting": "true"}
 	//
 	// API extension: instance_move_config
-	Config map[string]string
+	Config ConfigMap
 
 	// Instance devices.
 	// Example: {"root": {"type": "disk", "pool": "default", "path": "/"}}
 	//
 	// API extension: instance_move_config
-	Devices map[string]map[string]string
+	Devices DevicesMap
 
 	// List of profiles applied to the instance.
 	// Example: ["default"]
@@ -160,11 +160,11 @@ type InstancePut struct {
 
 	// Instance configuration (see doc/instances.md)
 	// Example: {"security.nesting": "true"}
-	Config map[string]string `json:"config" yaml:"config"`
+	Config ConfigMap `json:"config" yaml:"config"`
 
 	// Instance devices (see doc/instances.md)
 	// Example: {"root": {"type": "disk", "pool": "default", "path": "/"}}
-	Devices map[string]map[string]string `json:"devices" yaml:"devices"`
+	Devices DevicesMap `json:"devices" yaml:"devices"`
 
 	// Whether the instance is ephemeral (deleted on shutdown)
 	// Example: false
@@ -211,11 +211,11 @@ type Instance struct {
 
 	// Expanded configuration (all profiles and local config merged)
 	// Example: {"security.nesting": "true"}
-	ExpandedConfig map[string]string `json:"expanded_config,omitempty" yaml:"expanded_config,omitempty"`
+	ExpandedConfig ConfigMap `json:"expanded_config,omitempty" yaml:"expanded_config,omitempty"`
 
 	// Expanded devices (all profiles and local devices merged)
 	// Example: {"root": {"type": "disk", "pool": "default", "path": "/"}}
-	ExpandedDevices map[string]map[string]string `json:"expanded_devices,omitempty" yaml:"expanded_devices,omitempty"`
+	ExpandedDevices DevicesMap `json:"expanded_devices,omitempty" yaml:"expanded_devices,omitempty"`
 
 	// Instance name
 	// Example: foo
@@ -276,7 +276,7 @@ func (c *Instance) Writable() InstancePut {
 // IsActive checks whether the instance state indicates the instance is active.
 //
 // API extension: instances.
-func (c Instance) IsActive() bool {
+func (c *Instance) IsActive() bool {
 	switch c.StatusCode {
 	case Stopped:
 		return false
@@ -361,6 +361,12 @@ type InstanceSource struct {
 	// Whether this is refreshing an existing instance (for migration and copy)
 	// Example: false
 	Refresh bool `json:"refresh,omitempty" yaml:"refresh,omitempty"`
+
+	// Whether to exclude source snapshots earlier than latest target snapshot
+	// Example: false
+	//
+	// API extension: custom_volume_refresh_exclude_older_snapshots
+	RefreshExcludeOlder bool `json:"refresh_exclude_older,omitempty" yaml:"refresh_exclude_older,omitempty"`
 
 	// Source project name (for copy and local image)
 	// Example: blah

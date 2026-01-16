@@ -25,13 +25,28 @@ type StorageBucketPut struct {
 	// Example: {"size": "50GiB"}
 	//
 	// API extension: storage_buckets
-	Config map[string]string `json:"config" yaml:"config"`
+	Config ConfigMap `json:"config" yaml:"config"`
 
 	// Description of the storage bucket
 	// Example: My custom bucket
 	//
 	// API extension: storage_buckets
 	Description string `json:"description" yaml:"description"`
+}
+
+// StorageBucketFull is a combination of StorageBucket, StorageBucketBackup and StorageBucketKey.
+//
+// swagger:model
+//
+// API extension: storage_bucket_full.
+type StorageBucketFull struct {
+	StorageBucket `yaml:",inline"`
+
+	// List of backups.
+	Backups []StorageBucketBackup `json:"backups" yaml:"backups"`
+
+	// List of keys.
+	Keys []StorageBucketKey `json:"keys" yaml:"keys"`
 }
 
 // StorageBucket represents the fields of a storage pool bucket

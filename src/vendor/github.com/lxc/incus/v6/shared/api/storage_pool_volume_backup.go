@@ -4,12 +4,12 @@ import (
 	"time"
 )
 
-// StoragePoolVolumeBackup represents a volume backup
+// StorageVolumeBackup represents a volume backup
 //
 // swagger:model
 //
 // API extension: custom_volume_backup.
-type StoragePoolVolumeBackup struct {
+type StorageVolumeBackup struct {
 	// Backup name
 	// Example: backup0
 	Name string `json:"name" yaml:"name"`
@@ -31,12 +31,12 @@ type StoragePoolVolumeBackup struct {
 	OptimizedStorage bool `json:"optimized_storage" yaml:"optimized_storage"`
 }
 
-// StoragePoolVolumeBackupsPost represents the fields available for a new volume backup
+// StorageVolumeBackupsPost represents the fields available for a new volume backup
 //
 // swagger:model
 //
 // API extension: custom_volume_backup.
-type StoragePoolVolumeBackupsPost struct {
+type StorageVolumeBackupsPost struct {
 	// Backup name
 	// Example: backup0
 	Name string `json:"name" yaml:"name"`
@@ -56,14 +56,20 @@ type StoragePoolVolumeBackupsPost struct {
 	// What compression algorithm to use
 	// Example: gzip
 	CompressionAlgorithm string `json:"compression_algorithm" yaml:"compression_algorithm"`
+
+	// External upload target
+	// The backup will be uploaded and then deleted from local storage.
+	//
+	// API extension: backup_s3_upload
+	Target *BackupTarget `json:"target" yaml:"target"`
 }
 
-// StoragePoolVolumeBackupPost represents the fields available for the renaming of a volume backup
+// StorageVolumeBackupPost represents the fields available for the renaming of a volume backup
 //
 // swagger:model
 //
 // API extension: custom_volume_backup.
-type StoragePoolVolumeBackupPost struct {
+type StorageVolumeBackupPost struct {
 	// New backup name
 	// Example: backup1
 	Name string `json:"name" yaml:"name"`

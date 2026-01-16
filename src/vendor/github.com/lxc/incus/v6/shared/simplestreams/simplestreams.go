@@ -2,6 +2,7 @@ package simplestreams
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,10 +27,10 @@ type DownloadableFile struct {
 }
 
 // NewClient returns a simplestreams client for the provided stream URL.
-func NewClient(url string, httpClient http.Client, useragent string) *SimpleStreams {
+func NewClient(uri string, httpClient http.Client, useragent string) *SimpleStreams {
 	return &SimpleStreams{
 		http:           &httpClient,
-		url:            url,
+		url:            uri,
 		cachedProducts: map[string]*Products{},
 		useragent:      useragent,
 	}
@@ -90,6 +91,11 @@ func (s *SimpleStreams) readCache(path string) ([]byte, bool) {
 	expired := time.Since(fi.ModTime()) > s.cacheExpiry
 
 	return body, expired
+}
+
+// InvalidateCache removes the on-disk cache for the SimpleStreams remote.
+func (s *SimpleStreams) InvalidateCache() {
+	_ = os.RemoveAll(s.cachePath)
 }
 
 func (s *SimpleStreams) cachedDownload(path string) ([]byte, error) {
@@ -165,7 +171,7 @@ func (s *SimpleStreams) cachedDownload(path string) ([]byte, error) {
 	if s.cachePath != "" {
 		cacheName := filepath.Join(s.cachePath, fileName)
 		_ = os.Remove(cacheName)
-		_ = os.WriteFile(cacheName, body, 0644)
+		_ = os.WriteFile(cacheName, body, 0o644)
 	}
 
 	return body, nil
@@ -375,7 +381,8 @@ func (s *SimpleStreams) GetFiles(fingerprint string) (map[string]DownloadableFil
 					files[path[2]] = DownloadableFile{
 						Path:   path[0],
 						Sha256: path[1],
-						Size:   size}
+						Size:   size,
+					}
 				}
 
 				return files, nil
@@ -383,7 +390,7 @@ func (s *SimpleStreams) GetFiles(fingerprint string) (map[string]DownloadableFil
 		}
 	}
 
-	return nil, fmt.Errorf("Couldn't find the requested image")
+	return nil, errors.New("Couldn't find the requested image")
 }
 
 // ListAliases returns a list of image aliases for the provided image fingerprint.
@@ -507,9 +514,9 @@ func (s *SimpleStreams) GetImage(fingerprint string) (*api.Image, error) {
 	}
 
 	if len(matches) == 0 {
-		return nil, fmt.Errorf("The requested image couldn't be found")
+		return nil, errors.New("The requested image couldn't be found")
 	} else if len(matches) > 1 {
-		return nil, fmt.Errorf("More than one match for the provided partial fingerprint")
+		return nil, errors.New("More than one match for the provided partial fingerprint")
 	}
 
 	return &matches[0], nil

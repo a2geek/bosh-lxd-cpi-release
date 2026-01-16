@@ -2,6 +2,7 @@ package util
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -12,7 +13,12 @@ import (
 	"github.com/lxc/incus/v6/shared/units"
 )
 
-func DownloadFileHash(ctx context.Context, httpClient *http.Client, useragent string, progress func(progress ioprogress.ProgressData), canceler *cancel.HTTPRequestCanceller, filename string, url string, hash string, hashFunc hash.Hash, target io.WriteSeeker) (int64, error) {
+// ErrNotFound is used to explicitly signal error cases, where a resource
+// can not be found (404 HTTP status code).
+var ErrNotFound = errors.New("resource not found")
+
+// DownloadFileHash downloads a file while validating its hash.
+func DownloadFileHash(ctx context.Context, httpClient *http.Client, useragent string, progress func(progress ioprogress.ProgressData), canceler *cancel.HTTPRequestCanceller, filename string, url string, fileHash string, hashFunc hash.Hash, target io.WriteSeeker) (int64, error) {
 	// Always seek to the beginning
 	_, _ = target.Seek(0, io.SeekStart)
 
@@ -44,6 +50,10 @@ func DownloadFileHash(ctx context.Context, httpClient *http.Client, useragent st
 	defer close(doneCh)
 
 	if r.StatusCode != http.StatusOK {
+		if r.StatusCode == http.StatusNotFound {
+			return -1, fmt.Errorf("Unable to fetch %s: %w", url, ErrNotFound)
+		}
+
 		return -1, fmt.Errorf("Unable to fetch %s: %s", url, r.Status)
 	}
 
@@ -74,8 +84,8 @@ func DownloadFileHash(ctx context.Context, httpClient *http.Client, useragent st
 		}
 
 		result := fmt.Sprintf("%x", hashFunc.Sum(nil))
-		if result != hash {
-			return -1, fmt.Errorf("Hash mismatch for %s: %s != %s", url, result, hash)
+		if result != fileHash {
+			return -1, fmt.Errorf("Hash mismatch for %s: %s != %s", url, result, fileHash)
 		}
 	} else {
 		size, err = io.Copy(target, body)

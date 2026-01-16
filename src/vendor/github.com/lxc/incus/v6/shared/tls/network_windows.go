@@ -4,20 +4,22 @@ package tls
 
 import (
 	"crypto/x509"
-	"fmt"
+	"errors"
 	"sync"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
 
-var once sync.Once
-var systemRoots *x509.CertPool
+var (
+	once        sync.Once
+	systemRoots *x509.CertPool
+)
 
 func systemCertPool() (*x509.CertPool, error) {
 	once.Do(initSystemRoots)
 	if systemRoots == nil {
-		return nil, fmt.Errorf("Bad system root pool")
+		return nil, errors.New("Bad system root pool")
 	}
 
 	return systemRoots, nil
