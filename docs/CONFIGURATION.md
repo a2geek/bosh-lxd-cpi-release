@@ -13,7 +13,7 @@
 | `lxd_cpi.server.insecure_skip_verify` | Indicates if the SSL connection should be validated (set to false, the default, for self-signed certificates). |
 | `lxd_cpi.server.tls_client_cert` | Client public certificate to use for TLS connection. |
 | `lxd_cpi.server.tls_client_key` | Client private key to use for TLS connection. |
-| `lxd_cpi.server.bios_path` | Location and name of BIOS to use (default `"bios-256k.bin"`). |
+| `lxd_cpi.server.bios_path` | Location and name of BIOS to use (default is disabled, example `"bios-256k.bin"`). |
 
 ### LXD/Incus options
 

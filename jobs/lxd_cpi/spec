@@ -36,7 +36,7 @@ properties:
 
   lxd_cpi.server.bios_path:
     description: Location and name of BIOS to use.
-    default: "bios-256k.bin"
+    example: "bios-256k.bin"
 
   lxd_cpi.server.project_name:
     description: "Name of Project with which to place VMs and Stemcells"

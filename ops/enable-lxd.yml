@@ -6,3 +6,11 @@
 - type: replace
   path: /cloud_provider/properties/lxd_cpi/server/type?
   value: lxd
+
+- type: replace
+  path: /instance_groups/name=bosh/properties/lxd_cpi/server/bios_path?
+  value: "bios-256k.bin"
+
+- type: replace
+  path: /cloud_provider/properties/lxd_cpi/server/bios_path?
+  value: "bios-256k.bin"

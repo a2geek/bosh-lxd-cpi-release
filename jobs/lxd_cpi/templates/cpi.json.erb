@@ -13,7 +13,7 @@ config = {
     "Network" => p("lxd_cpi.server.network_name"),
     "ManagedNetworkAssignment" => p("lxd_cpi.server.managed_network_assignment"),
     "StoragePool" => p("lxd_cpi.server.storage_pool_name"),
-    "BIOSPath" => p("lxd_cpi.server.bios_path")
+    "BIOSPath" => p("lxd_cpi.server.bios_path", "")
   },
   "Agent" => {
     "Mbus" => p("lxd_cpi.agent.mbus"),
