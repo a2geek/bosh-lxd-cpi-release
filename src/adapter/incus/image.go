@@ -28,6 +28,22 @@ func (a *incusApiAdapter) FindExistingImage(description string) (string, error) 
 	return "", nil
 }
 
+func (a *incusApiAdapter) GetStemcellDescription(alias string) (string, error) {
+	entry, _, err := a.client.GetImageAlias(alias)
+	if err != nil {
+		return "", err
+	}
+	image, _, err := a.client.GetImage(entry.Target)
+	if err != nil {
+		return "", err
+	}
+	description, b := image.Properties["description"]
+	if !b {
+		return "", fmt.Errorf("no description for image '%s'", entry.Target)
+	}
+	return description, nil
+}
+
 func (a *incusApiAdapter) CreateAndUploadImage(meta adapter.ImageMetadata) error {
 	image := api.ImagesPost{
 		ImagePut: api.ImagePut{
@@ -91,7 +107,7 @@ func (a *incusApiAdapter) CreateAndUploadImage(meta adapter.ImageMetadata) error
 	imageAliasPost := api.ImageAliasesPost{
 		ImageAliasesEntry: api.ImageAliasesEntry{
 			ImageAliasesEntryPut: api.ImageAliasesEntryPut{
-				Description: "bosh image",
+				Description: meta.Description,
 				Target:      fingerprint,
 			},
 			Name: meta.Alias,

@@ -34,9 +34,17 @@ properties:
       <snip>
       -----END RSA PRIVATE KEY-----
 
-  lxd_cpi.server.bios_path:
-    description: Location and name of BIOS to use.
-    example: "bios-256k.bin"
+  lxd_cpi.server.instance_config:
+    description: |
+      Custom instance config settings by stemcell line. 
+      See https://documentation.ubuntu.com/lxd/stable-5.21/reference/instance_options/ 
+      and https://linuxcontainers.org/incus/docs/main/reference/instance_options/ .
+    default:
+      noble:
+        security.secureboot: "false"
+      jammy:
+        security.csm: "true"
+        security.secureboot: "false"
 
   lxd_cpi.server.project_name:
     description: "Name of Project with which to place VMs and Stemcells"
