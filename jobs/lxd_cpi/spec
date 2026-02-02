@@ -39,11 +39,15 @@ properties:
       Custom instance config settings by stemcell line. 
       See https://documentation.ubuntu.com/lxd/stable-5.21/reference/instance_options/ 
       and https://linuxcontainers.org/incus/docs/main/reference/instance_options/ .
+      Notes: (1) Jammy requires a BIOS boot - the default setting allows LXD/Incus to use a default BIOS image.
+      The BIOS image is not always available, so the "jammy" entry may need to be replaced with "raw.qemu: -bios <path>".
+      (2) From Noble onward, the default option assumes that a UEFI boot will take place. 
+      (3) It is very likely that a UEFI boot will fail if the "secureboot" option is enabled. Therefore, the default has it disabled.
     default:
-      noble:
-        security.secureboot: "false"
       jammy:
         security.csm: "true"
+        security.secureboot: "false"
+      default:
         security.secureboot: "false"
 
   lxd_cpi.server.project_name:

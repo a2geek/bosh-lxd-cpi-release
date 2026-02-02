@@ -98,10 +98,16 @@ func (c CPI) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapErrorf(err, "find stemcell description for '%s'", stemcellCID.AsString())
 	}
 	var instanceConfig map[string]string
+	var defaultConfig map[string]string
 	for k, v := range c.config.Server.InstanceConfig {
-		if strings.Contains(imageDescription, k) {
+		if "default" == k {
+			defaultConfig = v
+		} else if strings.Contains(imageDescription, k) {
 			instanceConfig = v
 		}
+	}
+	if len(instanceConfig) == 0 {
+		instanceConfig = defaultConfig
 	}
 	if len(instanceConfig) == 0 {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.Error("no matching stemcell configuration found")
