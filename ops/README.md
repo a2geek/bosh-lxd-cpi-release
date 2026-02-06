@@ -4,6 +4,7 @@ These ops files are supplied to help configure the BOSH director.
 
 | Name | Description |
 | :--- | :--- |
+| [`enable-default-secureboot.yml`](enable-default-secureboot.yml) | Enable secureboot for the "default" settings. This is intended for [IncusOS](https://linuxcontainers.org/incus-os/), which indicates that it is ready for "modern security features like UEFI Secure Boot". |
 | [`enable-incus-agent.yml`](enable-incus-agent.yml) | Enable the the [Incus Agent](https://linuxcontainers.org/incus/docs/main/howto/instances_create/#install-the-incus-agent-into-virtual-machine-instances) to be run in the BOSH VM. If wanted for _all_ VMs, also see the [runtime config setting](../manifests/enable-incus-agent-config.yml). |
 | [`enable-incus.yml`](enable-incus.yml) | Sets the server type to be `incus`. Required when using Incus; also sets the `bios_path` to `seabios.bin`. |
 | [`enable-lxd-agent.yml`](enable-lxd-agent.yml) | Enable the [LXD Agent](https://documentation.ubuntu.com/lxd/en/latest/howto/instances_create/#install-the-lxd-agent-into-virtual-machine-instances) to be run in the BOSH VM. If wanted for _all_ VMs, also see the [runtime config setting](../manifests/enable-lxd-agent-config.yml). Example of using the runtime config is in [`util.sh`](../util.sh). |
