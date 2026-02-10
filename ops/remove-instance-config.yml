@@ -1,0 +1,6 @@
+---
+- type: remove
+  path: /instance_groups/name=bosh/properties/lxd_cpi/server/instance_config?
+
+- type: remove
+  path: /cloud_provider/properties/lxd_cpi/server/instance_config?

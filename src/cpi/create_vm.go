@@ -3,6 +3,7 @@ package cpi
 import (
 	"bosh-lxd-cpi/adapter"
 	"fmt"
+	"strings"
 
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
@@ -91,9 +92,25 @@ func (c CPI) CreateVMV2(
 		"path": "/",
 	}
 
-	instanceConfig := map[string]string{}
-	if c.config.Server.BIOSPath != "" {
-		instanceConfig["raw.qemu"] = "-bios " + c.config.Server.BIOSPath
+	// Figure out which stemcell line this is and apply corresponding configuration
+	imageDescription, err := c.adapter.GetStemcellDescription(stemcellCID.AsString())
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapErrorf(err, "find stemcell description for '%s'", stemcellCID.AsString())
+	}
+	var instanceConfig map[string]string
+	var defaultConfig map[string]string
+	for k, v := range c.config.Server.InstanceConfig {
+		if "default" == k {
+			defaultConfig = v
+		} else if strings.Contains(imageDescription, k) {
+			instanceConfig = v
+		}
+	}
+	if len(instanceConfig) == 0 {
+		instanceConfig = defaultConfig
+	}
+	if len(instanceConfig) == 0 {
+		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.Error("no matching stemcell configuration found")
 	}
 
 	err = c.adapter.CreateInstance(adapter.InstanceMetadata{

@@ -6,6 +6,7 @@ type ApiAdapter interface {
 	FindExistingImage(description string) (string, error)
 	CreateAndUploadImage(meta ImageMetadata) error
 	DeleteImage(alias string) error
+	GetStemcellDescription(alias string) (string, error)
 
 	IsManagedNetwork(name string) (bool, error)
 

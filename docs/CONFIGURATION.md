@@ -13,7 +13,26 @@
 | `lxd_cpi.server.insecure_skip_verify` | Indicates if the SSL connection should be validated (set to false, the default, for self-signed certificates). |
 | `lxd_cpi.server.tls_client_cert` | Client public certificate to use for TLS connection. |
 | `lxd_cpi.server.tls_client_key` | Client private key to use for TLS connection. |
-| `lxd_cpi.server.bios_path` | Location and name of BIOS to use (default is disabled, example `"bios-256k.bin"`). |
+| `lxd_cpi.server.instance_config` | Custom instance config settings by stemcell line. See [LXD](https://documentation.ubuntu.com/lxd/stable-5.21/reference/instance_options/) and [Incus](https://linuxcontainers.org/incus/docs/main/reference/instance_options/) options for details. |
+
+#### `instance_config` settings
+
+The default settings are:
+
+```yaml
+instance_config:
+  jammy:
+    security.csm: "true"
+    security.secureboot: "false"
+  default:
+    security.secureboot: "false"
+```
+
+Notes: 
+1. Jammy requires a BIOS boot - the default setting allows LXD/Incus to use a default BIOS image. The BIOS image is not always available, so the "jammy" entry may need to be replaced with "raw.qemu: -bios <path>" based on your configuaration.
+2. From Noble onward (the `default` entry), the assumption is that a UEFI boot will take place. 
+3. It is very likely that a UEFI boot will fail if the "secureboot" option is enabled. Therefore, the default has it disabled.
+4. If you are using IncusOS, their [introductory documentation](https://linuxcontainers.org/incus-os/introduction/) indicates that UEFI Secure Boot is configured. In this case, use the `enable-default-secureboot.yml` ops file.
 
 ### LXD/Incus options
 
@@ -47,7 +66,7 @@
 
 ### Throttle configuration
 
-> These are unlikely to be required. Left overs from early development of the CPI.
+> These are unlikely to be required. Leftovers from early development of the CPI.
 
 | Option | Description |
 | --- | --- |

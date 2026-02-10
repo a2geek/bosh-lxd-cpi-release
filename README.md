@@ -6,14 +6,18 @@ This is a [BOSH CPI](https://bosh.io/) implementation to support [LXD](https://c
 
 ## Requirements
 
+Recent verison of LXD and Incus both support BIOS and UEFI boots. "Jammy" or earlier stemcells will require a BIOS boot while "Noble" or later stemcells can use the UEFI boot.
+
 LXD 5.21, LXD supports BIOS boots for VMs, which all the BOSH Stemcells use. Without this feature, they must be UEFI boot devices and VMs are not an option. Incus support is in place for the 6.0 LTS release, and likely some of the pre-releases.
 
 Note that the (initial) BOSH deployment can be run from Linux, a Mac, and presumably from the Linux on WSL. Once a BOSH director is running, the BOSH CLI can be used from [pretty much anywhere](https://bosh.io/docs/cli-v2-install/).
 
-The current development environments are Ubuntu 22.04:
+The current development environments are:
 
-* LXD (currently `5.21/stable`) has been installed via a Snap and [this guide](https://documentation.ubuntu.com/lxd/en/latest/tutorial/first_steps/) was generally followed
-* Incus (currently `6.0.0-1ubuntu0.1`) has been installed via `apt` and [the documentation](https://linuxcontainers.org/incus/docs/main/installing/#installing) was followed for Ubuntu.
+* LXD (`5.21/stable`) has been installed via Snap and [this guide](https://documentation.ubuntu.com/lxd/en/latest/tutorial/first_steps/) was generally followed
+* LXD (`6/stable`) has been installed via Snap
+* Incus (`6.0.0-1ubuntu0.1`) has been installed via `apt` and [the documentation](https://linuxcontainers.org/incus/docs/main/installing/#installing) was followed for Ubuntu
+* [IncusOS](https://linuxcontainers.org/incus-os/) has also been reported as working
 
 ## Documentation
 
@@ -33,7 +37,7 @@ All CPI calls have been implemented, including snapshots and IaaS-native disk re
 ### LXD adjustments
 
 * There is a nightly scheduled process to look for unused configuration disks (`vol-c-<uuid>` format). There are events (at least with ZFS) where the configuration disk sometimes doesn't get detached from the VM. The nightly process simply scans the list of detached configuration disks, tries to delete them, and reports success or error in the log. See [cleanup](src/cmd/cleanup/main.go).
-* Throttling. Not so much LXD, but more the single host conundrum. There is a server that runs and maintains a hash map of "transaction" reservations. Once the CPI level transaction completes, the transaction is also released. Additionally, these reservations will time out after a certain amount time. _By default, this is disabled._ (See Tuning for more details. Code is at [throttle](src/cmd/cleanup/main.go).)
+* Throttling. Not so much LXD, but more the single host conundrum. There is a service that runs and maintains a hash map of "transaction" reservations. Once the CPI level transaction completes, the transaction is also released. Additionally, these reservations will time out after a certain amount time. _By default, this is disabled._ (See Tuning for more details. Code is at [throttle](src/cmd/cleanup/main.go).)
 
 ### Tuning
 
