@@ -7,6 +7,11 @@ import (
 )
 
 func (a *incusApiAdapter) CreateInstance(meta adapter.InstanceMetadata) error {
+	instanceType := api.InstanceTypeVM
+	if meta.Type == adapter.InstanceContainer {
+		instanceType = api.InstanceTypeContainer
+	}
+
 	instancesPost := api.InstancesPost{
 		InstancePut: api.InstancePut{
 			Devices:  meta.Devices,
@@ -20,7 +25,7 @@ func (a *incusApiAdapter) CreateInstance(meta adapter.InstanceMetadata) error {
 			Alias:   meta.StemcellAlias,
 			Project: meta.Project,
 		},
-		Type: api.InstanceTypeVM,
+		Type: instanceType,
 	}
 	c := a.client
 	if meta.Target != "" {

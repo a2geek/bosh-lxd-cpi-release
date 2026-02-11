@@ -93,7 +93,7 @@ func (c CPI) CreateVMV2(
 	}
 
 	// Figure out which stemcell line this is and apply corresponding configuration
-	imageDescription, err := c.adapter.GetStemcellDescription(stemcellCID.AsString())
+	imageInfo, err := c.adapter.GetStemcellInfo(stemcellCID.AsString())
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapErrorf(err, "find stemcell description for '%s'", stemcellCID.AsString())
 	}
@@ -102,7 +102,7 @@ func (c CPI) CreateVMV2(
 	for k, v := range c.config.Server.InstanceConfig {
 		if "default" == k {
 			defaultConfig = v
-		} else if strings.Contains(imageDescription, k) {
+		} else if strings.Contains(imageInfo.Description, k) {
 			instanceConfig = v
 		}
 	}
@@ -113,9 +113,15 @@ func (c CPI) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.Error("no matching stemcell configuration found")
 	}
 
+	// HACK! Not certain what to do at this point
+	if imageInfo.Type == adapter.InstanceContainer {
+		instanceConfig = map[string]string{}
+	}
+
 	err = c.adapter.CreateInstance(adapter.InstanceMetadata{
 		Name:          theCid,
 		StemcellAlias: stemcellCID.AsString(),
+		Type:          imageInfo.Type,
 		InstanceType:  vmProps.InstanceType,
 		Project:       c.config.Server.Project,
 		Profiles:      []string{c.config.Server.Profile},

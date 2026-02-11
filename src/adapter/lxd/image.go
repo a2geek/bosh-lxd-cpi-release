@@ -28,20 +28,31 @@ func (a *lxdApiAdapter) FindExistingImage(description string) (string, error) {
 	return "", nil
 }
 
-func (a *lxdApiAdapter) GetStemcellDescription(alias string) (string, error) {
+func (a *lxdApiAdapter) GetStemcellInfo(alias string) (*adapter.ImageInfo, error) {
 	entry, _, err := a.client.GetImageAlias(alias)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	image, _, err := a.client.GetImage(entry.Target)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	description, b := image.Properties["description"]
 	if !b {
-		return "", fmt.Errorf("no description for image '%s'", entry.Target)
+		return nil, fmt.Errorf("no description for image '%s'", entry.Target)
 	}
-	return description, nil
+
+	instanceType := adapter.InstanceVM
+	if image.Type == string(api.InstanceTypeContainer) {
+		instanceType = adapter.InstanceContainer
+	}
+
+	info := &adapter.ImageInfo{
+		Description: description,
+		Type:        instanceType,
+	}
+
+	return info, nil
 }
 
 func (a *lxdApiAdapter) CreateAndUploadImage(meta adapter.ImageMetadata) error {
@@ -112,7 +123,7 @@ func (a *lxdApiAdapter) CreateAndUploadImage(meta adapter.ImageMetadata) error {
 	imageAliasPost := api.ImageAliasesPost{
 		ImageAliasesEntry: api.ImageAliasesEntry{
 			Name:        meta.Alias,
-			Description: "bosh image",
+			Description: meta.Description,
 			Target:      fingerprint,
 		},
 	}

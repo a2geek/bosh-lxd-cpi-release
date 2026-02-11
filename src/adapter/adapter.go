@@ -6,7 +6,7 @@ type ApiAdapter interface {
 	FindExistingImage(description string) (string, error)
 	CreateAndUploadImage(meta ImageMetadata) error
 	DeleteImage(alias string) error
-	GetStemcellDescription(alias string) (string, error)
+	GetStemcellInfo(alias string) (*ImageInfo, error)
 
 	IsManagedNetwork(name string) (bool, error)
 
@@ -44,6 +44,11 @@ const (
 	InstanceContainer
 )
 
+type ImageInfo struct {
+	Description string
+	Type        InstanceType
+}
+
 type ImageMetadata struct {
 	Alias          string
 	Description    string
@@ -60,6 +65,7 @@ type ImageMetadata struct {
 type InstanceMetadata struct {
 	Name          string
 	StemcellAlias string
+	Type          InstanceType
 	InstanceType  string
 	Project       string
 	Profiles      []string
