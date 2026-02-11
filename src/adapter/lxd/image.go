@@ -86,10 +86,15 @@ func (a *lxdApiAdapter) CreateAndUploadImage(meta adapter.ImageMetadata) error {
 		return err
 	}
 
+	instanceType := string(api.InstanceTypeVM)
+	if meta.Type == adapter.InstanceContainer {
+		instanceType = string(api.InstanceTypeContainer)
+	}
+
 	args := client.ImageCreateArgs{
 		MetaFile:   bytes.NewReader(buf.Bytes()),
 		RootfsFile: meta.TarFile,
-		Type:       string(api.InstanceTypeVM),
+		Type:       instanceType,
 	}
 	op, err := a.client.CreateImage(image, &args)
 	if err != nil {

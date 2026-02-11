@@ -37,9 +37,17 @@ type ApiAdapter interface {
 	Disconnect()
 }
 
+type InstanceType int
+
+const (
+	InstanceVM InstanceType = iota
+	InstanceContainer
+)
+
 type ImageMetadata struct {
 	Alias          string
 	Description    string
+	Type           InstanceType
 	OsDistro       string
 	ImagePath      string
 	Architecture   string
