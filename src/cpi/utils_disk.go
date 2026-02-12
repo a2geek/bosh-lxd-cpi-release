@@ -1,6 +1,8 @@
 package cpi
 
 import (
+	"bosh-lxd-cpi/adapter"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 )
 
@@ -21,6 +23,23 @@ func (c CPI) attachDiskDeviceToVM(vmCID apiv1.VMCID, name, diskId string) error 
 		"pool":   c.config.Server.StoragePool,
 		"source": diskId,
 	}
+
+	info, err := c.adapter.GetInstanceInfo(vmCID.AsString())
+	if err != nil {
+		return err
+	}
+
+	if info.Type == adapter.InstanceContainer {
+		switch name {
+		case DISK_DEVICE_EPHEMERAL:
+			device["path"] = "/var/vcap/data"
+		case DISK_DEVICE_PERSISTENT1:
+			device["path"] = "/var/vcap/store"
+		case DISK_DEVICE_PERSISTENT2:
+			device["path"] = "/mnt" // guessing
+		}
+	}
+
 	return c.adapter.AttachDevice(vmCID.AsString(), name, device)
 }
 
