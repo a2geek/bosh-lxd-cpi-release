@@ -38,12 +38,21 @@ func (a *lxdApiAdapter) DeleteInstance(name string) error {
 	return wait(a.client.DeleteInstance(name))
 }
 
-func (a *lxdApiAdapter) GetInstanceLocation(name string) (string, error) {
+func (a *lxdApiAdapter) GetInstanceInfo(name string) (*adapter.InstanceInfo, error) {
 	instance, _, err := a.client.GetInstance(name)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return instance.Location, nil
+
+	instanceType := adapter.InstanceVM
+	if instance.Type == string(api.InstanceTypeContainer) {
+		instanceType = adapter.InstanceContainer
+	}
+
+	return &adapter.InstanceInfo{
+		Location: instance.Location,
+		Type:     instanceType,
+	}, nil
 }
 
 func (a *lxdApiAdapter) UpdateInstanceDescription(name, newDescription string) error {

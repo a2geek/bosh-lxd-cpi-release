@@ -6,9 +6,9 @@ import (
 )
 
 func (c CPI) HasVM(cid apiv1.VMCID) (bool, error) {
-	location, err := c.adapter.GetInstanceLocation(cid.AsString())
+	info, err := c.adapter.GetInstanceInfo(cid.AsString())
 	if err != nil {
 		return false, bosherr.WrapError(err, "HasVM")
 	}
-	return len(location) != 0, nil
+	return len(info.Location) != 0, nil
 }

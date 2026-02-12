@@ -113,8 +113,10 @@ func (c CPI) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.Error("no matching stemcell configuration found")
 	}
 
-	// HACK! Not certain what to do at this point
+	contentType := adapter.BlockContent
 	if imageInfo.Type == adapter.InstanceContainer {
+		contentType = adapter.FilesystemContent
+		// HACK! Not certain what to do at this point
 		instanceConfig = map[string]string{}
 	}
 
@@ -139,7 +141,7 @@ func (c CPI) CreateVMV2(
 		}
 	}()
 
-	target, err := c.adapter.GetInstanceLocation(theCid)
+	target, err := c.adapter.GetInstanceInfo(theCid)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "VM Location")
 	}
@@ -155,7 +157,7 @@ func (c CPI) CreateVMV2(
 		}
 		diskCid := DISK_EPHEMERAL_PREFIX + diskId
 
-		err = c.adapter.CreateStoragePoolVolume(target, c.config.Server.StoragePool, diskCid, vmProps.EphemeralDisk)
+		err = c.adapter.CreateStoragePoolVolume(target.Location, c.config.Server.StoragePool, diskCid, contentType, vmProps.EphemeralDisk)
 		if err != nil {
 			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Create ephemeral disk")
 		}

@@ -1,6 +1,7 @@
 package lxd
 
 import (
+	"bosh-lxd-cpi/adapter"
 	"fmt"
 	"io"
 
@@ -30,11 +31,11 @@ func (a *lxdApiAdapter) ResizeStoragePoolVolume(pool, name string, newSize int) 
 	return wait(a.client.UpdateStoragePoolVolume(pool, "custom", name, writable, etag))
 }
 
-func (a *lxdApiAdapter) CreateStoragePoolVolume(target, pool, name string, size int) error {
+func (a *lxdApiAdapter) CreateStoragePoolVolume(target, pool, name string, contentType adapter.ContentType, size int) error {
 	storageVolumeRequest := api.StorageVolumesPost{
 		Name:        name,
 		Type:        "custom",
-		ContentType: "block",
+		ContentType: string(contentType),
 		StorageVolumePut: api.StorageVolumePut{
 			Config: map[string]string{
 				"size": fmt.Sprintf("%dMiB", size),
@@ -84,7 +85,7 @@ func (a *lxdApiAdapter) GetStoragePoolVolumeUsage(pool string) (map[string]int, 
 }
 
 func (a *lxdApiAdapter) ColocateStoragePoolVolumeWithInstance(instanceName, pool, diskName string) error {
-	instanceLoc, err := a.GetInstanceLocation(instanceName)
+	instanceInfo, err := a.GetInstanceInfo(instanceName)
 	if err != nil {
 		return err
 	}
@@ -94,12 +95,12 @@ func (a *lxdApiAdapter) ColocateStoragePoolVolumeWithInstance(instanceName, pool
 		return err
 	}
 
-	if instanceLoc == volume.Location {
+	if instanceInfo.Location == volume.Location {
 		return nil
 	}
 
 	srcServer := a.client.UseTarget(volume.Location)
-	dstServer := a.client.UseTarget(instanceLoc)
+	dstServer := a.client.UseTarget(instanceInfo.Location)
 
 	args := &lxd.StoragePoolVolumeCopyArgs{
 		Name:       volume.Name,

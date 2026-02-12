@@ -1,6 +1,8 @@
 package cpi
 
 import (
+	"bosh-lxd-cpi/adapter"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 )
@@ -15,12 +17,17 @@ func (c CPI) CreateDisk(size int,
 	theCid := DISK_PERSISTENT_PREFIX + id
 	diskCid := apiv1.NewDiskCID(theCid)
 
-	target, err := c.adapter.GetInstanceLocation(associatedVMCID.AsString())
+	target, err := c.adapter.GetInstanceInfo(associatedVMCID.AsString())
 	if err != nil {
 		return apiv1.DiskCID{}, bosherr.WrapError(err, "Finding disk location")
 	}
 
-	err = c.adapter.CreateStoragePoolVolume(target, c.config.Server.StoragePool, theCid, size)
+	contentType := adapter.BlockContent
+	if target.Type == adapter.InstanceContainer {
+		contentType = adapter.FilesystemContent
+	}
+
+	err = c.adapter.CreateStoragePoolVolume(target.Location, c.config.Server.StoragePool, theCid, contentType, size)
 	if err != nil {
 		return apiv1.DiskCID{}, bosherr.WrapError(err, "Creating volume")
 	}

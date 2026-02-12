@@ -22,7 +22,7 @@ func (c CPI) writeAgentFileToVM(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) erro
 		return fmt.Errorf("ISO image is empty")
 	}
 
-	target, err := c.adapter.GetInstanceLocation(vmCID.AsString())
+	target, err := c.adapter.GetInstanceInfo(vmCID.AsString())
 	if err != nil {
 		return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Location", vmCID.AsString())
 	}
@@ -30,7 +30,7 @@ func (c CPI) writeAgentFileToVM(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) erro
 	diskName := DISK_CONFIGURATION_PREFIX + uuid
 
 	buf := bytes.NewBuffer(diskImage)
-	err = c.adapter.CreateStoragePoolVolumeFromISO(target, c.config.Server.StoragePool, diskName, buf)
+	err = c.adapter.CreateStoragePoolVolumeFromISO(target.Location, c.config.Server.StoragePool, diskName, buf)
 	if err != nil {
 		return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Create", vmCID.AsString())
 	}

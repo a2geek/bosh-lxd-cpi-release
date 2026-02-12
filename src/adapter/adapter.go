@@ -12,7 +12,7 @@ type ApiAdapter interface {
 
 	CreateInstance(meta InstanceMetadata) error
 	DeleteInstance(name string) error
-	GetInstanceLocation(name string) (string, error)
+	GetInstanceInfo(name string) (*InstanceInfo, error)
 	UpdateInstanceDescription(name, newDescription string) error
 	SetInstanceAction(instanceName string, action Action) error
 	IsInstanceStopped(name string) (bool, error)
@@ -22,7 +22,7 @@ type ApiAdapter interface {
 	GetStoragePoolVolumeUsage(pool string) (map[string]int, error)
 	ResizeStoragePoolVolume(pool, name string, newSize int) error
 	CreateStoragePoolVolumeFromISO(target, pool, diskName string, backupFile io.Reader) error
-	CreateStoragePoolVolume(target, pool, name string, size int) error
+	CreateStoragePoolVolume(target, pool, name string, contentType ContentType, size int) error
 	UpdateStoragePoolVolumeDescription(pool, diskName, description string) error
 	ColocateStoragePoolVolumeWithInstance(instanceName, pool, diskName string) error
 
@@ -62,6 +62,11 @@ type ImageMetadata struct {
 	TarFile        io.Reader
 }
 
+type InstanceInfo struct {
+	Location string
+	Type     InstanceType
+}
+
 type InstanceMetadata struct {
 	Name          string
 	StemcellAlias string
@@ -80,4 +85,11 @@ const (
 	StartAction   Action = "start"
 	StopAction    Action = "stop"
 	RestartAction Action = "restart"
+)
+
+type ContentType string
+
+const (
+	BlockContent      ContentType = "block"
+	FilesystemContent ContentType = "filesystem"
 )

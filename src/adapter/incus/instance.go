@@ -38,9 +38,21 @@ func (a *incusApiAdapter) DeleteInstance(name string) error {
 	return wait(a.client.DeleteInstance(name))
 }
 
-func (a *incusApiAdapter) GetInstanceLocation(name string) (string, error) {
+func (a *incusApiAdapter) GetInstanceInfo(name string) (*adapter.InstanceInfo, error) {
 	instance, _, err := a.client.GetInstance(name)
-	return instance.Location, err
+	if err != nil {
+		return nil, err
+	}
+
+	instanceType := adapter.InstanceVM
+	if instance.Type == string(api.InstanceTypeContainer) {
+		instanceType = adapter.InstanceContainer
+	}
+
+	return &adapter.InstanceInfo{
+		Location: instance.Location,
+		Type:     instanceType,
+	}, nil
 }
 
 func (a *incusApiAdapter) UpdateInstanceDescription(name, newDescription string) error {
