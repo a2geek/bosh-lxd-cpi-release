@@ -20,9 +20,9 @@ else
 	# Presumption is initial deploy, so sitting on some desktop -- go to the internet and get a copy
 	case "${machine}" in
 		"x86_64") machine="amd64" ;;
-		"aarch64") machine="arm64" ;;
+		"aarch64"|"arm64") machine="arm64" ;;
 	esac
-	archive="go1.24.3.${platform}-${machine}.tar.gz"
+	archive="go1.25.4.${platform}-${machine}.tar.gz"
 	url="https://go.dev/dl/${archive}"
 	curl -LO "${url}"
 	# Install it...
