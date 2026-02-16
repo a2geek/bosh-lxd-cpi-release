@@ -7,14 +7,12 @@ import (
 	lxd "github.com/canonical/lxd/client"
 )
 
-const AGENT_PATH = "/var/vcap/bosh/warden-cpi-agent-env.json"
-
-func (a *lxdApiAdapter) ContainerFileRead(containerName string) (io.ReadCloser, error) {
-	readCloser, _, err := a.client.GetContainerFile(containerName, AGENT_PATH)
+func (a *lxdApiAdapter) ContainerFileRead(containerName, filePath string) (io.ReadCloser, error) {
+	readCloser, _, err := a.client.GetContainerFile(containerName, filePath)
 	return readCloser, err
 }
 
-func (a *lxdApiAdapter) ContainerFileWrite(containerName string, agentEnvContents []byte) error {
+func (a *lxdApiAdapter) ContainerFileWrite(containerName, filePath string, agentEnvContents []byte) error {
 	args := lxd.ContainerFileArgs{
 		Content:   bytes.NewReader(agentEnvContents),
 		UID:       0,    // root
@@ -23,5 +21,5 @@ func (a *lxdApiAdapter) ContainerFileWrite(containerName string, agentEnvContent
 		Type:      "file",
 		WriteMode: "overwrite",
 	}
-	return a.client.CreateContainerFile(containerName, AGENT_PATH, args)
+	return a.client.CreateContainerFile(containerName, filePath, args)
 }

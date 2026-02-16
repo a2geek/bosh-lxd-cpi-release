@@ -7,14 +7,12 @@ import (
 	incus "github.com/lxc/incus/v6/client"
 )
 
-const AGENT_PATH = "/var/vcap/bosh/warden-cpi-agent-env.json"
-
-func (a *incusApiAdapter) ContainerFileRead(containerName string) (io.ReadCloser, error) {
-	readCloser, _, err := a.client.GetInstanceFile(containerName, AGENT_PATH)
+func (a *incusApiAdapter) ContainerFileRead(containerName, filePath string) (io.ReadCloser, error) {
+	readCloser, _, err := a.client.GetInstanceFile(containerName, filePath)
 	return readCloser, err
 }
 
-func (a *incusApiAdapter) ContainerFileWrite(containerName string, agentEnvContents []byte) error {
+func (a *incusApiAdapter) ContainerFileWrite(containerName, filePath string, agentEnvContents []byte) error {
 	args := incus.InstanceFileArgs{
 		Content:   bytes.NewReader(agentEnvContents),
 		UID:       0,    // root
@@ -23,5 +21,5 @@ func (a *incusApiAdapter) ContainerFileWrite(containerName string, agentEnvConte
 		Type:      "file",
 		WriteMode: "overwrite",
 	}
-	return a.client.CreateInstanceFile(containerName, AGENT_PATH, args)
+	return a.client.CreateInstanceFile(containerName, filePath, args)
 }

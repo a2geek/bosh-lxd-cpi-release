@@ -118,6 +118,9 @@ func (c CPI) CreateVMV2(
 		contentType = adapter.FilesystemContent
 		// HACK! Not certain what to do at this point
 		instanceConfig = map[string]string{}
+		instanceConfig["security.privileged"] = "true"
+		instanceConfig["security.nesting"] = "true"
+		instanceConfig["raw.lxc"] = "lxc.mount.auto = proc:rw sys:rw cgroup:rw\nlxc.apparmor.profile = unconfined\nlxc.cap.drop ="
 	}
 
 	err = c.adapter.CreateInstance(adapter.InstanceMetadata{
@@ -173,6 +176,16 @@ func (c CPI) CreateVMV2(
 	err = c.writeAgentFileToVM(vmCID, agentEnv)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Write AgentEnv")
+	}
+
+	if target.Type == adapter.InstanceContainer {
+		for eth := 0; eth < len(networks); eth++ {
+			ethN := fmt.Sprintf("# Using DHCP to statically assign our IP address\n"+
+				"auto eth%d\n"+
+				"iface eth%d inet dhcp\n", eth, eth)
+			fileName := fmt.Sprintf("/etc/network/interfaces.d/eth%d", eth)
+			c.adapter.ContainerFileWrite(vmCID.AsString(), fileName, []byte(ethN))
+		}
 	}
 
 	err = c.adapter.SetInstanceAction(vmCID.AsString(), adapter.StartAction)

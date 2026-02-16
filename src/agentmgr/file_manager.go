@@ -7,6 +7,8 @@ import (
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 )
 
+const AGENT_PATH = "/var/vcap/bosh/warden-cpi-agent-env.json"
+
 func NewFileManager(adapter adapter.ApiAdapter) AgentManager {
 	return fileManager{
 		adapter: adapter,
@@ -18,7 +20,7 @@ type fileManager struct {
 }
 
 func (m fileManager) Read(vmCID apiv1.VMCID) (apiv1.AgentEnv, error) {
-	readCloser, err := m.adapter.ContainerFileRead(vmCID.AsString())
+	readCloser, err := m.adapter.ContainerFileRead(vmCID.AsString(), AGENT_PATH)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +40,7 @@ func (m fileManager) Write(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) ([]byte, 
 		return nil, err
 	}
 
-	err = m.adapter.ContainerFileWrite(vmCID.AsString(), agentEnvContents)
+	err = m.adapter.ContainerFileWrite(vmCID.AsString(), AGENT_PATH, agentEnvContents)
 	// We're not creating a disk image, so no bytes are returned
 	return nil, err
 }

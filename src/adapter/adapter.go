@@ -17,8 +17,8 @@ type ApiAdapter interface {
 	SetInstanceAction(instanceName string, action Action) error
 	IsInstanceStopped(name string) (bool, error)
 
-	ContainerFileRead(containerName string) (io.ReadCloser, error)
-	ContainerFileWrite(containerName string, agentEnvContents []byte) error
+	ContainerFileRead(containerName, filePath string) (io.ReadCloser, error)
+	ContainerFileWrite(containerName, filePath string, agentEnvContents []byte) error
 
 	DeleteStoragePoolVolume(pool, name string) error
 	GetStoragePoolVolume(pool, name string) (string, error)
