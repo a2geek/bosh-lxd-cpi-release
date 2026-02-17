@@ -21,10 +21,10 @@ func (c CPI) writeAgentFileToVM(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) erro
 	}
 
 	if target.Type == adapter.InstanceContainer {
-		_, err = c.agentMgrContainer.Write(vmCID, agentEnv)
+		_, err = c.agentMgr.Write(vmCID, agentEnv)
 		return err
 	} else {
-		diskImage, err := c.agentMgrVM.Write(vmCID, agentEnv)
+		diskImage, err := c.agentMgr.Write(vmCID, agentEnv)
 		if err != nil {
 			return bosherr.WrapErrorf(err, "writeAgentFileToVm(%s) - Write", vmCID.AsString())
 		}

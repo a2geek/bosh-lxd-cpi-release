@@ -33,5 +33,5 @@ func (c CPI) DeleteVM(vmCID apiv1.VMCID) error {
 		}
 	}
 
-	return c.agentMgrVM.Delete(vmCID)
+	return c.agentMgr.Delete(vmCID)
 }

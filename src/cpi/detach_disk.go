@@ -18,7 +18,7 @@ func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
 		return bosherr.WrapError(err, "Detach Device")
 	}
 
-	agentEnv, err := c.agentMgrVM.Read(vmCID)
+	agentEnv, err := c.agentMgr.Read(vmCID)
 	if err != nil {
 		return bosherr.WrapError(err, "Retrieve AgentEnv")
 	}

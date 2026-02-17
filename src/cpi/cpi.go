@@ -11,26 +11,29 @@ import (
 
 // CPI implementation
 type CPI struct {
-	adapter           adapter.ApiAdapter
-	uuidGen           boshuuid.Generator
-	config            config.Config
-	logger            boshlog.Logger
-	agentMgrVM        agentmgr.AgentManager
-	agentMgrContainer agentmgr.AgentManager
+	adapter  adapter.ApiAdapter
+	uuidGen  boshuuid.Generator
+	config   config.Config
+	logger   boshlog.Logger
+	agentMgr agentmgr.AgentManager
 }
 
 func NewCPI(adapter adapter.ApiAdapter, cfg config.Config, logger boshlog.Logger) (CPI, error) {
-	am, err := agentmgr.NewAgentManager(cfg.AgentConfig)
+	agentMgrVM, err := agentmgr.NewAgentManager(cfg.AgentConfig)
 	if err != nil {
 		return CPI{}, err
 	}
+
+	agentMgrContainer := agentmgr.NewContainerFileManager(adapter)
+
+	agentMgr := agentmgr.NewSwitchManager(adapter, agentMgrVM, agentMgrContainer)
+
 	cpi := CPI{
-		adapter:           adapter,
-		uuidGen:           boshuuid.NewGenerator(),
-		config:            cfg,
-		logger:            logger,
-		agentMgrVM:        am,
-		agentMgrContainer: agentmgr.NewContainerFileManager(adapter),
+		adapter:  adapter,
+		uuidGen:  boshuuid.NewGenerator(),
+		config:   cfg,
+		logger:   logger,
+		agentMgr: agentMgr,
 	}
 	return cpi, err
 }

@@ -13,7 +13,7 @@ func (c CPI) AttachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
 }
 
 func (c CPI) AttachDiskV2(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) (apiv1.DiskHint, error) {
-	agentEnv, err := c.agentMgrVM.Read(vmCID)
+	agentEnv, err := c.agentMgr.Read(vmCID)
 	if err != nil {
 		return apiv1.NewDiskHintFromString(""), bosherr.WrapError(err, "Read AgentEnv")
 	}
