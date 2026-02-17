@@ -13,7 +13,7 @@ type AgentManager interface {
 	Delete(apiv1.VMCID) error
 }
 
-// NewAgentManager will initialize a new config drive for AgentEnv settings
+// NewAgentManager will initialize a new config driver for AgentEnv settings
 func NewAgentManager(config Config) (AgentManager, error) {
 	var a AgentManager
 	switch config.SourceType {
