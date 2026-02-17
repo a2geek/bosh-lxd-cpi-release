@@ -9,17 +9,17 @@ import (
 
 const AGENT_PATH = "/var/vcap/bosh/warden-cpi-agent-env.json"
 
-func NewFileManager(adapter adapter.ApiAdapter) AgentManager {
-	return fileManager{
+func NewContainerFileManager(adapter adapter.ApiAdapter) AgentManager {
+	return containerFileManager{
 		adapter: adapter,
 	}
 }
 
-type fileManager struct {
+type containerFileManager struct {
 	adapter adapter.ApiAdapter
 }
 
-func (m fileManager) Read(vmCID apiv1.VMCID) (apiv1.AgentEnv, error) {
+func (m containerFileManager) Read(vmCID apiv1.VMCID) (apiv1.AgentEnv, error) {
 	readCloser, err := m.adapter.ContainerFileRead(vmCID.AsString(), AGENT_PATH)
 	if err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func (m fileManager) Read(vmCID apiv1.VMCID) (apiv1.AgentEnv, error) {
 	return factory.FromBytes(bytes)
 }
 
-func (m fileManager) Write(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) ([]byte, error) {
+func (m containerFileManager) Write(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) ([]byte, error) {
 	agentEnvContents, err := agentEnv.AsBytes()
 	if err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func (m fileManager) Write(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) ([]byte, 
 	return nil, err
 }
 
-func (m fileManager) Delete(vmCID apiv1.VMCID) error {
+func (m containerFileManager) Delete(vmCID apiv1.VMCID) error {
 	// N/A
 	return nil
 }

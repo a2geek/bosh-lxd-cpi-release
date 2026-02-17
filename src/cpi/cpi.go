@@ -30,7 +30,7 @@ func NewCPI(adapter adapter.ApiAdapter, cfg config.Config, logger boshlog.Logger
 		config:            cfg,
 		logger:            logger,
 		agentMgrVM:        am,
-		agentMgrContainer: agentmgr.NewFileManager(adapter),
+		agentMgrContainer: agentmgr.NewContainerFileManager(adapter),
 	}
 	return cpi, err
 }
