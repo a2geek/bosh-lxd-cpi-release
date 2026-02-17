@@ -821,7 +821,7 @@ func (r *ProtocolLXD) ExecContainer(containerName string, exec api.ContainerExec
 func (r *ProtocolLXD) GetContainerFile(containerName string, path string) (io.ReadCloser, *ContainerFileResponse, error) {
 	// Prepare the HTTP request
 	requestURL, err := shared.URLEncode(
-		r.httpBaseURL.String()+"1.0/containers/"+url.PathEscape(containerName)+"/files",
+		r.httpBaseURL.String()+"/1.0/containers/"+url.PathEscape(containerName)+"/files",
 		map[string]string{"path": path})
 	if err != nil {
 		return nil, nil, err
