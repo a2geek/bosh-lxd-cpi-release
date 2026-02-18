@@ -2,9 +2,21 @@ package incus
 
 import (
 	"bosh-lxd-cpi/adapter"
+	"strings"
+	"time"
 
 	"github.com/lxc/incus/v6/shared/api"
 )
+
+// isInvalidPIDError checks if the error is an "Invalid PID" error from Incus.
+// This occurs when trying to stop a VM that has no valid QEMU process,
+// typically because the VM is already stopped or in a race condition.
+func isInvalidPIDError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "Invalid PID")
+}
 
 func (a *incusApiAdapter) CreateInstance(meta adapter.InstanceMetadata) error {
 	instancesPost := api.InstancesPost{
@@ -39,14 +51,40 @@ func (a *incusApiAdapter) GetInstanceLocation(name string) (string, error) {
 }
 
 func (a *incusApiAdapter) UpdateInstanceDescription(name, newDescription string) error {
-	instance, etag, err := a.client.GetInstance(name)
-	if err != nil {
+	// Retry up to 5 times with 1 second delay to handle "instance busy" errors
+	// that occur when the instance is in the middle of another operation.
+	var lastErr error
+	for i := 0; i < 5; i++ {
+		instance, etag, err := a.client.GetInstance(name)
+		if err != nil {
+			return err
+		}
+
+		instance.Description = newDescription
+
+		err = wait(a.client.UpdateInstance(name, instance.Writable(), etag))
+		if err == nil {
+			return nil
+		}
+
+		lastErr = err
+		// If instance is busy with another operation, wait and retry
+		if isInstanceBusyError(err) {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		// For other errors, return immediately
 		return err
 	}
+	return lastErr
+}
 
-	instance.Description = newDescription
-
-	return wait(a.client.UpdateInstance(name, instance.Writable(), etag))
+// isInstanceBusyError checks if the error indicates the instance is busy with another operation.
+func isInstanceBusyError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "Instance is busy")
 }
 
 func (a *incusApiAdapter) SetInstanceAction(instanceName string, action adapter.Action) error {
@@ -64,6 +102,12 @@ func (a *incusApiAdapter) SetInstanceAction(instanceName string, action adapter.
 
 		err = wait(a.client.UpdateInstanceState(instanceName, req, ""))
 		if err != nil {
+			// Handle "Invalid PID" errors during stop action - this occurs when the
+			// VM is already stopped or stopping but Incus has a stale QEMU process state.
+			// Treat this as "already stopped" and continue.
+			if action == adapter.StopAction && isInvalidPIDError(err) {
+				return nil
+			}
 			return err
 		}
 	}
