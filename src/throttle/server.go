@@ -103,7 +103,7 @@ func (ts *ThrottleServer) handleTransactions(w http.ResponseWriter, r *http.Requ
 			w.Write(data)
 		}
 	case http.MethodPost:
-		if len(ts.transactions) > ts.limit {
+		if len(ts.transactions) >= ts.limit {
 			ts.logger.Debug("main", "%s %s - Too many requests", r.Method, r.URL.Path)
 			http.Error(w, "Too many requests", http.StatusTooManyRequests)
 		} else {

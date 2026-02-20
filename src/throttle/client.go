@@ -54,20 +54,21 @@ func (c *ThrottleClient) Lock() (string, int, error) {
 
 // LockAndWait will handle the "too many requests" (429) response until it is free.
 func (c *ThrottleClient) LockAndWait() (string, error) {
-	var transactionId string
-	for transactionId == "" {
+	for {
 		content, statusCode, err := c.Lock()
 		if statusCode == http.StatusTooManyRequests {
 			time.Sleep(10 * time.Second)
-			statusCode = 0
-			err = nil
+			continue
 		}
 		if err != nil {
 			return "", err
 		}
-		transactionId = content
+		if statusCode == http.StatusCreated {
+			return content, nil
+		}
+		// Unexpected status code, retry after a short delay
+		time.Sleep(1 * time.Second)
 	}
-	return transactionId, nil
 }
 
 func (c *ThrottleClient) Unlock(transactionId string) error {
