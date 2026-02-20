@@ -42,7 +42,23 @@ func (a *incusApiAdapter) CreateInstance(meta adapter.InstanceMetadata) error {
 }
 
 func (a *incusApiAdapter) DeleteInstance(name string) error {
-	return wait(a.client.DeleteInstance(name))
+	err := wait(a.client.DeleteInstance(name))
+	if err != nil {
+		return err
+	}
+
+	// Verify the instance is actually gone by polling until GetInstance returns "not found".
+	// This handles the case where the operation completes but the instance is still
+	// visible in the system for a brief period.
+	for i := 0; i < 30; i++ {
+		_, _, err := a.client.GetInstance(name)
+		if err != nil && strings.Contains(err.Error(), "not found") {
+			return nil
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	return nil
 }
 
 func (a *incusApiAdapter) GetInstanceLocation(name string) (string, error) {
@@ -90,6 +106,11 @@ func isInstanceBusyError(err error) bool {
 func (a *incusApiAdapter) SetInstanceAction(instanceName string, action adapter.Action) error {
 	atCurrentState, err := a.isVMAtRequestedState(instanceName, string(action))
 	if err != nil {
+		// Handle "Invalid PID" errors during stop action - this can occur when
+		// checking state of a VM that is in a bad state.
+		if action == adapter.StopAction && isInvalidPIDError(err) {
+			return nil
+		}
 		return err
 	}
 	if !atCurrentState {
