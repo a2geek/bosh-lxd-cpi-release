@@ -25,6 +25,13 @@ func wait(op WaitOperation, err error) error {
 		return err
 	}
 
+	// If the original error was swallowed by checkError (e.g., "LXD VM agent" error),
+	// but op is nil, we cannot wait - just return successfully since the error was
+	// deemed non-fatal.
+	if op == nil {
+		return nil
+	}
+
 	err = op.Wait()
 	if checkError(err) != nil {
 		return bosherr.WrapErrorf(err, "Wait")

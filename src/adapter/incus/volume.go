@@ -1,12 +1,17 @@
 package incus
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	client "github.com/lxc/incus/v6/client"
 	"github.com/lxc/incus/v6/shared/api"
 )
+
+// Timeout for volume creation operations to fail fast on infrastructure issues
+const volumeCreateTimeout = 120 * time.Second
 
 func (a *incusApiAdapter) DeleteStoragePoolVolume(pool, name string) error {
 	return a.client.DeleteStoragePoolVolume(pool, "custom", name)
@@ -45,7 +50,20 @@ func (a *incusApiAdapter) CreateStoragePoolVolume(target, pool, name string, siz
 	if target != "" {
 		c = c.UseTarget(target)
 	}
-	return c.CreateStoragePoolVolume(pool, storageVolumeRequest)
+
+	// Use a timeout to fail fast on infrastructure issues (e.g., ZFS zvol deactivation hangs)
+	// This allows BOSH to retry quickly rather than waiting for Incus's 5-minute timeout
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- c.CreateStoragePoolVolume(pool, storageVolumeRequest)
+	}()
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-time.After(volumeCreateTimeout):
+		return errors.New("volume creation timed out - infrastructure may be overloaded")
+	}
 }
 
 func (a *incusApiAdapter) CreateStoragePoolVolumeFromISO(target, pool, diskName string, backupFile io.Reader) error {

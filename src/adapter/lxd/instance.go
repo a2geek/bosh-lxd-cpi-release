@@ -2,9 +2,21 @@ package lxd
 
 import (
 	"bosh-lxd-cpi/adapter"
+	"strings"
+	"time"
 
 	"github.com/canonical/lxd/shared/api"
 )
+
+// isInvalidPIDError checks if the error is an "Invalid PID" error from LXD.
+// This occurs when trying to stop a VM that has no valid QEMU process,
+// typically because the VM is already stopped or in a race condition.
+func isInvalidPIDError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "Invalid PID")
+}
 
 func (a *lxdApiAdapter) CreateInstance(meta adapter.InstanceMetadata) error {
 	instancesPost := api.InstancesPost{
@@ -30,7 +42,23 @@ func (a *lxdApiAdapter) CreateInstance(meta adapter.InstanceMetadata) error {
 }
 
 func (a *lxdApiAdapter) DeleteInstance(name string) error {
-	return wait(a.client.DeleteInstance(name))
+	err := wait(a.client.DeleteInstance(name))
+	if err != nil {
+		return err
+	}
+
+	// Verify the instance is actually gone by polling until GetInstance returns "not found".
+	// This handles the case where the operation completes but the instance is still
+	// visible in the system for a brief period.
+	for i := 0; i < 30; i++ {
+		_, _, err := a.client.GetInstance(name)
+		if err != nil && strings.Contains(err.Error(), "not found") {
+			return nil
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	return nil
 }
 
 func (a *lxdApiAdapter) GetInstanceLocation(name string) (string, error) {
@@ -55,6 +83,11 @@ func (a *lxdApiAdapter) UpdateInstanceDescription(name, newDescription string) e
 func (a *lxdApiAdapter) SetInstanceAction(instanceName string, action adapter.Action) error {
 	atCurrentState, err := a.isVMAtRequestedState(instanceName, string(action))
 	if err != nil {
+		// Handle "Invalid PID" errors during stop action - this can occur when
+		// checking state of a VM that is in a bad state.
+		if action == adapter.StopAction && isInvalidPIDError(err) {
+			return nil
+		}
 		return err
 	}
 	if !atCurrentState {
@@ -67,6 +100,12 @@ func (a *lxdApiAdapter) SetInstanceAction(instanceName string, action adapter.Ac
 
 		err = wait(a.client.UpdateInstanceState(instanceName, req, ""))
 		if err != nil {
+			// Handle "Invalid PID" errors during stop action - this occurs when the
+			// VM is already stopped or stopping but LXD has a stale QEMU process state.
+			// Treat this as "already stopped" and continue.
+			if action == adapter.StopAction && isInvalidPIDError(err) {
+				return nil
+			}
 			return err
 		}
 	}
