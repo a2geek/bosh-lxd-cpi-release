@@ -17,7 +17,7 @@
 
 #### `instance_config` settings
 
-The default settings are:
+The default settings are as follows. _This is good through LXD 6.6._
 
 ```yaml
 instance_config:
@@ -26,6 +26,16 @@ instance_config:
     security.secureboot: "false"
   default:
     security.secureboot: "false"
+```
+
+_After LXD 6.6, use the following:_
+
+```yaml
+instance_config:
+  jammy:
+    boot.mode: bios
+  default:
+    boot.mode: uefi-nosecureboot
 ```
 
 Notes: 
