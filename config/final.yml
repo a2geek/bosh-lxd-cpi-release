@@ -1,6 +1,6 @@
 ---
 blobstore:
-  provider: s3
+  provider: local
   options:
-    bucket_name: bosh-lxd-cpi-release
+    blobstore_path: final_blobs
 final_name: lxd-bosh-cpi
