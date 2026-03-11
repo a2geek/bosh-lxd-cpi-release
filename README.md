@@ -6,7 +6,7 @@ This is a [BOSH CPI](https://bosh.io/) implementation to support [LXD](https://c
 
 ## Requirements
 
-> Note that as of LXD 6.6, the "security.secureboot" and "security.csm" got replaced with "boot.mode". See the [CPI Configuration options](docs/DEPLOYING.md) for more. For now, the default configuration uses the "security.*" notation due to 5.21 being the LTS release.
+> Note that as of LXD 6.6, the "security.secureboot" and "security.csm" got replaced with "boot.mode". See the [CPI Configuration options](docs/CONFIGURATION.md) for more. For now, the default configuration uses the "security.*" notation due to 5.21 being the LTS release.
 
 Recent verison of LXD and Incus both support BIOS and UEFI boots. "Jammy" or earlier stemcells will require a BIOS boot while "Noble" or later stemcells can use the UEFI boot.
 
