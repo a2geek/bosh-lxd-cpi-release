@@ -23,12 +23,18 @@ func (c CPI) CreateVMV2(
 	cloudProps apiv1.VMCloudProps, networks apiv1.Networks,
 	associatedDiskCIDs []apiv1.DiskCID, env apiv1.VMEnv) (apiv1.VMCID, apiv1.Networks, error) {
 
+	c.logger.Debug("create_vm", "Starting CreateVMV2 for agent '%s' with stemcell '%s'", agentID.AsString(), stemcellCID.AsString())
+
+	// Track ephemeral disk for cleanup on failure
+	var ephemeralDiskCid string
+
 	id, err := c.uuidGen.Generate()
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating VM id")
 	}
 	theCid := "vm-" + id
 	vmCID := apiv1.NewVMCID(theCid)
+	c.logger.Debug("create_vm", "Generated VM CID: '%s'", theCid)
 
 	// Default to global configuration
 	vmProps := LXDVMCloudProperties{
@@ -124,12 +130,31 @@ func (c CPI) CreateVMV2(
 		Config:        instanceConfig,
 	})
 	if err != nil {
+		c.logger.Error("create_vm", "Failed to create instance '%s': %v", theCid, err)
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating VM")
 	}
+	c.logger.Debug("create_vm", "Instance '%s' created successfully", theCid)
 
 	defer func() {
 		if err != nil {
-			c.DeleteVM(vmCID)
+			c.logger.Error("create_vm", "CreateVMV2 failed for '%s', starting cleanup. Error: %v", theCid, err)
+			// Clean up ephemeral disk if it was created but not yet attached
+			if ephemeralDiskCid != "" {
+				c.logger.Debug("create_vm", "Cleaning up unattached ephemeral disk '%s'", ephemeralDiskCid)
+				cleanupErr := c.adapter.DeleteStoragePoolVolume(c.config.Server.StoragePool, ephemeralDiskCid)
+				if cleanupErr != nil {
+					c.logger.Error("create_vm", "Failed to cleanup ephemeral disk '%s': %v", ephemeralDiskCid, cleanupErr)
+				} else {
+					c.logger.Debug("create_vm", "Successfully cleaned up ephemeral disk '%s'", ephemeralDiskCid)
+				}
+			}
+			c.logger.Debug("create_vm", "Calling DeleteVM for cleanup of '%s'", vmCID.AsString())
+			cleanupErr := c.DeleteVM(vmCID)
+			if cleanupErr != nil {
+				c.logger.Error("create_vm", "Failed to cleanup VM '%s': %v", vmCID.AsString(), cleanupErr)
+			} else {
+				c.logger.Debug("create_vm", "Successfully cleaned up VM '%s'", vmCID.AsString())
+			}
 		}
 	}()
 
@@ -143,30 +168,45 @@ func (c CPI) CreateVMV2(
 	agentEnv.AttachSystemDisk(apiv1.NewDiskHintFromString("/dev/sda"))
 
 	if vmProps.EphemeralDisk > 0 {
+		c.logger.Debug("create_vm", "Creating ephemeral disk of size %d MB for VM '%s'", vmProps.EphemeralDisk, theCid)
 		diskId, err := c.uuidGen.Generate()
 		if err != nil {
 			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating Disk id")
 		}
-		diskCid := DISK_EPHEMERAL_PREFIX + diskId
+		ephemeralDiskCid = DISK_EPHEMERAL_PREFIX + diskId
 
-		err = c.adapter.CreateStoragePoolVolume(target, c.config.Server.StoragePool, diskCid, vmProps.EphemeralDisk)
+		err = c.adapter.CreateStoragePoolVolume(target, c.config.Server.StoragePool, ephemeralDiskCid, vmProps.EphemeralDisk)
 		if err != nil {
+			c.logger.Error("create_vm", "Failed to create ephemeral disk '%s': %v", ephemeralDiskCid, err)
 			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Create ephemeral disk")
 		}
+		c.logger.Debug("create_vm", "Ephemeral disk '%s' created, attaching to VM '%s'", ephemeralDiskCid, theCid)
 
-		err = c.attachDiskDeviceToVM(vmCID, DISK_DEVICE_EPHEMERAL, diskCid)
+		err = c.attachDiskDeviceToVM(vmCID, DISK_DEVICE_EPHEMERAL, ephemeralDiskCid)
 		if err != nil {
+			c.logger.Error("create_vm", "Failed to attach ephemeral disk '%s' to VM '%s': %v", ephemeralDiskCid, theCid, err)
 			return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Attach ephemeral disk")
 		}
+		// Disk is now attached, DeleteVM will clean it up
+		c.logger.Debug("create_vm", "Ephemeral disk '%s' attached to VM '%s'", ephemeralDiskCid, theCid)
+		ephemeralDiskCid = ""
 
 		agentEnv.AttachEphemeralDisk(apiv1.NewDiskHintFromString("/dev/sdb"))
 	}
 
 	err = c.writeAgentFileToVM(vmCID, agentEnv)
 	if err != nil {
+		c.logger.Error("create_vm", "Failed to write agent env to VM '%s': %v", theCid, err)
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Write AgentEnv")
 	}
+	c.logger.Debug("create_vm", "Agent env written to VM '%s'", theCid)
 
+	c.logger.Debug("create_vm", "Starting VM '%s'", theCid)
 	err = c.adapter.SetInstanceAction(vmCID.AsString(), adapter.StartAction)
+	if err != nil {
+		c.logger.Error("create_vm", "Failed to start VM '%s': %v", theCid, err)
+	} else {
+		c.logger.Debug("create_vm", "CreateVMV2 completed successfully for VM '%s'", theCid)
+	}
 	return vmCID, newNetworks, err
 }
