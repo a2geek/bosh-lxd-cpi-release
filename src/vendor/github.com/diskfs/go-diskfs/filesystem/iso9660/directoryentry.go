@@ -366,7 +366,7 @@ func parseDirEntries(b []byte, f *FileSystem) ([]*directoryEntry, error) {
 func (de *directoryEntry) getLocation(p string) (location, size uint32, err error) {
 	// break path down into parts and levels
 	parts := splitPath(p)
-	if len(parts) == 0 {
+	if len(parts) == 0 || parts[0] == "." {
 		location = de.location
 		size = de.size
 	} else {
@@ -512,6 +512,16 @@ func (de *directoryEntry) IsDir() bool {
 // Sys() interface{}   // underlying data source (can return nil)
 func (de *directoryEntry) Sys() interface{} {
 	return nil
+}
+
+// Info returns the FileInfo structure, which directoryEntry already implements
+func (de *directoryEntry) Info() (os.FileInfo, error) {
+	return de, nil
+}
+
+// Type returns the type of the directory entry
+func (de *directoryEntry) Type() os.FileMode {
+	return de.Mode()
 }
 
 // utilities

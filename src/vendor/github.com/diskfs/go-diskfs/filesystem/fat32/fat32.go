@@ -3,6 +3,8 @@ package fat32
 import (
 	"errors"
 	"fmt"
+	"io"
+	iofs "io/fs"
 	"os"
 	"path"
 	"strings"
@@ -93,7 +95,7 @@ func (fs *FileSystem) Equal(a *FileSystem) bool {
 //
 // If the provided blocksize is 0, it will use the default of 512 bytes. If it is any number other than 0
 // or 512, it will return an error.
-func Create(b backend.Storage, size, start, blocksize int64, volumeLabel string) (*FileSystem, error) {
+func Create(b backend.Storage, size, start, blocksize int64, volumeLabel string, reproducible bool) (*FileSystem, error) {
 	// blocksize must be <=0 or exactly SectorSize512 or error
 	if blocksize != int64(SectorSize512) && blocksize > 0 {
 		return nil, fmt.Errorf("blocksize for FAT32 must be either 512 bytes or 0, not %d", blocksize)
@@ -104,10 +106,20 @@ func Create(b backend.Storage, size, start, blocksize int64, volumeLabel string)
 	if size < blocksize*4 {
 		return nil, fmt.Errorf("requested size is smaller than minimum allowed FAT32, requested %d minimum %d", size, blocksize*4)
 	}
-	// FAT filesystems use time-of-day of creation as a volume ID
-	now := time.Now()
-	// because we like the fudges other people did for uniqueness
-	volid := uint32(now.Unix()<<20 | (now.UnixNano() / 1000000))
+
+	var volid uint32
+
+	// if we are not invariant, create a volume ID
+	// otherwise, leave it as zero
+	// note: `mkfs.vfat --invariant` uses a volid of 0xabcd1234 in little-endian format
+	// but we will just use zero for simplicity since we do not care about matching exactly
+	// and only want reproducible builds
+	if !reproducible {
+		// FAT filesystems use time-of-day of creation as a volume ID
+		now := time.Now()
+		// because we like the fudges other people did for uniqueness
+		volid = uint32(now.Unix()<<20 | (now.UnixNano() / 1000000))
+	}
 
 	fsisPrimarySector := uint16(1)
 	backupBootSector := uint16(6)
@@ -327,12 +339,13 @@ func Create(b backend.Storage, size, start, blocksize int64, volumeLabel string)
 // which allow you to work directly with partitions, rather than having to calculate (and hopefully not make any errors)
 // where a partition starts and ends.
 //
-// If the provided blocksize is 0, it will use the default of 512 bytes. If it is any number other than 0
-// or 512, it will return an error.
+// If the provided blocksize is 0, it will use the default of 512 bytes. The blocksize parameter is only used
+// for validation; the actual bytes per sector is read from the filesystem's BPB.
 func Read(b backend.Storage, size, start, blocksize int64) (*FileSystem, error) {
-	// blocksize must be <=0 or exactly SectorSize512 or error
-	if blocksize != int64(SectorSize512) && blocksize > 0 {
-		return nil, fmt.Errorf("blocksize for FAT32 must be either 512 bytes or 0, not %d", blocksize)
+	// blocksize validation - we accept 0 (default), 512, or 4096 (for 4k native disks)
+	// The actual bytesPerSector is read from the BPB regardless of this parameter
+	if blocksize != 0 && blocksize != int64(SectorSize512) && blocksize != 4096 {
+		return nil, fmt.Errorf("blocksize for FAT32 must be 0, 512, or 4096 bytes, not %d", blocksize)
 	}
 	if size > Fat32MaxSize {
 		return nil, fmt.Errorf("requested size is larger than maximum allowed FAT32 size %d", Fat32MaxSize)
@@ -341,30 +354,36 @@ func Read(b backend.Storage, size, start, blocksize int64) (*FileSystem, error) 
 		return nil, fmt.Errorf("requested size is smaller than minimum allowed FAT32 size %d", blocksize*4)
 	}
 	// load the information from the disk
-	// read first 512 bytes from the file
-	bsb := make([]byte, SectorSize512)
+	// We need to read at least the first logical sector to get the BPB
+	// Try reading up to 4096 bytes to handle 4K sector devices
+	maxSectorSize := 4096
+	bsb := make([]byte, maxSectorSize)
 	n, err := b.ReadAt(bsb, start)
 	if err != nil {
 		return nil, fmt.Errorf("could not read bytes from file: %w", err)
 	}
-	if uint16(n) < uint16(SectorSize512) {
-		return nil, fmt.Errorf("only could read %d bytes from file", n)
+	if n < int(SectorSize512) {
+		return nil, fmt.Errorf("only could read %d bytes from file, need at least %d", n, SectorSize512)
 	}
-	bs, err := msDosBootSectorFromBytes(bsb)
 
+	// Parse boot sector from the first 512 bytes (boot sector structure is always 512 bytes)
+	bs, err := msDosBootSectorFromBytes(bsb[:SectorSize512])
 	if err != nil {
 		return nil, fmt.Errorf("error reading MS-DOS Boot Sector: %w", err)
 	}
 
+	// Get the actual sector size from the BPB
+	bytesPerSector := bs.biosParameterBlock.dos331BPB.dos20BPB.bytesPerSector
 	sectorsPerFat := bs.biosParameterBlock.sectorsPerFat
-	fatSize := sectorsPerFat * uint32(SectorSize512)
+	fatSize := sectorsPerFat * uint32(bytesPerSector)
 	reservedSectors := bs.biosParameterBlock.dos331BPB.dos20BPB.reservedSectors
 	sectorsPerCluster := bs.biosParameterBlock.dos331BPB.dos20BPB.sectorsPerCluster
-	fatPrimaryStart := uint64(reservedSectors) * uint64(SectorSize512)
+	fatPrimaryStart := uint64(reservedSectors) * uint64(bytesPerSector)
 	fatSecondaryStart := fatPrimaryStart + uint64(fatSize)
 
+	// FSI sector is always 512 bytes
 	fsisBytes := make([]byte, 512)
-	read, err := b.ReadAt(fsisBytes, int64(bs.biosParameterBlock.fsInformationSector)*blocksize+start)
+	read, err := b.ReadAt(fsisBytes, int64(bs.biosParameterBlock.fsInformationSector)*int64(bytesPerSector)+start)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read bytes for FSInformationSector: %w", err)
 	}
@@ -392,7 +411,7 @@ func Read(b backend.Storage, size, start, blocksize int64) (*FileSystem, error) 
 		fsis:            *fsis,
 		table:           *fat,
 		dataStart:       dataStart,
-		bytesPerCluster: int(sectorsPerCluster) * int(SectorSize512),
+		bytesPerCluster: int(sectorsPerCluster) * int(bytesPerSector),
 		start:           start,
 		size:            size,
 		backend:         b,
@@ -428,7 +447,8 @@ func (fs *FileSystem) writeBootSector() error {
 
 	// write backup boot sector to the file
 	if fs.bootSector.biosParameterBlock.backupBootSector > 0 {
-		count, err = writableFile.WriteAt(b, int64(fs.bootSector.biosParameterBlock.backupBootSector)*int64(SectorSize512)+fs.start)
+		bytesPerSector := fs.bootSector.biosParameterBlock.dos331BPB.dos20BPB.bytesPerSector
+		count, err = writableFile.WriteAt(b, int64(fs.bootSector.biosParameterBlock.backupBootSector)*int64(bytesPerSector)+fs.start)
 		if err != nil {
 			return fmt.Errorf("error writing MS-DOS Boot Sector to disk: %w", err)
 		}
@@ -443,7 +463,8 @@ func (fs *FileSystem) writeBootSector() error {
 func (fs *FileSystem) writeFsis() error {
 	fsInformationSector := fs.bootSector.biosParameterBlock.fsInformationSector
 	backupBootSector := fs.bootSector.biosParameterBlock.backupBootSector
-	fsisPrimary := int64(fsInformationSector * uint16(SectorSize512))
+	bytesPerSector := fs.bootSector.biosParameterBlock.dos331BPB.dos20BPB.bytesPerSector
+	fsisPrimary := int64(fsInformationSector) * int64(bytesPerSector)
 
 	fsisBytes := fs.fsis.toBytes()
 	writableFile, err := fs.backend.Writable()
@@ -456,7 +477,7 @@ func (fs *FileSystem) writeFsis() error {
 	}
 
 	if backupBootSector > 0 {
-		if _, err := writableFile.WriteAt(fsisBytes, int64(backupBootSector+1)*int64(SectorSize512)+fs.start); err != nil {
+		if _, err := writableFile.WriteAt(fsisBytes, int64(backupBootSector+1)*int64(bytesPerSector)+fs.start); err != nil {
 			return fmt.Errorf("unable to write backup Fsis: %w", err)
 		}
 	}
@@ -466,7 +487,8 @@ func (fs *FileSystem) writeFsis() error {
 
 func (fs *FileSystem) writeFat() error {
 	reservedSectors := fs.bootSector.biosParameterBlock.dos331BPB.dos20BPB.reservedSectors
-	fatPrimaryStart := uint64(reservedSectors) * uint64(SectorSize512)
+	bytesPerSector := fs.bootSector.biosParameterBlock.dos331BPB.dos20BPB.bytesPerSector
+	fatPrimaryStart := uint64(reservedSectors) * uint64(bytesPerSector)
 	fatSecondaryStart := fatPrimaryStart + uint64(fs.table.size)
 
 	fatBytes := fs.table.bytes()
@@ -525,6 +547,43 @@ func (fs *FileSystem) Symlink(_, _ string) error {
 	return filesystem.ErrNotSupported
 }
 
+// Chtimes changes the file creation, access and modification times
+func (fs *FileSystem) Chtimes(p string, ctime, atime, mtime time.Time) error {
+	// get the path
+	dir := path.Dir(p)
+	filename := path.Base(p)
+	// if the dir == filename, then it is just /
+	if dir == filename {
+		return fmt.Errorf("cannot open directory %s as file", p)
+	}
+	// get the directory entries
+	parentDir, entries, err := fs.readDirWithMkdir(dir, false)
+	if err != nil {
+		return fmt.Errorf("could not read directory entries for %s: %w", dir, err)
+	}
+	// find the specific entry we need
+	var entry *directoryEntry
+	for _, e := range entries {
+		shortName := e.filenameShort
+		if e.fileExtension != "" {
+			shortName += "." + e.fileExtension
+		}
+		if !strings.EqualFold(e.filenameLong, filename) && !strings.EqualFold(shortName, filename) {
+			continue
+		}
+		entry = e
+	}
+	if entry == nil {
+		return fmt.Errorf("path %s not found", p)
+	}
+	// if we got this far, we have found the file
+	entry.accessTime = atime
+	entry.modifyTime = mtime
+	entry.createTime = ctime
+	// write the directory entries to disk
+	return fs.writeDirectoryEntries(parentDir)
+}
+
 // Chmod changes the mode of the named file to mode. If the file is a symbolic link,
 // it changes the mode of the link's target.
 func (fs *FileSystem) Chmod(_ string, _ os.FileMode) error {
@@ -539,10 +598,14 @@ func (fs *FileSystem) Chown(_ string, _, _ int) error {
 
 // ReadDir return the contents of a given directory in a given filesystem.
 //
-// Returns a slice of os.FileInfo with all of the entries in the directory.
+// Returns a slice of iofs.DirEntry with all of the entries in the directory.
 //
 // Will return an error if the directory does not exist or is a regular file and not a directory
-func (fs *FileSystem) ReadDir(p string) ([]os.FileInfo, error) {
+func (fs *FileSystem) ReadDir(p string) ([]iofs.DirEntry, error) {
+	// should not accept anything that starts with /
+	if err := validatePath(p); err != nil {
+		return nil, err
+	}
 	_, entries, err := fs.readDirWithMkdir(p, false)
 	if err != nil {
 		return nil, fmt.Errorf("error reading directory %s: %w", p, err)
@@ -550,31 +613,24 @@ func (fs *FileSystem) ReadDir(p string) ([]os.FileInfo, error) {
 	// once we have made it here, looping is done. We have found the final entry
 	// we need to return all of the file info
 	//nolint:prealloc // because the following loop may omit some entry
-	var ret []os.FileInfo
+	var ret []iofs.DirEntry
 	for _, e := range entries {
-		if e.isVolumeLabel {
+		if e.isVolumeLabel || e.filenameShort == "" || e.filenameShort == ".." || e.filenameShort == "." {
 			continue
 		}
-		shortName := e.filenameShort
-		if e.lowercaseShortname {
-			shortName = strings.ToLower(shortName)
-		}
-		fileExtension := e.fileExtension
-		if e.lowercaseExtension {
-			fileExtension = strings.ToLower(fileExtension)
-		}
-		if fileExtension != "" {
-			shortName = fmt.Sprintf("%s.%s", shortName, fileExtension)
-		}
-		ret = append(ret, FileInfo{
-			modTime:   e.modifyTime,
-			name:      e.filenameLong,
-			shortName: shortName,
-			size:      int64(e.fileSize),
-			isDir:     e.isSubdirectory,
-		})
+		ret = append(ret, e)
 	}
 	return ret, nil
+}
+
+// Open returns an fs.File from which you can read the contents of a file
+// Especially useful for doing fs.FS operations
+func (fs *FileSystem) Open(p string) (iofs.File, error) {
+	file, err := fs.OpenFile(p, os.O_RDONLY)
+	if err != nil {
+		return nil, err
+	}
+	return file, nil
 }
 
 // OpenFile returns an io.ReadWriter from which you can read the contents of a file
@@ -587,31 +643,28 @@ func (fs *FileSystem) OpenFile(p string, flag int) (filesystem.File, error) {
 	// get the path
 	dir := path.Dir(p)
 	filename := path.Base(p)
-	// if the dir == filename, then it is just /
-	if dir == filename {
-		return nil, fmt.Errorf("cannot open directory %s as file", p)
-	}
 	// get the directory entries
 	parentDir, entries, err := fs.readDirWithMkdir(dir, false)
 	if err != nil {
 		return nil, fmt.Errorf("could not read directory entries for %s: %w", dir, err)
 	}
+
 	// we now know that the directory exists, see if the file exists
 	var targetEntry *directoryEntry
-	for _, e := range entries {
-		shortName := e.filenameShort
-		if e.fileExtension != "" {
-			shortName += "." + e.fileExtension
+	if filename == dir {
+		targetEntry = &parentDir.directoryEntry
+	} else {
+		for _, e := range entries {
+			shortName := e.filenameShort
+			if e.fileExtension != "" {
+				shortName += "." + e.fileExtension
+			}
+			if !strings.EqualFold(e.filenameLong, filename) && !strings.EqualFold(shortName, filename) {
+				continue
+			}
+			// if we got this far, we have found the file
+			targetEntry = e
 		}
-		if !strings.EqualFold(e.filenameLong, filename) && !strings.EqualFold(shortName, filename) {
-			continue
-		}
-		// cannot do anything with directories
-		if e.isSubdirectory {
-			return nil, fmt.Errorf("cannot open directory %s as file", p)
-		}
-		// if we got this far, we have found the file
-		targetEntry = e
 	}
 
 	// see if the file exists
@@ -658,6 +711,16 @@ func (fs *FileSystem) OpenFile(p string, flag int) (filesystem.File, error) {
 	}, nil
 }
 
+// ReadFile implements ReadFileFS to read an entire file into memory
+func (fs *FileSystem) ReadFile(name string) ([]byte, error) {
+	f, err := fs.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return io.ReadAll(f)
+}
+
 // removes the named file or (empty) directory.
 func (fs *FileSystem) Remove(pathname string) error {
 	// get the path
@@ -688,8 +751,8 @@ func (fs *FileSystem) Remove(pathname string) error {
 			if err != nil {
 				return fmt.Errorf("error while checking if file to delete is empty: %+v", err)
 			}
-			// '.' & '..' are always present in directory
-			if len(content) > 2 {
+			// '.' & '..' are not present in ReadDir
+			if len(content) > 0 {
 				return fmt.Errorf("cannot remove non-empty directory %s", pathname)
 			}
 		}
@@ -780,6 +843,30 @@ func (fs *FileSystem) Rename(oldpath, newpath string) error {
 	}
 
 	return nil
+}
+
+// Stat returns a FileInfo describing the file.
+func (fs *FileSystem) Stat(name string) (iofs.FileInfo, error) {
+	dir := path.Dir(name)
+	basename := path.Base(name)
+	des, err := fs.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("could not read directory %s: %v", dir, err)
+	}
+	// handle the root case
+	if dir == basename && (basename == "/" || basename == ".") {
+		rootDir, _, err := fs.readDirWithMkdir("/", false)
+		if err != nil {
+			return nil, fmt.Errorf("could not read root directory: %v", err)
+		}
+		return rootDir.Info()
+	}
+	for _, de := range des {
+		if de.Name() == basename {
+			return de.Info()
+		}
+	}
+	return nil, &iofs.PathError{Op: "stat", Path: name, Err: fmt.Errorf("file %s not found in directory %s", basename, dir)}
 }
 
 // Label get the label of the filesystem from the secial file in the root directory.
@@ -993,11 +1080,7 @@ func (fs *FileSystem) mkLabel(parent *Directory, name string) (*directoryEntry, 
 // readDirWithMkdir - walks down a directory tree to the last entry
 // if it does not exist, it may or may not make it
 func (fs *FileSystem) readDirWithMkdir(p string, doMake bool) (*Directory, []*directoryEntry, error) {
-	paths, err := splitPath(p)
-
-	if err != nil {
-		return nil, nil, err
-	}
+	paths := splitPath(p)
 	// walk down the directory tree until all paths have been walked or we cannot find something
 	// start with the root directory
 	var entries []*directoryEntry
@@ -1008,9 +1091,12 @@ func (fs *FileSystem) readDirWithMkdir(p string, doMake bool) (*Directory, []*di
 			filesystem:      fs,
 		},
 	}
-	entries, err = fs.readDirectory(currentDir)
+	entries, err := fs.readDirectory(currentDir)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read directory %s: %w", "/", err)
+	}
+	if p == "." {
+		return currentDir, entries, nil
 	}
 	for i, subp := range paths {
 		// do we have an entry whose name is the same as this name?
@@ -1232,4 +1318,11 @@ func abs(x int) int {
 		return -x
 	}
 	return x
+}
+
+func validatePath(name string) error {
+	if !iofs.ValidPath(name) {
+		return iofs.ErrInvalid
+	}
+	return nil
 }
