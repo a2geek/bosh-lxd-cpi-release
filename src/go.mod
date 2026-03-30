@@ -1,12 +1,12 @@
 module bosh-lxd-cpi
 
-go 1.25.4
+go 1.25.7
 
 require (
 	github.com/canonical/lxd v0.0.0-20260115153158-c1f4cb66bb08
 	github.com/cloudfoundry/bosh-cpi-go v0.0.0-20251227100157-506fe5f35b83
 	github.com/cloudfoundry/bosh-utils v0.0.596
-	github.com/diskfs/go-diskfs v1.7.0
+	github.com/diskfs/go-diskfs v1.9.0
 	github.com/lxc/incus/v6 v6.22.0
 	golang.org/x/text v0.34.0
 	gopkg.in/yaml.v2 v2.4.0

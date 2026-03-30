@@ -3,9 +3,12 @@ package iso9660
 import (
 	"encoding/binary"
 	"fmt"
+	"io"
+	iofs "io/fs"
 	"os"
 	"path"
 	"path/filepath"
+	"time"
 
 	"github.com/diskfs/go-diskfs/backend"
 	"github.com/diskfs/go-diskfs/filesystem"
@@ -354,6 +357,13 @@ func (fsm *FileSystem) Chmod(name string, mode os.FileMode) error {
 	return filesystem.ErrNotImplemented
 }
 
+// Chtimes changes the file creation, access and modification times
+//
+//nolint:revive // parameters will be used eventually
+func (fs *FileSystem) Chtimes(name string, ctime, atime, mtime time.Time) error {
+	return filesystem.ErrNotImplemented
+}
+
 // Chown changes the numeric uid and gid of the named file. If the file is a symbolic link,
 // it changes the uid and gid of the link's target. A uid or gid of -1 means to not change that value
 //
@@ -369,8 +379,12 @@ func (fsm *FileSystem) Chown(name string, uid, gid int) error {
 // Returns a slice of os.FileInfo with all of the entries in the directory.
 //
 // Will return an error if the directory does not exist or is a regular file and not a directory
-func (fsm *FileSystem) ReadDir(p string) ([]os.FileInfo, error) {
-	var fi []os.FileInfo
+func (fsm *FileSystem) ReadDir(p string) ([]iofs.DirEntry, error) {
+	// should not accept anything that starts with /
+	if err := validatePath(p); err != nil {
+		return nil, err
+	}
+	var de []iofs.DirEntry
 	// non-workspace: read from iso9660
 	// workspace: read from regular filesystem
 	if fsm.workspace != "" {
@@ -380,28 +394,70 @@ func (fsm *FileSystem) ReadDir(p string) ([]os.FileInfo, error) {
 		if err != nil {
 			return nil, fmt.Errorf("could not read directory %s: %v", p, err)
 		}
-		for _, e := range dirEntries {
-			info, err := e.Info()
-			if err != nil {
-				return nil, fmt.Errorf("could not read directory %s: %v", p, err)
-			}
-			fi = append(fi, info)
-		}
+		de = dirEntries
 	} else {
 		dirEntries, err := fsm.readDirectory(p)
 		if err != nil {
 			return nil, fmt.Errorf("error reading directory %s: %v", p, err)
 		}
-		fi = make([]os.FileInfo, 0, len(dirEntries))
 		for _, entry := range dirEntries {
 			// ignore any entry that is current directory or parent
 			if entry.isSelf || entry.isParent {
 				continue
 			}
-			fi = append(fi, entry)
+			de = append(de, entry)
 		}
 	}
-	return fi, nil
+	return de, nil
+}
+
+// Open returns an fs.File for the named file or directory.
+// If the path refers to a directory, the returned file also implements
+// fs.ReadDirFile, allowing callers such as http.FileServer(http.FS(fs))
+// to list directory contents.
+func (fsm *FileSystem) Open(p string) (iofs.File, error) {
+	// should not accept anything that starts with /
+	if err := validatePath(p); err != nil {
+		return nil, err
+	}
+
+	// workspace mode: os.Open handles both files and directories
+	if fsm.workspace != "" {
+		return os.Open(path.Join(fsm.workspace, p))
+	}
+
+	// root directory
+	if p == "." {
+		return &dirFile{entry: fsm.rootDir, fs: fsm, path: "."}, nil
+	}
+
+	// look up the entry in its parent directory
+	dir := path.Dir(p)
+	filename := path.Base(p)
+	entries, err := fsm.readDirectory(dir)
+	if err != nil {
+		return nil, &iofs.PathError{Op: "open", Path: p, Err: err}
+	}
+
+	for _, e := range entries {
+		if e.isSelf || e.isParent {
+			continue
+		}
+		if e.Name() == filename {
+			if e.IsDir() {
+				return &dirFile{entry: e, fs: fsm, path: p}, nil
+			}
+			// regular file
+			return &File{
+				directoryEntry: e,
+				isReadWrite:    false,
+				isAppend:       false,
+				offset:         0,
+			}, nil
+		}
+	}
+
+	return nil, &iofs.PathError{Op: "open", Path: p, Err: iofs.ErrNotExist}
 }
 
 // OpenFile returns an io.ReadWriter from which you can read the contents of a file
@@ -473,6 +529,16 @@ func (fsm *FileSystem) OpenFile(p string, flag int) (filesystem.File, error) {
 	return f, nil
 }
 
+// ReadFile implements ReadFileFS to read an entire file into memory
+func (fsm *FileSystem) ReadFile(name string) ([]byte, error) {
+	f, err := fsm.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return io.ReadAll(f)
+}
+
 // Rename renames (moves) oldpath to newpath. If newpath already exists and is not a directory, Rename replaces it.
 func (fsm *FileSystem) Rename(oldpath, newpath string) error {
 	if fsm.workspace == "" {
@@ -486,6 +552,26 @@ func (fsm *FileSystem) Remove(p string) error {
 		return filesystem.ErrReadonlyFilesystem
 	}
 	return os.Remove(path.Join(fsm.workspace, p))
+}
+
+// Stat returns a FileInfo describing the file.
+func (fsm *FileSystem) Stat(name string) (iofs.FileInfo, error) {
+	// root directory
+	if name == "." {
+		return rootDirInfo{fsm.rootDir}, nil
+	}
+	dir := path.Dir(name)
+	basename := path.Base(name)
+	des, err := fsm.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("could not read directory %s: %v", dir, err)
+	}
+	for _, de := range des {
+		if de.Name() == basename {
+			return de.Info()
+		}
+	}
+	return nil, &iofs.PathError{Op: "stat", Path: name, Err: fmt.Errorf("file %s not found in directory %s", basename, dir)}
 }
 
 // readDirectory - read directory entry on iso only (not workspace)
@@ -571,4 +657,10 @@ func (fsm *FileSystem) Label() string {
 
 func (fsm *FileSystem) SetLabel(string) error {
 	return fmt.Errorf("ISO9660 filesystem is read-only")
+}
+func validatePath(name string) error {
+	if !iofs.ValidPath(name) {
+		return iofs.ErrInvalid
+	}
+	return nil
 }
