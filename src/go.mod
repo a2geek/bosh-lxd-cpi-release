@@ -5,7 +5,7 @@ go 1.25.7
 require (
 	github.com/canonical/lxd v0.0.0-20260115153158-c1f4cb66bb08
 	github.com/cloudfoundry/bosh-cpi-go v0.0.0-20251227100157-506fe5f35b83
-	github.com/cloudfoundry/bosh-utils v0.0.596
+	github.com/cloudfoundry/bosh-utils v0.0.605
 	github.com/diskfs/go-diskfs v1.9.1
 	github.com/lxc/incus/v6 v6.23.0
 	golang.org/x/text v0.35.0
@@ -19,7 +19,6 @@ require (
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/bmatcuk/doublestar v1.3.4 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/charlievieth/fs v0.0.3 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
