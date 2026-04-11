@@ -27,6 +27,11 @@ const (
 	fileSocket
 )
 
+const (
+	appleXattrPrefix     = "com.apple."
+	appleXattrProvenance = appleXattrPrefix + "provenance"
+)
+
 // FinalizeOptions options to pass to finalize
 type FinalizeOptions struct {
 	// Compressor which compressor to use, including, where relevant, options. Defaults ot CompressorGzip
@@ -375,6 +380,7 @@ func copyFileData(from backend.File, to backend.WritableFile, fromOffset, toOffs
 
 		// compress the block if needed
 		isCompressed := false
+		outBuf := buf[:n]
 		if c != nil {
 			out, err := c.compress(buf)
 			if err != nil {
@@ -382,14 +388,14 @@ func copyFileData(from backend.File, to backend.WritableFile, fromOffset, toOffs
 			}
 			if len(out) < len(buf) {
 				isCompressed = true
-				buf = out
+				outBuf = out
 			}
 		}
-		blocks = append(blocks, &blockData{size: uint32(len(buf)), compressed: isCompressed})
-		if _, err := to.WriteAt(buf[:n], toOffset+int64(compressed)); err != nil {
+		blocks = append(blocks, &blockData{size: uint32(len(outBuf)), compressed: isCompressed})
+		if _, err := to.WriteAt(outBuf, toOffset+int64(compressed)); err != nil {
 			return raw, compressed, blocks, err
 		}
-		compressed += len(buf)
+		compressed += len(outBuf)
 	}
 	return raw, compressed, blocks, nil
 }
@@ -462,8 +468,11 @@ func walkTree(workspace string) ([]*finalizeFileInfo, error) {
 		}
 		xattrs := map[string]string{}
 		for _, name := range xattrNames {
+			if strings.HasPrefix(name, appleXattrProvenance) {
+				continue
+			}
 			val, err := xattr.Get(fp, name)
-			if err != nil {
+			if err != nil && !os.IsNotExist(err) {
 				return fmt.Errorf("unable to get xattr %s for %s: %v", name, fp, err)
 			}
 			xattrs[name] = string(val)
