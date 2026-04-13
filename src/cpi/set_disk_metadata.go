@@ -8,6 +8,11 @@ import (
 )
 
 func (c CPI) SetDiskMetadata(cid apiv1.DiskCID, metadata apiv1.DiskMeta) error {
+	err := c.adapter.IsConnected()
+	if err != nil {
+		return err
+	}
+
 	actual, err := NewActualDiskMeta(metadata)
 	if err != nil {
 		return bosherr.WrapError(err, "Unmarshalling DiskMeta")

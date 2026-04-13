@@ -8,6 +8,11 @@ import (
 )
 
 func (c CPI) SetVMMetadata(cid apiv1.VMCID, metadata apiv1.VMMeta) error {
+	err := c.adapter.IsConnected()
+	if err != nil {
+		return err
+	}
+
 	actual, err := NewActualVMMeta(metadata)
 	if err != nil {
 		return bosherr.WrapError(err, "SetVMMetadata - Unmarshal VMMeta to ActualVMMeta")

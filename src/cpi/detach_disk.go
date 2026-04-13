@@ -6,7 +6,12 @@ import (
 )
 
 func (c CPI) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) error {
-	err := c.adapter.DetachDeviceBySource(vmCID.AsString(), diskCID.AsString())
+	err := c.adapter.IsConnected()
+	if err != nil {
+		return err
+	}
+
+	err = c.adapter.DetachDeviceBySource(vmCID.AsString(), diskCID.AsString())
 	if err != nil {
 		return bosherr.WrapError(err, "Detach Device")
 	}

@@ -8,7 +8,12 @@ import (
 )
 
 func (c CPI) DeleteVM(vmCID apiv1.VMCID) error {
-	err := c.adapter.SetInstanceAction(vmCID.AsString(), adapter.StopAction)
+	err := c.adapter.IsConnected()
+	if err != nil {
+		return err
+	}
+
+	err = c.adapter.SetInstanceAction(vmCID.AsString(), adapter.StopAction)
 	if err != nil {
 		return bosherr.WrapError(err, "Delete VM - stop")
 	}

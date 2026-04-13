@@ -23,6 +23,11 @@ func (c CPI) CreateVMV2(
 	cloudProps apiv1.VMCloudProps, networks apiv1.Networks,
 	associatedDiskCIDs []apiv1.DiskCID, env apiv1.VMEnv) (apiv1.VMCID, apiv1.Networks, error) {
 
+	err := c.adapter.IsConnected()
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, err
+	}
+
 	id, err := c.uuidGen.Generate()
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.WrapError(err, "Creating VM id")

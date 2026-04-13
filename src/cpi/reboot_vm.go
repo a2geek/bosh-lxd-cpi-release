@@ -7,5 +7,10 @@ import (
 )
 
 func (c CPI) RebootVM(cid apiv1.VMCID) error {
+	err := c.adapter.IsConnected()
+	if err != nil {
+		return err
+	}
+
 	return c.adapter.SetInstanceAction(cid.AsString(), adapter.RestartAction)
 }

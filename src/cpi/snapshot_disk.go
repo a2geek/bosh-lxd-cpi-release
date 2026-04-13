@@ -5,6 +5,11 @@ import (
 )
 
 func (c CPI) SnapshotDisk(diskCID apiv1.DiskCID, meta apiv1.DiskMeta) (apiv1.SnapshotCID, error) {
+	err := c.adapter.IsConnected()
+	if err != nil {
+		return apiv1.SnapshotCID{}, err
+	}
+
 	id, err := c.uuidGen.Generate()
 	if err != nil {
 		return apiv1.SnapshotCID{}, err

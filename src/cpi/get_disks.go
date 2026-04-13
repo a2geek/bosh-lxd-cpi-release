@@ -6,6 +6,11 @@ import (
 )
 
 func (c CPI) GetDisks(cid apiv1.VMCID) ([]apiv1.DiskCID, error) {
+	err := c.adapter.IsConnected()
+	if err != nil {
+		return []apiv1.DiskCID{}, err
+	}
+
 	disks, err := c.findDisksAttachedToVm(cid)
 	if err != nil {
 		return []apiv1.DiskCID{}, bosherr.WrapError(err, "GetDisks - locating disks")

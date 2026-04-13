@@ -8,6 +8,11 @@ import (
 )
 
 func (c CPI) DeleteSnapshot(snapshotCID apiv1.SnapshotCID) error {
+	err := c.adapter.IsConnected()
+	if err != nil {
+		return err
+	}
+
 	parts := strings.Split(snapshotCID.AsString(), "_")
 	if len(parts) != 2 {
 		return bosherr.Error("expecting snapshot CID to be two parts separated by '/'")

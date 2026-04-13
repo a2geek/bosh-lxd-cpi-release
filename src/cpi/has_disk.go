@@ -6,6 +6,11 @@ import (
 )
 
 func (c CPI) HasDisk(cid apiv1.DiskCID) (bool, error) {
+	err := c.adapter.IsConnected()
+	if err != nil {
+		return false, err
+	}
+
 	etag, err := c.adapter.GetStoragePoolVolume(c.config.Server.StoragePool, cid.AsString())
 	if err != nil {
 		return false, bosherr.WrapError(err, "Locating storage volume")

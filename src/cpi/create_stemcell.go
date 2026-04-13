@@ -11,6 +11,11 @@ import (
 )
 
 func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) (apiv1.StemcellCID, error) {
+	err := c.adapter.IsConnected()
+	if err != nil {
+		return apiv1.StemcellCID{}, err
+	}
+
 	id, err := c.uuidGen.Generate()
 	if err != nil {
 		return apiv1.StemcellCID{}, bosherr.WrapError(err, "Generating stemcell id")

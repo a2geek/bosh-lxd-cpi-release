@@ -6,6 +6,11 @@ import (
 )
 
 func (c CPI) HasVM(cid apiv1.VMCID) (bool, error) {
+	err := c.adapter.IsConnected()
+	if err != nil {
+		return false, err
+	}
+
 	location, err := c.adapter.GetInstanceLocation(cid.AsString())
 	if err != nil {
 		return false, bosherr.WrapError(err, "HasVM")

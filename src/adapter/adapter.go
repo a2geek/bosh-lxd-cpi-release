@@ -34,6 +34,7 @@ type ApiAdapter interface {
 	DetachDeviceBySource(instanceName, sourceName string) error
 	GetDevices(instanceName string) (map[string]map[string]string, error)
 
+	IsConnected() error
 	Disconnect()
 }
 
