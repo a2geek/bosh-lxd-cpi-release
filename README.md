@@ -8,9 +8,9 @@ This is a [BOSH CPI](https://bosh.io/) implementation to support [LXD](https://c
 
 > Note that as of LXD 6.6, the "security.secureboot" and "security.csm" got replaced with "boot.mode". See the [CPI Configuration options](docs/CONFIGURATION.md) for more. For now, the default configuration uses the "security.*" notation due to 5.21 being the LTS release.
 
-Recent verison of LXD and Incus both support BIOS and UEFI boots. "Jammy" or earlier stemcells will require a BIOS boot while "Noble" or later stemcells can use the UEFI boot.
+Recent verisons of LXD and Incus both support BIOS and UEFI boots. "Jammy" or earlier stemcells will require a BIOS boot while "Noble" or later stemcells can use the UEFI boot.
 
-LXD 5.21, LXD supports BIOS boots for VMs, which all the BOSH Stemcells use. Without this feature, they must be UEFI boot devices and VMs are not an option. Incus support is in place for the 6.0 LTS release, and likely some of the pre-releases.
+With LXD 5.21, LXD supports BIOS boots for VMs, which all the BOSH Stemcells use. Without this feature, they must be UEFI boot devices. Incus support is in place for the 6.0 LTS release, and likely some of the pre-releases. "Jammy" and earlier stemcells are BIOS boot stemcells and "Noble" and later stemcells are either BIOS boot or UEFI boot. (Some more details can be found in the configuration documentation under `lxd_cpi.server.instance_config`.)
 
 Note that the (initial) BOSH deployment can be run from Linux, a Mac, and presumably from the Linux on WSL. Once a BOSH director is running, the BOSH CLI can be used from [pretty much anywhere](https://bosh.io/docs/cli-v2-install/).
 
@@ -31,15 +31,16 @@ The current development environments are:
 * LXD/Incus [CPI configuration options](docs/CONFIGURATION.md).
 * Supplied [option files](ops/README.md).
 * [Working with Genesis](docs/GENESIS.md) shows how to deploy to Genesis with a non-standard CPI.
+* Some collected notes on [Homelab](docs/HOMELAB.md) setups.
 
 ## Current State
 
-All CPI calls have been implemented, including snapshots and IaaS-native disk resizing.
+All CPI calls have been implemented, including snapshots and IaaS-native disk resizing. This CPI passes the [BATs](https://github.com/cloudfoundry/bosh-acceptance-tests).
 
 ### LXD adjustments
 
 * There is a nightly scheduled process to look for unused configuration disks (`vol-c-<uuid>` format). There are events (at least with ZFS) where the configuration disk sometimes doesn't get detached from the VM. The nightly process simply scans the list of detached configuration disks, tries to delete them, and reports success or error in the log. See [cleanup](src/cmd/cleanup/main.go).
-* Throttling. Not so much LXD, but more the single host conundrum. There is a service that runs and maintains a hash map of "transaction" reservations. Once the CPI level transaction completes, the transaction is also released. Additionally, these reservations will time out after a certain amount time. _By default, this is disabled._ (See Tuning for more details. Code is at [throttle](src/cmd/cleanup/main.go).)
+* Throttling. Not so much LXD, but more the single host conundrum. There is a service that runs and maintains a hash map of "transaction" reservations. Once the CPI level transaction completes, the transaction is also released. Additionally, these reservations will time out after a certain amount time. _By default, throttling is disabled._ (See Tuning for more details. Code is at [throttle](src/cmd/cleanup/main.go).)
 
 ### Tuning
 
