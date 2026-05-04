@@ -93,7 +93,8 @@ func (a *incusApiAdapter) ColocateStoragePoolVolumeWithInstance(instanceName, po
 		return err
 	}
 
-	if instanceLoc == volume.Location {
+	// If location is blank (""), it is assumed to be a remote device (such as ceph).
+	if instanceLoc == volume.Location || volume.Location == "" {
 		return nil
 	}
 
