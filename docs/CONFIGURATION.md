@@ -156,3 +156,25 @@ networks:
     gateway: 240.5.0.1
     static: 240.5.0.10-240.5.0.19
 ```
+
+Sample configuration to allow targetting specific servers named `hydra1` and `hydra2`:
+
+```yaml
+vm_extensions:
+- name: hydra1
+  cloud_properties:
+    target: hydra1
+- name: hydra2
+  cloud_properties:
+    target: hydra2
+```
+
+... and usage of the `vm_extension`:
+
+```yaml
+instance_groups:
+- name:          instance_name
+  azs:           [z1]
+  vm_extensions: [hydra2]
+  // etc...
+```
