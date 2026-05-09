@@ -3,14 +3,14 @@
   path: /releases/-
   value:
     name: lxd-bosh-cpi
-    url: https://github.com/a2geek/bosh-lxd-cpi-release/releases/download/v8/bosh-lxd-cpi-release.tgz
-    sha1: 6339ed886a0804e0230410f5c5f97062e715274d
+    url: https://github.com/a2geek/bosh-lxd-cpi-release/releases/download/v9/bosh-lxd-cpi-release.tgz
+    sha1: 1a95337e5becbb7eed78f4c20b1190fb7cc7b638
 
 - type: replace
   path: /resource_pools/name=vms/stemcell?
   value:
-    url: https://bosh.io/d/stemcells/bosh-openstack-kvm-ubuntu-noble?v=1.305
-    sha1: df21b6aa73cded8c86e3ec4b10d709286aeb8183
+    url: https://bosh.io/d/stemcells/bosh-openstack-kvm-ubuntu-noble?v=1.364
+    sha1: d6cc58bda0120fe47787a46775ff5bafc5718257
 
 # Configure LXD sizes
 - type: replace

@@ -1,0 +1,23 @@
+name: lxd-bosh-cpi
+version: v9
+commit_hash: dc28bde
+uncommitted_changes: false
+jobs:
+- name: lxd_cpi
+  version: 065006bd924369599fd9fc56e18522c12ee31a6b0c75e4ce083a2af9212b92e7
+  fingerprint: 065006bd924369599fd9fc56e18522c12ee31a6b0c75e4ce083a2af9212b92e7
+  sha1: sha256:1a81a341c685e93db19c48333760c8a2ca505b544b4a947f88b86ff7a7436d96
+  packages:
+  - lxd_cpi
+packages:
+- name: golang-1-linux
+  version: a9ec2c795feaf63781af31ef2f20627cde83daf214e6d0b15dbd1e965f39d67f
+  fingerprint: a9ec2c795feaf63781af31ef2f20627cde83daf214e6d0b15dbd1e965f39d67f
+  sha1: sha256:5aa81d027504119e689b7a0550b5d0e9eb37b8b9307d066f48de97f188667f4c
+  dependencies: []
+- name: lxd_cpi
+  version: 968698a125cbde4dcdb126f5aed323579e580f7de695ca76b420cd8aa4aa40d5
+  fingerprint: 968698a125cbde4dcdb126f5aed323579e580f7de695ca76b420cd8aa4aa40d5
+  sha1: sha256:5f4c36fa06fef3e6177ec1e99d9f84acc99fa846f18b0f2243a5e97d2191e890
+  dependencies:
+  - golang-1-linux
