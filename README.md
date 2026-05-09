@@ -32,6 +32,7 @@ The current development environments are:
 * Supplied [option files](ops/README.md).
 * [Working with Genesis](docs/GENESIS.md) shows how to deploy to Genesis with a non-standard CPI.
 * Some collected notes on [Homelab](docs/HOMELAB.md) setups.
+* A (small) collection of [error messages](docs/ERRORS.md) that may be helpful.
 
 ## Current State
 
