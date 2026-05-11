@@ -5,7 +5,7 @@ go 1.25.7
 require (
 	github.com/canonical/lxd v0.0.0-20260115153158-c1f4cb66bb08
 	github.com/cloudfoundry/bosh-cpi-go v0.0.0-20251227100157-506fe5f35b83
-	github.com/cloudfoundry/bosh-utils v0.0.608
+	github.com/cloudfoundry/bosh-utils v0.0.610
 	github.com/diskfs/go-diskfs v1.9.1
 	github.com/lxc/incus/v6 v6.23.0
 	golang.org/x/text v0.36.0
