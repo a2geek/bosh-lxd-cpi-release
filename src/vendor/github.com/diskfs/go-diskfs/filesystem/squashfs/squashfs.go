@@ -284,7 +284,7 @@ func (fs *FileSystem) Mkdir(p string) error {
 	if fs.workspace == "" {
 		return filesystem.ErrReadonlyFilesystem
 	}
-	err := os.MkdirAll(path.Join(fs.workspace, p), 0o755)
+	err := os.MkdirAll(workspacePath(fs.workspace, p), 0o755)
 	if err != nil {
 		return fmt.Errorf("could not create directory %s: %v", p, err)
 	}
@@ -320,11 +320,16 @@ func (fs *FileSystem) Symlink(oldpath, newpath string) error {
 
 // Chmod changes the mode of the named file to mode. If the file is a symbolic link,
 // it changes the mode of the link's target.
-//
-//nolint:revive // parameters will be used eventually
 func (fs *FileSystem) Chmod(name string, mode os.FileMode) error {
-	// https://dr-emann.github.io/squashfs/squashfs.html#_common_inode_header
-	return filesystem.ErrNotImplemented
+	if err := validatePath(name); err != nil {
+		return err
+	}
+
+	if fs.workspace == "" {
+		return filesystem.ErrReadonlyFilesystem
+	}
+
+	return os.Chmod(workspacePath(fs.workspace, name), mode)
 }
 
 // Chown changes the numeric uid and gid of the named file. If the file is a symbolic link,
@@ -357,7 +362,7 @@ func (fs *FileSystem) ReadDir(p string) ([]iofs.DirEntry, error) {
 	// non-workspace: read from squashfs
 	// workspace: read from regular filesystem
 	if fs.workspace != "" {
-		fullPath := path.Join(fs.workspace, p)
+		fullPath := workspacePath(fs.workspace, p)
 		// read the entries
 		dirEntries, err := os.ReadDir(fullPath)
 		if err != nil {
@@ -415,11 +420,9 @@ func (fs *FileSystem) OpenFile(p string, flag int) (filesystem.File, error) {
 
 		// what if we asked for root?
 		if dir == filename && filename == "." {
-			targetEntry = &directoryEntry{
-				fs:             fs,
-				inode:          fs.rootDir,
-				isSubdirectory: true,
-				name:           ".",
+			targetEntry, err = fs.directoryEntryFromInode(".", fs.rootDir, true)
+			if err != nil {
+				return nil, fmt.Errorf("could not read root directory info: %v", err)
 			}
 		} else {
 			// get the directory entries
@@ -452,7 +455,7 @@ func (fs *FileSystem) OpenFile(p string, flag int) (filesystem.File, error) {
 			return nil, err
 		}
 	} else {
-		f, err = os.OpenFile(path.Join(fs.workspace, p), flag, 0o644)
+		f, err = os.OpenFile(workspacePath(fs.workspace, p), flag, 0o644)
 		if err != nil {
 			return nil, fmt.Errorf("target file %s does not exist: %v", p, err)
 		}
@@ -476,18 +479,27 @@ func (fs *FileSystem) Rename(oldpath, newpath string) error {
 	if fs.workspace == "" {
 		return filesystem.ErrReadonlyFilesystem
 	}
-	return os.Rename(path.Join(fs.workspace, oldpath), path.Join(fs.workspace, newpath))
+	return os.Rename(workspacePath(fs.workspace, oldpath), workspacePath(fs.workspace, newpath))
 }
 
 func (fs *FileSystem) Remove(p string) error {
 	if fs.workspace == "" {
 		return filesystem.ErrReadonlyFilesystem
 	}
-	return os.Remove(path.Join(fs.workspace, p))
+	return os.Remove(workspacePath(fs.workspace, p))
 }
 
 // Stat returns a FileInfo describing the file.
 func (fs *FileSystem) Stat(name string) (iofs.FileInfo, error) {
+	if err := validatePath(name); err != nil {
+		return nil, err
+	}
+	if name == "." {
+		if fs.workspace != "" {
+			return os.Stat(workspacePath(fs.workspace, name))
+		}
+		return fs.directoryEntryFromInode(".", fs.rootDir, true)
+	}
 	dir := path.Dir(name)
 	basename := path.Base(name)
 	des, err := fs.ReadDir(dir)
@@ -590,29 +602,38 @@ func (fs *FileSystem) hydrateDirectoryEntries(entries []*directoryEntryRaw) ([]*
 		if err != nil {
 			return nil, fmt.Errorf("error finding inode for %s: %v", e.name, err)
 		}
-		body, header := in.getBody(), in.getHeader()
-		xattrIndex, has := body.xattrIndex()
-		xattrs := map[string]string{}
-		if has {
-			xattrs, err = fs.xattrs.find(int(xattrIndex))
-			if err != nil {
-				return nil, fmt.Errorf("error reading xattrs for %s: %v", e.name, err)
-			}
+		entry, err := fs.directoryEntryFromInode(e.name, in, e.isSubdirectory)
+		if err != nil {
+			return nil, err
 		}
-		fullEntries = append(fullEntries, &directoryEntry{
-			fs:             fs,
-			isSubdirectory: e.isSubdirectory,
-			name:           e.name,
-			size:           body.size(),
-			modTime:        header.modTime,
-			mode:           header.mode,
-			inode:          in,
-			uid:            fs.uidsGids[header.uidIdx],
-			gid:            fs.uidsGids[header.gidIdx],
-			xattrs:         xattrs,
-		})
+		fullEntries = append(fullEntries, entry)
 	}
 	return fullEntries, nil
+}
+
+func (fs *FileSystem) directoryEntryFromInode(name string, in inode, isSubdirectory bool) (*directoryEntry, error) {
+	body, header := in.getBody(), in.getHeader()
+	xattrIndex, has := body.xattrIndex()
+	xattrs := map[string]string{}
+	if has {
+		var err error
+		xattrs, err = fs.xattrs.find(int(xattrIndex))
+		if err != nil {
+			return nil, fmt.Errorf("error reading xattrs for %s: %v", name, err)
+		}
+	}
+	return &directoryEntry{
+		fs:             fs,
+		isSubdirectory: isSubdirectory,
+		name:           name,
+		size:           body.size(),
+		modTime:        header.modTime,
+		mode:           header.mode,
+		inode:          in,
+		uid:            fs.uidsGids[header.uidIdx],
+		gid:            fs.uidsGids[header.gidIdx],
+		xattrs:         xattrs,
+	}, nil
 }
 
 // getInode read a single inode, given the block offset, and the offset in the

@@ -95,8 +95,9 @@ type partitionVolumeDescriptor struct {
 }
 
 type volumeDescriptors struct {
-	descriptors []volumeDescriptor
-	primary     *primaryVolumeDescriptor
+	descriptors   []volumeDescriptor
+	primary       *primaryVolumeDescriptor
+	supplementary *supplementaryVolumeDescriptor
 }
 
 func (v *volumeDescriptors) equal(a *volumeDescriptors) bool {
@@ -222,19 +223,26 @@ func volumeDescriptorFromBytes(b []byte) (volumeDescriptor, error) {
 func parsePrimaryVolumeDescriptor(b []byte) (*primaryVolumeDescriptor, error) {
 	blocksize := binary.LittleEndian.Uint16(b[128:130])
 
-	creation, err := decBytesToTime(b[813 : 813+17])
-	if err != nil {
-		return nil, fmt.Errorf("unable to convert creation date/time from bytes: %v", err)
-	}
-	modification, err := decBytesToTime(b[830 : 830+17])
-	if err != nil {
-		return nil, fmt.Errorf("unable to convert modification date/time from bytes: %v", err)
-	}
 	// expiration can be never
 	nullBytes := []byte{48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 0}
-	var expiration, effective time.Time
+	var err error
+	var creation, modification, expiration, effective time.Time
+	creationBytes := b[813 : 813+17]
+	modificationBytes := b[830 : 830+17]
 	expirationBytes := b[847 : 847+17]
 	effectiveBytes := b[864 : 864+17]
+	if !bytes.Equal(creationBytes, nullBytes) {
+		creation, err = decBytesToTime(creationBytes)
+		if err != nil {
+			return nil, fmt.Errorf("unable to convert creation date/time from bytes: %v", err)
+		}
+	}
+	if !bytes.Equal(modificationBytes, nullBytes) {
+		modification, err = decBytesToTime(modificationBytes)
+		if err != nil {
+			return nil, fmt.Errorf("unable to convert modification date/time from bytes: %v", err)
+		}
+	}
 	if !bytes.Equal(expirationBytes, nullBytes) {
 		expiration, err = decBytesToTime(expirationBytes)
 		if err != nil {
@@ -323,19 +331,26 @@ func parseSupplementaryVolumeDescriptor(b []byte) (*supplementaryVolumeDescripto
 	volumesize := binary.LittleEndian.Uint32(b[80:84])
 	volumesizeBytes := uint64(blocksize) * uint64(volumesize)
 
-	creation, err := decBytesToTime(b[813 : 813+17])
-	if err != nil {
-		return nil, fmt.Errorf("unable to convert creation date/time from bytes: %v", err)
-	}
-	modification, err := decBytesToTime(b[830 : 830+17])
-	if err != nil {
-		return nil, fmt.Errorf("unable to convert modification date/time from bytes: %v", err)
-	}
 	// expiration can be never
 	nullBytes := []byte{48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 0}
-	var expiration, effective time.Time
+	var err error
+	var creation, modification, expiration, effective time.Time
+	creationBytes := b[813 : 813+17]
+	modificationBytes := b[830 : 830+17]
 	expirationBytes := b[847 : 847+17]
 	effectiveBytes := b[864 : 864+17]
+	if !bytes.Equal(creationBytes, nullBytes) {
+		creation, err = decBytesToTime(creationBytes)
+		if err != nil {
+			return nil, fmt.Errorf("unable to convert creation date/time from bytes: %v", err)
+		}
+	}
+	if !bytes.Equal(modificationBytes, nullBytes) {
+		modification, err = decBytesToTime(modificationBytes)
+		if err != nil {
+			return nil, fmt.Errorf("unable to convert modification date/time from bytes: %v", err)
+		}
+	}
 	if !bytes.Equal(expirationBytes, nullBytes) {
 		expiration, err = decBytesToTime(expirationBytes)
 		if err != nil {
@@ -356,9 +371,11 @@ func parseSupplementaryVolumeDescriptor(b []byte) (*supplementaryVolumeDescripto
 	}
 
 	return &supplementaryVolumeDescriptor{
+		volumeFlags:                b[7],
 		systemIdentifier:           string(b[8:40]),
 		volumeIdentifier:           string(b[40:72]),
 		volumeSize:                 volumesizeBytes,
+		escapeSequences:            append([]byte{}, b[88:120]...),
 		setSize:                    binary.LittleEndian.Uint16(b[120:122]),
 		sequenceNumber:             binary.LittleEndian.Uint16(b[124:126]),
 		blocksize:                  blocksize,
@@ -390,11 +407,13 @@ func (v *supplementaryVolumeDescriptor) equal(a volumeDescriptor) bool {
 func (v *supplementaryVolumeDescriptor) toBytes() []byte {
 	b := volumeDescriptorFirstBytes(volumeDescriptorSupplementary)
 
+	b[7] = v.volumeFlags
 	copy(b[8:40], v.systemIdentifier)
 	copy(b[40:72], v.volumeIdentifier)
 	blockcount := uint32(v.volumeSize / uint64(v.blocksize))
 	binary.LittleEndian.PutUint32(b[80:84], blockcount)
 	binary.BigEndian.PutUint32(b[84:88], blockcount)
+	copy(b[88:120], v.escapeSequences)
 	binary.LittleEndian.PutUint16(b[120:122], v.setSize)
 	binary.BigEndian.PutUint16(b[122:124], v.setSize)
 	binary.LittleEndian.PutUint16(b[124:126], v.sequenceNumber)
@@ -427,8 +446,21 @@ func (v *supplementaryVolumeDescriptor) toBytes() []byte {
 	copy(b[830:830+17], timeToDecBytes(v.modification))
 	copy(b[847:847+17], timeToDecBytes(v.expiration))
 	copy(b[864:864+17], timeToDecBytes(v.effective))
+	b[881] = 1 // file structure version
 
 	return b
+}
+
+// isJolietSVD returns true if the supplementary volume descriptor contains
+// Joliet escape sequences (UCS-2 Level 1, 2, or 3).
+func isJolietSVD(svd *supplementaryVolumeDescriptor) bool {
+	if svd == nil || len(svd.escapeSequences) < 3 {
+		return false
+	}
+	seq := svd.escapeSequences[:3]
+	return bytes.Equal(seq, []byte{0x25, 0x2F, 0x40}) || // Level 1
+		bytes.Equal(seq, []byte{0x25, 0x2F, 0x43}) || // Level 2
+		bytes.Equal(seq, []byte{0x25, 0x2F, 0x45}) // Level 3
 }
 
 // partitionVolumeDescriptor

@@ -6,7 +6,7 @@ require (
 	github.com/canonical/lxd v0.0.0-20260115153158-c1f4cb66bb08
 	github.com/cloudfoundry/bosh-cpi-go v0.0.0-20251227100157-506fe5f35b83
 	github.com/cloudfoundry/bosh-utils v0.0.610
-	github.com/diskfs/go-diskfs v1.9.1
+	github.com/diskfs/go-diskfs v1.9.2
 	github.com/lxc/incus/v6 v6.23.0
 	golang.org/x/text v0.37.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -25,7 +25,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
 	github.com/djherbis/times v1.6.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/elliotwutingfeng/asciiset v0.0.0-20251209210403-59ed57bd7b86 // indirect
+	github.com/elliotwutingfeng/asciiset v0.0.0-20260129054604-cfde2086bc57 // indirect
 	github.com/flosch/pongo2 v0.0.0-20200913210552-0d938eb266f3 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
