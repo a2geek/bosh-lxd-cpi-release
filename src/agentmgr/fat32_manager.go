@@ -38,6 +38,7 @@ func (c fat32Manager) Write(vmCID apiv1.VMCID, agentEnv apiv1.AgentEnv) ([]byte,
 	if err != nil {
 		return nil, err
 	}
+	defer os.Remove(diskFileName)
 
 	// Note that the sizes are rough guesstimates.
 	// diskSize = 35MB; minimum size is 32MB but...
