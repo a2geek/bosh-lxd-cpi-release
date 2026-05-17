@@ -109,7 +109,7 @@ func (a *lxdApiAdapter) CreateAndUploadImage(meta adapter.ImageMetadata) error {
 	imageAliasPost := api.ImageAliasesPost{
 		ImageAliasesEntry: api.ImageAliasesEntry{
 			Name:        meta.Alias,
-			Description: "bosh image",
+			Description: meta.Description,
 			Target:      fingerprint,
 		},
 	}
