@@ -9,7 +9,7 @@ import (
 )
 
 func (a *incusApiAdapter) DeleteStoragePoolVolume(pool, name string) error {
-	return a.client.DeleteStoragePoolVolume(pool, "custom", name)
+	return wait(a.client.DeleteStoragePoolVolume(pool, "custom", name))
 }
 
 func (a *incusApiAdapter) GetStoragePoolVolume(pool, name string) (string, error) {
@@ -26,7 +26,7 @@ func (a *incusApiAdapter) ResizeStoragePoolVolume(pool, name string, newSize int
 	writable := volume.Writable()
 	writable.Config["size"] = fmt.Sprintf("%dMiB", newSize)
 
-	return a.client.UpdateStoragePoolVolume(pool, "custom", name, writable, etag)
+	return wait(a.client.UpdateStoragePoolVolume(pool, "custom", name, writable, etag))
 }
 
 func (a *incusApiAdapter) CreateStoragePoolVolume(target, pool, name string, size int) error {
@@ -45,7 +45,7 @@ func (a *incusApiAdapter) CreateStoragePoolVolume(target, pool, name string, siz
 	if target != "" {
 		c = c.UseTarget(target)
 	}
-	return c.CreateStoragePoolVolume(pool, storageVolumeRequest)
+	return wait(c.CreateStoragePoolVolume(pool, storageVolumeRequest))
 }
 
 func (a *incusApiAdapter) CreateStoragePoolVolumeFromISO(target, pool, diskName string, backupFile io.Reader) error {
@@ -67,7 +67,7 @@ func (a *incusApiAdapter) UpdateStoragePoolVolumeDescription(pool, diskName, des
 
 	volume.Description = description
 
-	return a.client.UpdateStoragePoolVolume(pool, "custom", diskName, volume.Writable(), etag)
+	return wait(a.client.UpdateStoragePoolVolume(pool, "custom", diskName, volume.Writable(), etag))
 }
 func (a *incusApiAdapter) GetStoragePoolVolumeUsage(pool string) (map[string]int, error) {
 	volumes, err := a.client.GetStoragePoolVolumes(pool)
@@ -113,5 +113,5 @@ func (a *incusApiAdapter) ColocateStoragePoolVolumeWithInstance(instanceName, po
 		return err
 	}
 
-	return srcServer.DeleteStoragePoolVolume(pool, "custom", diskName)
+	return wait(srcServer.DeleteStoragePoolVolume(pool, "custom", diskName))
 }
