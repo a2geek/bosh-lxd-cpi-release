@@ -12,5 +12,17 @@ func (a *incusApiAdapter) CreateStoragePoolVolumeSnapshot(pool, volumeName, snap
 	post := api.StorageVolumeSnapshotsPost{
 		Name: snapshotName,
 	}
-	return wait(a.client.CreateStoragePoolVolumeSnapshot(pool, "custom", volumeName, post))
+	err := wait(a.client.CreateStoragePoolVolumeSnapshot(pool, "custom", volumeName, post))
+	if err != nil {
+		return err
+	}
+
+	snapshot, etag, err := a.client.GetStoragePoolVolumeSnapshot(pool, "custom", volumeName, snapshotName)
+	if err != nil {
+		return err
+	}
+
+	// Update the snapshot with the description
+	snapshot.Description = description
+	return a.client.UpdateStoragePoolVolumeSnapshot(pool, "custom", volumeName, snapshotName, snapshot.Writable(), etag)
 }
