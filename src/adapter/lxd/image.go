@@ -22,7 +22,9 @@ func (a *lxdApiAdapter) FindExistingImage(description string) (string, error) {
 	}
 	for _, image := range images {
 		if description == image.Properties["description"] {
-			return image.Aliases[0].Name, nil
+			if len(image.Aliases) > 0 {
+				return image.Aliases[0].Name, nil
+			}
 		}
 	}
 	return "", nil
