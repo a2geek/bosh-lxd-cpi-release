@@ -3,8 +3,8 @@
   path: /releases/-
   value:
     name: lxd-bosh-cpi
-    url: https://github.com/a2geek/bosh-lxd-cpi-release/releases/download/v9/bosh-lxd-cpi-release.tgz
-    sha1: 1a95337e5becbb7eed78f4c20b1190fb7cc7b638
+    url: https://github.com/a2geek/bosh-lxd-cpi-release/releases/download/v10/bosh-lxd-cpi-release.tgz
+    sha1: 5a6b0281e94484e40b59277bd2440709014be59d
 
 - type: replace
   path: /resource_pools/name=vms/stemcell?
