@@ -178,3 +178,30 @@ instance_groups:
   vm_extensions: [hydra2]
   // etc...
 ```
+
+# Network cloud properties
+
+The network now supports target for the subnet. For example:
+
+```yaml
+networks:
+- name: default
+  type: manual
+  subnets:
+  - azs: [z1,z2]
+    range: 240.4.0.1/24
+    dns: [192.168.1.1]
+    reserved: 240.4.0.2-240.4.0.9
+    gateway: 240.4.0.1
+    static: 240.4.0.10-240.4.0.19
+    cloud_properties:
+      target: hydra1
+  - azs: [z1,z2]
+    range: 240.5.0.1/24
+    dns: [192.168.1.1]
+    reserved: 240.5.0.2-240.5.0.9
+    gateway: 240.5.0.1
+    static: 240.5.0.10-240.5.0.19
+    cloud_properties:
+      target: hydra2
+```

@@ -7,18 +7,26 @@ Likely a lot of the use for Incus or LXD will be in the "homelab". This is just 
 | Product | Installation | Instances | Routing |
 | :--- | :--- | ---: | :--- |
 | LXD 6.x | Snap | 1 | Subnet to host |
-| LXD 5.21 LTS | Snap | 2 | Uses the [Ubuntu Fan](https://wiki.ubuntu.com/FanNetworking) for networking. Each dedicated subnet is directed to the proper host. BOSH cloud config is set to `dynamic` to allow LXD to set IP address. Uses [DNS Publisher](https://github.com/a2geek/dns-publisher-release) to publish the IP mappings. |
+| LXD 5.21 LTS | Snap | 3 | Uses the [Ubuntu Fan](https://wiki.ubuntu.com/FanNetworking) for networking. Each dedicated subnet is directed to the proper host. See below. |
 | Incus 6.x | apt | 1 | Subnet to host |
 
 ## Networking
 
-Be careful of Docker. It mucks with the host routing and you may need to `sudo iptables -I DOCKER-USER -j ACCEPT` which allows IP forwards into and out of the VMs.
+Be careful of Docker. It mucks with the host routing and you may need to `sudo iptables -A DOCKER-USER -j ACCEPT` which allows IP forwards into and out of the VMs.
 
 For single hosts, networking is literally simple and the router just needs to route to the host. As an example, I setup OpenWrt to route my subnet to the host.
 
 For multiple hosts, using the Ubuntu Fan is a good option. BOSH will need to be configured as "dynamic" to allow LXD/Incus to assign the IP addresses. But routing is pretty straight forward.
 
 Alternatively, with multiple hosts there are products like MicroOVN that appear to share IP address space across hosts.
+
+### Ubuntu Fan
+
+Networking has been two different ways. As of June 2026, the CPI now allows `target` to be added into the cloud config. This allows the use of manual networks where BOSH assigns the IP address. Prior to this, BOSH could assign IP addresses but each VM's placement was random (whatever LXD decided) or manually placed -- in that environment dynamic was better which allowed LXD/Incus to make that determination.
+
+The better option is now using manual with an entry for each host. IP assignment is up to you. See [configuration](CONFIGURATION.md) for a sample (near the bottom of the page).
+
+Otherwise, you can set the cloud config to `dynamic` to allow LXD/Incus to set IP address. Uses [DNS Publisher](https://github.com/a2geek/dns-publisher-release) to publish the IP mappings.
 
 ## Disk
 
