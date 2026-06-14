@@ -85,6 +85,16 @@ func (c CPI) CreateVMV2(
 				})
 				newNetworks[key] = newNet
 			}
+
+			netProps := LXDNetworkCloudProperties{}
+			net.CloudProps().As(&netProps)
+			if netProps.Target != "" {
+				if vmProps.Target != "" && vmProps.Target != netProps.Target {
+					return apiv1.VMCID{}, apiv1.Networks{}, bosherr.Errorf("VM target (%s) and nework target (%s) differ and cannot be reconciled", vmProps.Target, netProps.Target)
+				}
+				vmProps.Target = netProps.Target
+				c.logger.Debug("create_vm", "overriding VM target to '%s' based on network '%s'", vmProps.Target, key)
+			}
 		}
 		devices[name] = settings
 

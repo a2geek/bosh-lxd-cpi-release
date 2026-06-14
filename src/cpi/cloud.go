@@ -26,3 +26,9 @@ type LXDVMCloudProperties struct {
 	// Network is an override to allow individual networks per AZ
 	Network string `json:"network" yaml:"network"`
 }
+
+// LXDNetworkCloudProperties represents the NetworkCloudProps supplied by BOSH.
+type LXDNetworkCloudProperties struct {
+	// Target is the cluster group (or empty)
+	Target string `json:"target" yaml:"target"`
+}
