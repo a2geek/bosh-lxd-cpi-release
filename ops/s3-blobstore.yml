@@ -1,0 +1,46 @@
+---
+# Note: Also pay attention to the data type that the s3cli expects for each property.
+# See: https://github.com/cloudfoundry/bosh-s3cli
+
+- type: remove
+  path: /instance_groups/name=bosh/jobs/name=blobstore
+
+# See: https://github.com/cloudfoundry/bosh/blob/main/jobs/director/templates/director.yml.erb
+- type: replace
+  path: /instance_groups/name=bosh/properties/blobstore?
+  value:
+    provider: s3
+    bucket_name: ((s3_bucket_name))
+    access_key_id: ((s3_access_key_id))
+    secret_access_key: ((s3_secret_access_key))
+    s3_region: ((s3_region))
+    host: ((s3_host))
+    s3_port: ((s3_port))
+    use_ssl: ((s3_use_ssl))
+    s3_host_style: ((s3_host_style))
+    s3_signature_version: ((s3_signature_version))
+
+- type: remove
+  path: /instance_groups/name=bosh/properties/agent/env/bosh/blobstores
+
+# See: https://github.com/cloudfoundry/bosh/blob/main/jobs/director/templates/director.yml.erb
+- type: replace
+  path: /instance_groups/name=bosh/properties/agent/env/bosh/blobstores?/-
+  value:
+    provider: s3
+    options:
+      bucket_name: ((s3_bucket_name))
+      access_key_id: ((s3_access_key_id))
+      secret_access_key: ((s3_secret_access_key))
+      region: ((s3_region))
+      host: ((s3_host))
+      port: ((s3_port))
+      use_ssl: ((s3_use_ssl))
+      host_style: ((s3_host_style))
+      s3_signature_version: ((s3_signature_version))
+
+- type: remove
+  path: /variables/name=blobstore_ca?
+
+- type: remove
+  path: /variables/name=blobstore_server_tls?
