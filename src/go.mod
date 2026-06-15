@@ -8,7 +8,7 @@ require (
 	github.com/cloudfoundry/bosh-utils v0.0.616
 	github.com/diskfs/go-diskfs v1.9.3
 	github.com/lxc/incus/v6 v6.23.0
-	golang.org/x/text v0.37.0
+	golang.org/x/text v0.38.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
