@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bosh-lxd-cpi/adapter"
 	"compress/gzip"
+	"fmt"
 	"os"
 
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
@@ -83,5 +84,42 @@ func (c CPI) CreateStemcell(imagePath string, scprops apiv1.StemcellCloudProps) 
 		DiskInMB:       props.Disk,
 		TarFile:        tarFile,
 	})
-	return apiv1.NewStemcellCID(alias), err
+	if err != nil {
+		return apiv1.StemcellCID{}, bosherr.WrapError(err, "error while creating and uploading image")
+	}
+
+	if c.config.Server.PredeployStemcell {
+		c.logger.Info("create_stemcell", "Predeploying stemcell '%s'", alias)
+
+		// Predeploy a very basic VM. Don't even start it. We just want LXD/Incus to do the image processing so it's ready for multiple VMs to be created at once.
+		// This is a workaround for the fact that LXD/Incus does not support multiple concurrent image processing from multiple hosts (I think a single host + remote is ok).
+		vmID := fmt.Sprintf("vm-%s-predeploy", id)
+		devices := make(map[string]map[string]string)
+		devices["root"] = map[string]string{
+			"type": "disk",
+			"pool": c.config.Server.StoragePool,
+			"path": "/",
+		}
+
+		err = c.adapter.CreateInstance(adapter.InstanceMetadata{
+			Name:          vmID,
+			StemcellAlias: alias,
+			InstanceType:  "c2-m4", // Just enough to get the stemcell preprocessed.
+			Project:       c.config.Server.Project,
+			Profiles:      []string{c.config.Server.Profile},
+			Target:        c.config.Server.Target,
+			Devices:       devices,
+			// TODO uncertain if we need Config. It primarily determines the type of bootloader (BIOS vs UEFI). But we're not booting this VM, so it may not matter.
+			//Config:        instanceConfig,
+		})
+		if err != nil {
+			return apiv1.StemcellCID{}, bosherr.WrapError(err, "Creating predeploy VM")
+		}
+
+		defer func() {
+			c.DeleteVM(apiv1.NewVMCID(vmID))
+		}()
+	}
+
+	return apiv1.NewStemcellCID(alias), nil
 }

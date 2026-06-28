@@ -54,6 +54,7 @@ Notes:
 | `lxd_cpi.server.managed_network_assignment` | If the LXD network is 'managed' (runs a DHCP server), indicates strategy of IP assignment. Primarily applies to BOSH 'manual' network: `static` (default) or `dhcp`. Note that for a 'dynamic' network, `dhcp` must be used. Also note that if you are using the Ubuntu Fan specifically, `dhcp` is what you want as there is extra routing that the static configuration does not include. |
 | `lxd_cpi.server.network_name` | Name of network with which to place VMs. Example `lxdbr0`. |
 | `lxd_cpi.server.storage_pool_name` | Name of storage pool with which to place disks. (default `default`). |
+| `lxd_cpi.server.predeploy_stemcell` | Indicates if the stemcell is predeployed. This appears to only be required if the storage pool is remote (ex: Ceph) and if LXD/Incus is clustered. |
 
 ### BOSH Agent configuration
 

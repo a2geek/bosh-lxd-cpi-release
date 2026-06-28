@@ -69,6 +69,9 @@ properties:
   lxd_cpi.server.storage_pool_name:
     description: "Name of StoragePool with which to place disks"
     default: "default"
+  lxd_cpi.server.predeploy_stemcell:
+    description: "Enable predeploy of stemcells. This is intended for remote storage pools when LXD or Incus is clustered. See note in docs/ERRORS.md in the repository."
+    default: false
 
   lxd_cpi.agent.mbus:
     description: "Mbus URL used by deployed BOSH agents"
