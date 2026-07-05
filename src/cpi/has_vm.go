@@ -11,8 +11,9 @@ func (c CPI) HasVM(cid apiv1.VMCID) (bool, error) {
 		return false, err
 	}
 
+	// Note that GetInstanceLocation will return an empty string upon error (covering the instance not found case).
 	location, err := c.adapter.GetInstanceLocation(cid.AsString())
-	if err != nil {
+	if CleanInstanceNotFoundError(err) != nil {
 		return false, bosherr.WrapError(err, "HasVM")
 	}
 	return len(location) != 0, nil

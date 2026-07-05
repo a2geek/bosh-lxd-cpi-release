@@ -13,6 +13,15 @@ func (c CPI) DeleteVM(vmCID apiv1.VMCID) error {
 		return err
 	}
 
+	// If the VM does not exist, we can consider it deleted.
+	exists, err := c.HasVM(vmCID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return c.agentMgr.Delete(vmCID)
+	}
+
 	err = c.adapter.SetInstanceAction(vmCID.AsString(), adapter.StopAction)
 	if err != nil {
 		return bosherr.WrapError(err, "Delete VM - stop")
