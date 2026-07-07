@@ -20,11 +20,6 @@ func NewThrottleServer(config Config, logger boshlog.Logger) (ThrottleServer, er
 	if _, err := os.Stat(config.Path); err == nil {
 		os.Remove(config.Path)
 	}
-	mutexTimeout, err := time.ParseDuration(config.MutexTimeout)
-	if err != nil {
-		logger.Error("main", "Unable to parse mutex timeout duration: %s", err.Error())
-		return ThrottleServer{}, err
-	}
 
 	return ThrottleServer{
 		logger:       logger,
@@ -33,8 +28,6 @@ func NewThrottleServer(config Config, logger boshlog.Logger) (ThrottleServer, er
 		limit:        config.Limit,
 		transactions: map[string]time.Time{},
 		uuidGen:      boshuuid.NewGenerator(),
-		mutex:        NewTimedMutex(),
-		mutexTimeout: mutexTimeout,
 	}, nil
 }
 
@@ -45,8 +38,6 @@ type ThrottleServer struct {
 	limit        int
 	transactions map[string]time.Time
 	uuidGen      boshuuid.Generator
-	mutex        *TimedMutex
-	mutexTimeout time.Duration
 }
 
 func (ts *ThrottleServer) Serve() error {
@@ -61,7 +52,6 @@ func (ts *ThrottleServer) Serve() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/transactions/{transactionId}", ts.handleTransactionWithId)
 	mux.HandleFunc("/transactions", ts.handleTransactions)
-	mux.HandleFunc("/stemcell-lock", ts.handleStemcellLock)
 
 	ts.logger.Info("main", "Now serving traffic on socket %s", ts.path)
 	return http.Serve(socket, mux)
@@ -76,8 +66,6 @@ func (ts *ThrottleServer) expireTransactions() {
 				delete(ts.transactions, k)
 			}
 		}
-		// Protection against deadlocks in case of a crash while holding the mutex
-		ts.mutex.UnlockWithTimeout(ts.mutexTimeout)
 	}
 }
 
@@ -130,26 +118,6 @@ func (ts *ThrottleServer) handleTransactions(w http.ResponseWriter, r *http.Requ
 				w.Write([]byte(transactionId))
 			}
 		}
-	default:
-		ts.logger.Debug("main", "%s %s - Method not allowed", r.Method, r.URL.Path)
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (ts *ThrottleServer) handleStemcellLock(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		if !ts.mutex.LockWithTimeout(ts.mutexTimeout) {
-			ts.logger.Debug("main", "%s %s - Could not acquire lock", r.Method, r.URL.Path)
-			http.Error(w, "Could not acquire lock", http.StatusTooManyRequests)
-		} else {
-			ts.logger.Info("main", "%s %s - Lock acquired", r.Method, r.URL.Path)
-			w.WriteHeader(http.StatusOK)
-		}
-	case http.MethodDelete:
-		ts.mutex.Unlock()
-		ts.logger.Info("main", "%s %s - Lock released", r.Method, r.URL.Path)
-		w.WriteHeader(http.StatusNoContent)
 	default:
 		ts.logger.Debug("main", "%s %s - Method not allowed", r.Method, r.URL.Path)
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
