@@ -2,8 +2,11 @@ package cpi
 
 import (
 	"bosh-lxd-cpi/adapter"
+	"context"
+	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
@@ -128,7 +131,7 @@ func (c CPI) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, bosherr.Error("no matching stemcell configuration found")
 	}
 
-	err = c.adapter.CreateInstance(adapter.InstanceMetadata{
+	err = c.createVMWithLock(adapter.InstanceMetadata{
 		Name:          theCid,
 		StemcellAlias: stemcellCID.AsString(),
 		InstanceType:  vmProps.InstanceType,
@@ -184,4 +187,24 @@ func (c CPI) CreateVMV2(
 
 	err = c.adapter.SetInstanceAction(vmCID.AsString(), adapter.StartAction)
 	return vmCID, newNetworks, err
+}
+
+func (c CPI) createVMWithLock(instanceMetadata adapter.InstanceMetadata) error {
+	if c.config.Server.CreateVMLock.Enabled {
+		lockCtx, cancel := context.WithTimeout(context.Background(), c.createVMLockTimeout)
+		defer cancel()
+
+		// Will pause until the createVMLockTimeout is reached and then just proceeds...
+		locked, err := c.createVMLock.TryLockContext(lockCtx, 10*time.Second)
+		if locked {
+			defer c.createVMLock.Unlock()
+		}
+		// Allow the "context deadline exceeded" error to pass through and continue with the VM creation
+		if err != nil && !errors.Is(err, context.DeadlineExceeded) {
+			return err
+		}
+	}
+
+	err := c.adapter.CreateInstance(instanceMetadata)
+	return err
 }

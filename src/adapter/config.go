@@ -13,9 +13,15 @@ type Config struct {
 	Network                  string
 	StoragePool              string
 	PredeployStemcell        bool
+	CreateVMLock             CreateVMLockConfig
 	// InstanceConfig is a map of a map of strings. That is, the first key is the
 	// stemcell identifier and the map it contains is used for configuration.
 	InstanceConfig map[string]map[string]string
+}
+type CreateVMLockConfig struct {
+	Enabled bool
+	Timeout string
+	Path    string
 }
 
 func (lxd Config) Validate() error {

@@ -14,7 +14,12 @@ config = {
     "ManagedNetworkAssignment" => p("lxd_cpi.server.managed_network_assignment"),
     "StoragePool" => p("lxd_cpi.server.storage_pool_name"),
     "PredeployStemcell" => p("lxd_cpi.server.predeploy_stemcell"),
-    "InstanceConfig" => p("lxd_cpi.server.instance_config")
+    "InstanceConfig" => p("lxd_cpi.server.instance_config"),
+    "CreateVMLock" => {
+      "Enabled" => p("lxd_cpi.server.create_vm_lock.enabled"),
+      "Timeout" => p("lxd_cpi.server.create_vm_lock.timeout"),
+      "Path" => p("lxd_cpi.server.create_vm_lock.path")
+    }
   },
   "Agent" => {
     "Mbus" => p("lxd_cpi.agent.mbus"),
