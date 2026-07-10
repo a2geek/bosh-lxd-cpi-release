@@ -54,7 +54,10 @@ Notes:
 | `lxd_cpi.server.managed_network_assignment` | If the LXD network is 'managed' (runs a DHCP server), indicates strategy of IP assignment. Primarily applies to BOSH 'manual' network: `static` (default) or `dhcp`. Note that for a 'dynamic' network, `dhcp` must be used. Also note that if you are using the Ubuntu Fan specifically, `dhcp` is what you want as there is extra routing that the static configuration does not include. |
 | `lxd_cpi.server.network_name` | Name of network with which to place VMs. Example `lxdbr0`. |
 | `lxd_cpi.server.storage_pool_name` | Name of storage pool with which to place disks. (default `default`). |
-| `lxd_cpi.server.predeploy_stemcell` | Indicates if the stemcell is predeployed. This appears to only be required if the storage pool is remote (ex: Ceph) and if LXD/Incus is clustered. Note that a temporary VM is created (not started) and then deleted. This forces LXD/Incus to do the legwork to get the stemcell image prepared. Also note that stemcell uploads take quite a bit more time but the progress can be monitored in the LXD/Incus console. |
+| `lxd_cpi.server.predeploy_stemcell` | Indicates if the stemcell is predeployed. This appears to only be required if the storage pool is remote (ex: Ceph) and if LXD/Incus is clustered. Note that a temporary VM is created (not started). This forces LXD/Incus to do the legwork to get the stemcell image prepared. Also note that stemcell uploads take quite a bit more time but the progress can be monitored in the LXD/Incus console. Default is `false`. |
+| `lxd_cpi.server.create_vm_lock.enabled` | Enables single-threaded VM configuration. This is recommended by the LXD team for remote storage in a cluster. Especially from 5.21.5+. Default is `false`. |
+| `lxd_cpi.server.create_vm_lock.timeout` | Default max timeout before allowing VMs through the lock. Default is `10m`. |
+| `lxd_cpi.server.create_vm_lock.path` | Default path for the `flock` library to use for file the single-threaded file lock. Default is `/var/vcap/sys/run/lxd_cpi/create-vm.lock`. |
 
 ### BOSH Agent configuration
 
@@ -77,7 +80,7 @@ Notes:
 
 ### Throttle configuration
 
-> These are unlikely to be required. Leftovers from early development of the CPI.
+> These are unlikely to be required. Leftovers from early development of the CPI. Might be useful on a single host with slower disk.
 
 | Option | Description |
 | --- | --- |

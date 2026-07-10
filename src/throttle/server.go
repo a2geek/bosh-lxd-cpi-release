@@ -118,5 +118,8 @@ func (ts *ThrottleServer) handleTransactions(w http.ResponseWriter, r *http.Requ
 				w.Write([]byte(transactionId))
 			}
 		}
+	default:
+		ts.logger.Debug("main", "%s %s - Method not allowed", r.Method, r.URL.Path)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }

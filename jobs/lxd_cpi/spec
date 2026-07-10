@@ -73,6 +73,16 @@ properties:
     description: "Enable predeploy of stemcells. This is intended for remote storage pools when LXD or Incus is clustered. See note in docs/ERRORS.md in the repository."
     default: false
 
+  lxd_cpi.server.create_vm_lock.enabled:
+    description: "Single-thread VM creation. This is intended to assist with remote storage pools when LXD or Incus is clustered."
+    default: false
+  lxd_cpi.server.create_vm_lock.timeout:
+    description: "Duration after which VM creation will proceed. Use in combination with lock_create_vm flag."
+    default: "10m"
+  lxd_cpi.server.create_vm_lock.path:
+    description: "Path to lock file for create VM lock."
+    default: "/var/vcap/sys/run/lxd_cpi/create-vm.lock"
+
   lxd_cpi.agent.mbus:
     description: "Mbus URL used by deployed BOSH agents"
     example: "nats://nats:nats-password@10.254.50.4:4222"

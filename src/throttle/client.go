@@ -83,6 +83,9 @@ func (c *ThrottleClient) Unlock(transactionId string) error {
 	}
 
 	resp, err := c.client.Do(req)
+	if resp.StatusCode == http.StatusNotFound {
+		return nil
+	}
 	if err != nil {
 		return err
 	}

@@ -1,0 +1,4 @@
+# This is for rendering within the VM once stood up
+- type: replace
+  path: /instance_groups/name=bosh/properties/lxd_cpi/server/create_vm_lock?/enabled?
+  value: true
