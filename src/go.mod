@@ -5,7 +5,7 @@ go 1.25.7
 require (
 	github.com/canonical/lxd v0.0.0-20260115153158-c1f4cb66bb08
 	github.com/cloudfoundry/bosh-cpi-go v0.0.0-20251227100157-506fe5f35b83
-	github.com/cloudfoundry/bosh-utils v0.0.635
+	github.com/cloudfoundry/bosh-utils v0.0.636
 	github.com/diskfs/go-diskfs v1.9.4
 	github.com/lxc/incus/v6 v6.23.0
 	golang.org/x/text v0.41.0
@@ -62,7 +62,7 @@ require (
 	go.opentelemetry.io/otel v1.42.0 // indirect
 	go.opentelemetry.io/otel/metric v1.42.0 // indirect
 	go.opentelemetry.io/otel/trace v1.42.0 // indirect
-	golang.org/x/crypto v0.54.0 // indirect
+	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/term v0.45.0 // indirect
