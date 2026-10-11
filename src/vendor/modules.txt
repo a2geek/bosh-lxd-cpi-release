@@ -148,8 +148,8 @@ github.com/lxc/incus/v6/shared/tls
 github.com/lxc/incus/v6/shared/units
 github.com/lxc/incus/v6/shared/util
 github.com/lxc/incus/v6/shared/ws
-# github.com/moby/sys/user v0.4.0
-## explicit; go 1.17
+# github.com/moby/sys/user v0.4.1
+## explicit; go 1.18
 github.com/moby/sys/user
 # github.com/moby/sys/userns v0.1.0
 ## explicit; go 1.21
