@@ -41,7 +41,7 @@ All CPI calls have been implemented, including snapshots and IaaS-native disk re
 ### LXD adjustments
 
 * There is a nightly scheduled process to look for unused configuration disks (`vol-c-<uuid>` format). There are events (at least with ZFS) where the configuration disk sometimes doesn't get detached from the VM. The nightly process simply scans the list of detached configuration disks, tries to delete them, and reports success or error in the log. See [cleanup](src/cmd/cleanup/main.go).
-* Throttling. Not so much LXD, but more the single host conundrum. There is a service that runs and maintains a hash map of "transaction" reservations. Once the CPI level transaction completes, the transaction is also released. Additionally, these reservations will time out after a certain amount time. _By default, throttling is disabled._ (See Tuning for more details. Code is at [throttle](src/cmd/cleanup/main.go).)
+* Throttling. Not so much LXD, but more the single host conundrum. There is a service that runs and maintains a hash map of "transaction" reservations. Once the CPI level transaction completes, the transaction is also released. Additionally, these reservations will time out after a certain amount time. _By default, throttling is disabled._ (See Tuning for more details. Code is at [throttle](src/cmd/throttle/main.go).)
 
 ### Tuning
 
