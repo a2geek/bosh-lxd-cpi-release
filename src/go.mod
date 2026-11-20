@@ -1,11 +1,11 @@
 module bosh-lxd-cpi
 
-go 1.26.10
+go 1.26.11
 
 require (
 	github.com/canonical/lxd v0.0.0-20260115153158-c1f4cb66bb08
 	github.com/cloudfoundry/bosh-cpi-go v0.0.0-20251227100157-506fe5f35b83
-	github.com/cloudfoundry/bosh-utils v0.0.674
+	github.com/cloudfoundry/bosh-utils v0.0.676
 	github.com/diskfs/go-diskfs v1.9.4
 	github.com/lxc/incus/v6 v6.23.0
 	golang.org/x/text v0.44.0
@@ -64,9 +64,9 @@ require (
 	go.opentelemetry.io/otel v1.47.0 // indirect
 	go.opentelemetry.io/otel/metric v1.47.0 // indirect
 	go.opentelemetry.io/otel/trace v1.47.0 // indirect
-	golang.org/x/crypto v0.58.0 // indirect
+	golang.org/x/crypto v0.59.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sys v0.49.0 // indirect
-	golang.org/x/term v0.47.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
+	golang.org/x/term v0.48.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 )
